@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProjectsModule } from './projects/projects.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ActivitiesModule } from './activities/activities.module';
     }),
     ProjectsModule,
     ActivitiesModule,
+    McpModule,
   ],
   controllers: [AppController],
   providers: [AppService],

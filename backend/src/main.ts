@@ -1,5 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -11,7 +11,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ─── Global prefix ──────────────────────────────────────────────────────────
-  app.setGlobalPrefix(API_PREFIX);
+  // /mcp is excluded so the MCP endpoint does not get the api/v1 prefix
+  app.setGlobalPrefix(API_PREFIX, {
+    exclude: [
+      { path: 'mcp', method: RequestMethod.POST },
+      { path: 'mcp', method: RequestMethod.GET },
+      { path: 'mcp', method: RequestMethod.DELETE },
+    ],
+  });
 
   // ─── CORS ───────────────────────────────────────────────────────────────────
   app.enableCors();
