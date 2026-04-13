@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ProjectsModule } from './projects/projects.module';
+import { ActivitiesModule } from './activities/activities.module';
 
 @Module({
   imports: [
@@ -31,10 +33,13 @@ import { AppService } from './app.service';
         username: config.get<string>('DB_USER'),
         password: config.get<string>('DB_PASSWORD'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: config.get<string>('NODE_ENV') !== 'production',
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
+        synchronize: false,
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),
+    ProjectsModule,
+    ActivitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
