@@ -21,7 +21,9 @@ async function bootstrap() {
   });
 
   // ─── CORS ───────────────────────────────────────────────────────────────────
-  app.enableCors();
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  });
 
   // ─── Validation ─────────────────────────────────────────────────────────────
   app.useGlobalPipes(
