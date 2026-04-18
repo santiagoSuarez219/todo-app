@@ -66,6 +66,7 @@ export interface Project {
 export interface Activity {
   id: string;
   name: string;
+  description: string | null;
   project: Project | null;
   actionDate: string | null;
   dueDate: string | null;
@@ -96,6 +97,7 @@ export type UpdateProjectDto = Partial<CreateProjectDto>;
 
 export interface CreateActivityDto {
   name: string;
+  description?: string | null;
   projectId?: string | null;
   parentId?: string | null;
   actionDate?: string | null;

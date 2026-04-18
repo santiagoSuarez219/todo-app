@@ -125,6 +125,17 @@ export class ActivitiesController {
     return this.activitiesService.findByStatus(status, pagination);
   }
 
+  @Get('search/:query')
+  @ApiOperation({ summary: 'Buscar actividades por nombre, descripcion o proyecto' })
+  @ApiParam({ name: 'query', type: String })
+  @ApiOkResponse({ type: [Activity] })
+  search(
+    @Param('query') query: string,
+    @Query() pagination: PaginationDto,
+  ): Promise<Activity[]> {
+    return this.activitiesService.search(query, pagination);
+  }
+
   @Get(':id/subtasks')
   @ApiOperation({ summary: 'Get subtasks of an activity' })
   @ApiOkResponse({ type: [Activity] })

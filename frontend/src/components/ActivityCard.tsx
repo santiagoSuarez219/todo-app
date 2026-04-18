@@ -18,7 +18,12 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   return (
     <div className={`bg-white rounded-lg border p-4 shadow-sm ${isOverdue ? 'border-red-300' : 'border-gray-200'}`}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-gray-900 leading-snug">{activity.name}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-900 leading-snug">{activity.name}</p>
+          {activity.description && (
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{activity.description}</p>
+          )}
+        </div>
         <div className="flex gap-1 shrink-0">
           {onEdit && (
             <button

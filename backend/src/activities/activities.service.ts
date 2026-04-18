@@ -213,4 +213,17 @@ export class ActivitiesService {
       pagination,
     ).getMany();
   }
+
+  async search(query: string, pagination: PaginationDto): Promise<Activity[]> {
+    const term = query.trim();
+    if (!term) return [];
+
+    return this.paginate(
+      this.baseQuery().where(
+        '(activity.name ILIKE :q OR activity.description ILIKE :q OR project.name ILIKE :q)',
+        { q: `%${term}%` },
+      ),
+      pagination,
+    ).getMany();
+  }
 }

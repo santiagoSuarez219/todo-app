@@ -24,6 +24,12 @@ export class CreateActivityDto {
   @MaxLength(255)
   name: string;
 
+  @ApiPropertyOptional({ description: 'Descripcion detallada de la actividad' })
+  @IsString()
+  @MaxLength(5000)
+  @IsOptional()
+  description?: string;
+
   @ApiPropertyOptional({ description: 'UUID del proyecto asociado' })
   @IsUUID()
   @IsOptional()

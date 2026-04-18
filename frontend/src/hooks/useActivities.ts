@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getActivities, getActivity, createActivity, updateActivity, deleteActivity,
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
-  getActivitiesByProject,
+  getActivitiesByProject, searchActivities,
 } from '../services/activities.service';
 import type { CreateActivityDto, UpdateActivityDto, PaginationParams } from '../types';
 
@@ -47,6 +47,14 @@ export function useActivitiesByProject(projectId: string, params?: PaginationPar
     queryKey: ['activities', 'project', projectId, params],
     queryFn: () => getActivitiesByProject(projectId, params),
     enabled: !!projectId,
+  });
+}
+
+export function useSearchActivities(query: string, params?: PaginationParams) {
+  return useQuery({
+    queryKey: ['activities', 'search', query, params],
+    queryFn: () => searchActivities(query, params),
+    enabled: query.trim().length > 0,
   });
 }
 

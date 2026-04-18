@@ -8,6 +8,7 @@ import {
 
 const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(255),
+  description: z.string().max(5000).nullish(),
   projectId: z.string().uuid().nullish(),
   status: z.string().optional(),
   priority: z.string().optional(),
@@ -36,6 +37,7 @@ export default function ActivityForm({ initial, projects = [], onSubmit, onCance
     resolver: zodResolver(schema),
     defaultValues: {
       name: initial?.name ?? '',
+      description: initial?.description ?? '',
       projectId: initial?.project?.id ?? null,
       status: initial?.status ?? ActivityStatus.PENDING,
       priority: initial?.priority ?? Priority.MEDIUM,
@@ -53,6 +55,7 @@ export default function ActivityForm({ initial, projects = [], onSubmit, onCance
   function toDto(values: FormValues): CreateActivityDto {
     return {
       name: values.name,
+      description: values.description || null,
       projectId: values.projectId || null,
       status: (values.status as CreateActivityDto['status']) || undefined,
       priority: (values.priority as CreateActivityDto['priority']) || undefined,
@@ -76,6 +79,16 @@ export default function ActivityForm({ initial, projects = [], onSubmit, onCance
           className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
         {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+        <textarea
+          {...register('description')}
+          rows={3}
+          placeholder="Detalle adicional sobre la actividad..."
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        />
       </div>
 
       {projects.length > 0 && (
