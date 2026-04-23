@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+coverage/
+.git/
+*.log
+npm-debug.log*
+test/
+**/*.spec.ts
+**/*.e2e-spec.ts
+README.md

@@ -12,6 +12,7 @@ import { McpModule } from './mcp/mcp.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
       envFilePath: '../.env',
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
