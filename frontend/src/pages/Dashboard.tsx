@@ -90,7 +90,11 @@ export default function Dashboard() {
       case 'pending':   return list.filter((a) => a.status === 'pending');
       case 'in_progress': return list.filter((a) => a.status === 'in_progress');
       case 'completed': return list.filter((a) => a.status === 'completed');
-      case 'overdue':   return list.filter((a) => a.dueDate && new Date(a.dueDate) < now && a.status !== 'completed');
+      case 'overdue':   return list.filter((a) => {
+        if (a.status === 'completed') return false;
+        if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
+        return !!a.dueDate && new Date(a.dueDate) < now;
+      });
       default:          return list;
     }
   })();
@@ -172,9 +176,11 @@ export default function Dashboard() {
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                   }`}>
                   {tab.key === 'overdue'
-                    ? (allQ.data ?? []).filter(
-                      (a) => a.dueDate && new Date(a.dueDate) < now && a.status !== 'completed',
-                    ).length
+                    ? (allQ.data ?? []).filter((a) => {
+                        if (a.status === 'completed') return false;
+                        if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
+                        return !!a.dueDate && new Date(a.dueDate) < now;
+                      }).length
                     : (allQ.data ?? []).filter((a) => a.status === tab.key).length}
                 </span>
               )}
