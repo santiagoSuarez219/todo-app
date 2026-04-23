@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Not, Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Activity } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -133,7 +133,7 @@ export class ActivitiesService {
     const { start, end } = this.todayRange();
     return this.paginate(
       this.baseQuery().where(
-        'activity.actionDate BETWEEN :start AND :end',
+        '(activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)',
         { start, end },
       ),
       pagination,
@@ -149,7 +149,7 @@ export class ActivitiesService {
     end.setHours(23, 59, 59, 999);
     return this.paginate(
       this.baseQuery().where(
-        'activity.actionDate BETWEEN :start AND :end',
+        '(activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)',
         { start, end },
       ),
       pagination,
@@ -158,8 +158,8 @@ export class ActivitiesService {
 
   findThisWeek(pagination: PaginationDto): Promise<Activity[]> {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday
-    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+    const dayOfWeek = now.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const monday = new Date(now);
     monday.setDate(now.getDate() + diffToMonday);
     monday.setHours(0, 0, 0, 0);
@@ -168,7 +168,7 @@ export class ActivitiesService {
     sunday.setHours(23, 59, 59, 999);
     return this.paginate(
       this.baseQuery().where(
-        'activity.actionDate BETWEEN :monday AND :sunday',
+        '(activity.actionDate BETWEEN :monday AND :sunday OR activity.dueDate BETWEEN :monday AND :sunday)',
         { monday, sunday },
       ),
       pagination,
