@@ -1,38 +1,142 @@
 import { NavLink } from 'react-router-dom';
+import { useProjects } from '../../hooks/useProjects';
 
-const links = [
-  { to: '/', label: 'Dashboard', icon: '▦' },
-  { to: '/projects', label: 'Proyectos', icon: '◫' },
-  { to: '/activities', label: 'Actividades', icon: '≡' },
-  { to: '/activities/today', label: 'Hoy', icon: '◷' },
-  { to: '/activities/this-week', label: 'Esta semana', icon: '▦' },
-  { to: '/activities/overdue', label: 'Vencidas', icon: '⚠' },
-];
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function HomeIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  );
+}
+
+function TodayIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+    </svg>
+  );
+}
+
+function WeekIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+    </svg>
+  );
+}
+
+function OverdueIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+    </svg>
+  );
+}
+
+// ─── Link style ───────────────────────────────────────────────────────────────
+
+const linkCls = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
+    isActive
+      ? 'bg-blue-700 dark:bg-blue-600 text-white'
+      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+  }`;
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
+  const { data: projects, isLoading } = useProjects();
+
   return (
-    <aside className="w-56 shrink-0 bg-gray-900 text-gray-100 min-h-screen flex flex-col">
-      <div className="px-5 py-6 border-b border-gray-700">
-        <span className="text-lg font-semibold tracking-tight">ToDo</span>
+    <aside className="w-56 shrink-0 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+      {/* Brand */}
+      <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <span className="text-base font-semibold tracking-tight text-gray-900 dark:text-white">ToDo</span>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {links.map(({ to, label, icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-                isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`
-            }
-          >
-            <span className="text-base leading-none">{icon}</span>
-            {label}
-          </NavLink>
-        ))}
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+        {/* Main links */}
+        <NavLink to="/" end className={linkCls}>
+          <HomeIcon /> Tareas
+        </NavLink>
+        <NavLink to="/activities/today" className={linkCls}>
+          <TodayIcon /> Hoy
+        </NavLink>
+        <NavLink to="/activities/this-week" className={linkCls}>
+          <WeekIcon /> Esta semana
+        </NavLink>
+        <NavLink to="/activities/overdue" className={linkCls}>
+          <OverdueIcon /> Vencidas
+        </NavLink>
+
+        {/* Projects section */}
+        <div className="pt-4">
+          <div className="flex items-center justify-between px-3 mb-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Proyectos
+            </span>
+            <NavLink
+              to="/projects"
+              className={({ isActive }) =>
+                `p-0.5 rounded transition-colors ${
+                  isActive
+                    ? 'text-blue-700 dark:text-blue-400'
+                    : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`
+              }
+              title="Ver todos los proyectos"
+            >
+              <GridIcon />
+            </NavLink>
+          </div>
+
+          {/* Loading skeletons */}
+          {isLoading && (
+            <div className="space-y-1 px-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-7 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {/* Project links */}
+          {projects?.map((project) => (
+            <NavLink
+              key={project.id}
+              to={`/projects/${project.id}`}
+              className={linkCls}
+            >
+              <FolderIcon />
+              <span className="truncate">{project.name}</span>
+            </NavLink>
+          ))}
+
+          {!isLoading && projects?.length === 0 && (
+            <p className="px-3 text-xs text-gray-400 dark:text-gray-500 italic">
+              Sin proyectos
+            </p>
+          )}
+        </div>
       </nav>
     </aside>
   );

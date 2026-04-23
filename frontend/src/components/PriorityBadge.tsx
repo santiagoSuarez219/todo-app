@@ -1,15 +1,15 @@
 import { Priority } from '../types';
 
 const colorMap: Record<Priority, string> = {
-  [Priority.HIGH]: 'bg-red-100 text-red-700',
-  [Priority.MEDIUM]: 'bg-yellow-100 text-yellow-700',
-  [Priority.LOW]: 'bg-green-100 text-green-700',
+  [Priority.HIGH]:   'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  [Priority.MEDIUM]: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+  [Priority.LOW]:    'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
 };
 
 const labelMap: Record<Priority, string> = {
-  [Priority.HIGH]: 'Alta',
-  [Priority.MEDIUM]: 'Media',
-  [Priority.LOW]: 'Baja',
+  [Priority.HIGH]:   '↑ Alta',
+  [Priority.MEDIUM]: '→ Media',
+  [Priority.LOW]:    '↓ Baja',
 };
 
 interface Props {
