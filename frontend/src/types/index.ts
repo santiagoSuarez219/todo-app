@@ -51,6 +51,13 @@ export const DurationUnit = {
 } as const;
 export type DurationUnit = (typeof DurationUnit)[keyof typeof DurationUnit];
 
+export const Automatizacion = {
+  FULLY_AUTOMATABLE: 'fully_automatable',
+  PARTIALLY_AUTOMATABLE: 'partially_automatable',
+  NOT_AUTOMATABLE: 'not_automatable',
+} as const;
+export type Automatizacion = (typeof Automatizacion)[keyof typeof Automatizacion];
+
 // ─── Entities ───────────────────────────────────────────────────────────────
 
 export interface Project {
@@ -80,6 +87,7 @@ export interface Activity {
   location: string | null;
   parent: Activity | null;
   subtasks: Activity[];
+  automatizacion: Automatizacion | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +118,7 @@ export interface CreateActivityDto {
   device?: Device | null;
   type?: ActivityType;
   location?: string | null;
+  automatizacion?: Automatizacion | null;
 }
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;
