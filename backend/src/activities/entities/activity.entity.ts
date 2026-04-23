@@ -13,6 +13,7 @@ import { Priority } from '../../common/enums/priority.enum';
 import { Energy } from '../../common/enums/energy.enum';
 import { DurationUnit } from '../../common/enums/duration-unit.enum';
 import { Device } from '../../common/enums/device.enum';
+import { Automatizacion } from '../../common/enums/automatizacion.enum';
 import { Project } from '../../projects/entities/project.entity';
 
 @Entity('activities')
@@ -22,6 +23,9 @@ export class Activity {
 
   @Column({ type: 'varchar', length: 255 })
   name: string;
+
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
 
   @ManyToOne(() => Project, (project) => project.activities, {
     nullable: true,
@@ -82,6 +86,13 @@ export class Activity {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   location: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: Automatizacion,
+    nullable: true,
+  })
+  automatizacion: Automatizacion | null;
 
   @ManyToOne(() => Activity, (activity) => activity.subtasks, {
     nullable: true,

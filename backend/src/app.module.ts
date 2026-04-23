@@ -6,11 +6,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProjectsModule } from './projects/projects.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
       envFilePath: '../.env',
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
@@ -40,6 +42,7 @@ import { ActivitiesModule } from './activities/activities.module';
     }),
     ProjectsModule,
     ActivitiesModule,
+    McpModule,
   ],
   controllers: [AppController],
   providers: [AppService],

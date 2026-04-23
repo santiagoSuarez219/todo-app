@@ -16,6 +16,7 @@ import { Device } from '../../common/enums/device.enum';
 import { DurationUnit } from '../../common/enums/duration-unit.enum';
 import { Energy } from '../../common/enums/energy.enum';
 import { Priority } from '../../common/enums/priority.enum';
+import { Automatizacion } from '../../common/enums/automatizacion.enum';
 
 export class CreateActivityDto {
   @ApiProperty({ example: 'Revisar PRs', maxLength: 255 })
@@ -23,6 +24,12 @@ export class CreateActivityDto {
   @IsNotEmpty()
   @MaxLength(255)
   name: string;
+
+  @ApiPropertyOptional({ description: 'Descripcion detallada de la actividad' })
+  @IsString()
+  @MaxLength(5000)
+  @IsOptional()
+  description?: string;
 
   @ApiPropertyOptional({ description: 'UUID del proyecto asociado' })
   @IsUUID()
@@ -85,4 +92,9 @@ export class CreateActivityDto {
   @IsUUID()
   @IsOptional()
   parentId?: string;
+
+  @ApiPropertyOptional({ enum: Automatizacion })
+  @IsEnum(Automatizacion)
+  @IsOptional()
+  automatizacion?: Automatizacion;
 }
