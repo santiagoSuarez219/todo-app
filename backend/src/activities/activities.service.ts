@@ -54,10 +54,52 @@ export class ActivitiesService {
     return { start, end };
   }
 
+  // ─── Type sanitization ───────────────────────────────────────────────────────
+
+  private sanitizeByType(dto: CreateActivityDto): CreateActivityDto {
+    const type = dto.type ?? ActivityType.TASK;
+    const sanitized = { ...dto };
+
+    if (type === ActivityType.REMINDER) {
+      sanitized.dueDate = undefined;
+      sanitized.duration = undefined;
+      sanitized.durationUnit = undefined;
+      sanitized.device = undefined;
+      sanitized.location = undefined;
+      sanitized.automatizacion = undefined;
+      sanitized.parentId = undefined;
+    }
+
+    if (type === ActivityType.EVENT) {
+      sanitized.duration = undefined;
+      sanitized.durationUnit = undefined;
+      sanitized.device = undefined;
+      sanitized.location = undefined;
+      sanitized.automatizacion = undefined;
+      sanitized.parentId = undefined;
+    }
+
+    // For TASK: strip time from actionDate and dueDate (keep date only)
+    if (type === ActivityType.TASK) {
+      if (sanitized.actionDate) {
+        const d = new Date(sanitized.actionDate);
+        d.setHours(0, 0, 0, 0);
+        sanitized.actionDate = d.toISOString();
+      }
+      if (sanitized.dueDate) {
+        const d = new Date(sanitized.dueDate);
+        d.setHours(0, 0, 0, 0);
+        sanitized.dueDate = d.toISOString();
+      }
+    }
+
+    return sanitized;
+  }
+
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
   async create(dto: CreateActivityDto): Promise<Activity> {
-    const { projectId, parentId, ...rest } = dto;
+    const { projectId, parentId, ...rest } = this.sanitizeByType(dto);
 
     const activity = this.activitiesRepository.create(rest);
 
@@ -93,7 +135,9 @@ export class ActivitiesService {
 
   async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
     const activity = await this.findOne(id);
-    const { projectId, parentId, ...rest } = dto;
+    // Use the current type if not provided in the update DTO
+    const effectiveDto = { ...dto, type: dto.type ?? activity.type } as CreateActivityDto;
+    const { projectId, parentId, ...rest } = this.sanitizeByType(effectiveDto);
 
     Object.assign(activity, rest);
 
