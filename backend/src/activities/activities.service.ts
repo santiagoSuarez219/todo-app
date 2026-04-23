@@ -29,6 +29,7 @@ export class ActivitiesService {
       .createQueryBuilder('activity')
       .leftJoinAndSelect('activity.project', 'project')
       .leftJoinAndSelect('activity.parent', 'parent')
+      .leftJoinAndSelect('activity.subtasks', 'subtasks')
       .orderBy('activity.createdAt', 'DESC');
   }
 
