@@ -36,11 +36,23 @@ export class CreateActivityDto {
   @IsOptional()
   projectId?: string;
 
+  /**
+   * Semántica según tipo:
+   * - TASK: fecha de acción (hora truncada a medianoche)
+   * - REMINDER: fecha y hora del recordatorio
+   * - EVENT: fecha y hora de inicio
+   */
   @ApiPropertyOptional({ example: '2026-04-13T09:00:00Z' })
   @IsDateString()
   @IsOptional()
   actionDate?: string;
 
+  /**
+   * Semántica según tipo:
+   * - TASK: fecha límite (hora truncada a medianoche)
+   * - REMINDER: ignorado (se fuerza a null en el servicio)
+   * - EVENT: fecha y hora de fin
+   */
   @ApiPropertyOptional({ example: '2026-04-13T18:00:00Z' })
   @IsDateString()
   @IsOptional()
