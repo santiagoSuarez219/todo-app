@@ -30,7 +30,13 @@ export class ActivitiesService {
       .leftJoinAndSelect('activity.project', 'project')
       .leftJoinAndSelect('activity.parent', 'parent')
       .leftJoinAndSelect('activity.subtasks', 'subtasks')
-      .orderBy('activity.createdAt', 'DESC');
+      .addSelect(
+        `CASE activity.priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`,
+        'priority_order',
+      )
+      .orderBy('activity.actionDate', 'ASC', 'NULLS LAST')
+      .addOrderBy('activity.dueDate', 'ASC', 'NULLS LAST')
+      .addOrderBy('priority_order', 'ASC');
   }
 
   private paginate(
