@@ -85,9 +85,9 @@ function TrashIcon() {
 // ─── AutomatizacionBadge ──────────────────────────────────────────────────────
 
 const AUTOMATIZACION_CONFIG: Record<string, { label: string; cls: string }> = {
-  fully_automatable:    { label: 'Automatizable', cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' },
+  fully_automatable: { label: 'Automatizable', cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' },
   partially_automatable: { label: 'Parcialmente', cls: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' },
-  not_automatable:      { label: 'No automatizable', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
+  not_automatable: { label: 'No automatizable', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
 };
 
 function AutomatizacionBadge({ value }: { value: Automatizacion }) {
@@ -103,10 +103,10 @@ function AutomatizacionBadge({ value }: { value: Automatizacion }) {
 // ─── Status options ───────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS: { value: ActivityStatus; label: string; dot: string }[] = [
-  { value: 'pending',     label: 'Pendiente',   dot: 'bg-yellow-400' },
+  { value: 'pending', label: 'Pendiente', dot: 'bg-yellow-400' },
   { value: 'in_progress', label: 'En progreso', dot: 'bg-blue-500' },
-  { value: 'completed',   label: 'Completada',  dot: 'bg-green-500' },
-  { value: 'on_hold',     label: 'En espera',   dot: 'bg-purple-500' },
+  { value: 'completed', label: 'Completada', dot: 'bg-green-500' },
+  { value: 'on_hold', label: 'En espera', dot: 'bg-purple-500' },
 ];
 
 // ─── StatusDropdown ───────────────────────────────────────────────────────────
@@ -153,11 +153,10 @@ function StatusDropdown({ activity }: { activity: Activity }) {
             <button
               key={value}
               onClick={() => handleSelect(value)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${
-                value === activity.status
-                  ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${value === activity.status
+                ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
+                }`}
             >
               <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
               {label}
@@ -279,13 +278,32 @@ function EditActivityModal({ activity, onClose }: { activity: Activity; onClose:
   );
 }
 
+// ─── TypeBadge ────────────────────────────────────────────────────────────────
+
+const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
+  task:     { label: 'Tarea',        cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
+  reminder: { label: 'Recordatorio', cls: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' },
+  event:    { label: 'Evento',       cls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
+};
+
+function TypeBadge({ type }: { type: string }) {
+  const cfg = TYPE_BADGE[type];
+  if (!cfg) return null;
+  return (
+    <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border font-medium ${cfg.cls}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(dateStr: string) {
+function fmt(dateStr: string, withTime = false) {
   return new Date(dateStr).toLocaleDateString('es-CO', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
   });
 }
 
@@ -298,13 +316,18 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   const [createSubtaskOpen, setCreateSubtaskOpen] = useState(false);
   const { mutate: doDelete, isPending: isDeleting } = useDeleteActivity();
 
+  const isTask     = activity.type === 'task';
+  const isReminder = activity.type === 'reminder';
+  const isEvent    = activity.type === 'event';
+
   const now = new Date();
   const isOverdue =
-    activity.dueDate &&
-    new Date(activity.dueDate) < now &&
-    activity.status !== 'completed';
+    activity.status !== 'completed' &&
+    (isTask || isEvent
+      ? activity.dueDate && new Date(activity.dueDate) < now
+      : isReminder && activity.actionDate && new Date(activity.actionDate) < now);
 
-  const totalSubtasks = activity.subtasks?.length ?? 0;
+  const totalSubtasks = isTask ? (activity.subtasks?.length ?? 0) : 0;
   const completedSubtasks =
     activity.subtasks?.filter((s) => s.status === 'completed').length ?? 0;
   const subtaskPercent =
@@ -312,11 +335,10 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
 
   const durationLabel =
     activity.duration && activity.durationUnit
-      ? `${activity.duration} ${
-          activity.durationUnit === 'hours'
-            ? activity.duration === 1 ? 'hora' : 'horas'
-            : activity.duration === 1 ? 'día' : 'días'
-        }`
+      ? `${activity.duration} ${activity.durationUnit === 'hours'
+        ? activity.duration === 1 ? 'hora' : 'horas'
+        : activity.duration === 1 ? 'día' : 'días'
+      }`
       : null;
 
   function handleEditClick() {
@@ -330,11 +352,10 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   return (
     <>
       <div
-        className={`bg-white dark:bg-gray-800 rounded-lg border flex flex-col gap-3 p-4 transition-shadow hover:shadow-md ${
-          isOverdue
-            ? 'border-red-300 dark:border-red-700'
-            : 'border-gray-200 dark:border-gray-700'
-        }`}
+        className={`bg-white dark:bg-gray-800 rounded-lg border flex flex-col gap-3 p-4 transition-shadow hover:shadow-md ${isOverdue
+          ? 'border-red-300 dark:border-red-700'
+          : 'border-gray-200 dark:border-gray-700'
+          }`}
       >
         {/* ── Row 1: status dropdown + actions ── */}
         <div className="flex items-center justify-between gap-2">
@@ -371,6 +392,9 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           )}
         </div>
 
+        {/* ── Row 2b: type badge ── */}
+        <TypeBadge type={activity.type} />
+
         {/* ── Row 3: project chip ── */}
         {activity.project && (
           <div>
@@ -387,49 +411,67 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         {/* ── Separator ── */}
         <hr className="border-gray-100 dark:border-gray-700" />
 
-        {/* ── Row 4: priority + energy + automatizacion ── */}
+        <div></div>
+
+        {/* ── Row 4: priority + energy + automatizacion (solo TASK) ── */}
         <div className="flex items-center gap-3 flex-wrap">
           <PriorityBadge priority={activity.priority} />
           <EnergyIndicator energy={activity.energy} />
-          {activity.automatizacion && (
+          {isTask && activity.automatizacion && (
             <AutomatizacionBadge value={activity.automatizacion} />
           )}
         </div>
 
-        {/* ── Row 5: dates ── */}
+        {/* ── Row 5: fechas (semántica por tipo) ── */}
         {(activity.actionDate || activity.dueDate) && (
           <div className="flex flex-col gap-1.5">
-            {activity.actionDate && (
+            {/* TASK: fecha de acción (sin hora) */}
+            {isTask && activity.actionDate && (
               <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <CalendarIcon />
-                <span>Acción: {fmt(activity.actionDate)}</span>
+                <span>Inicio: {fmt(activity.actionDate)}</span>
               </div>
             )}
-            {activity.dueDate && (
-              <div
-                className={`flex items-center gap-1.5 text-xs font-medium ${
-                  isOverdue
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}
-              >
+            {/* TASK: fecha límite (sin hora) */}
+            {isTask && activity.dueDate && (
+              <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
                 {isOverdue ? <WarningIcon /> : <CalendarIcon />}
                 <span>Vence: {fmt(activity.dueDate)}</span>
+              </div>
+            )}
+            {/* REMINDER: fecha + hora */}
+            {isReminder && activity.actionDate && (
+              <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {isOverdue ? <WarningIcon /> : <CalendarIcon />}
+                <span>Recordatorio: {fmt(activity.actionDate, true)}</span>
+              </div>
+            )}
+            {/* EVENT: inicio y fin con hora */}
+            {isEvent && activity.actionDate && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <CalendarIcon />
+                <span>Inicio: {fmt(activity.actionDate, true)}</span>
+              </div>
+            )}
+            {isEvent && activity.dueDate && (
+              <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {isOverdue ? <WarningIcon /> : <CalendarIcon />}
+                <span>Fin: {fmt(activity.dueDate, true)}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* ── Row 6: estimated time ── */}
-        {durationLabel && (
+        {/* ── Row 6: duración (solo TASK) ── */}
+        {isTask && durationLabel && (
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <ClockIcon />
             <span>{durationLabel}</span>
           </div>
         )}
 
-        {/* ── Row 7: subtask area ── */}
-        {totalSubtasks > 0 ? (
+        {/* ── Row 7: subtask area (solo TASK) ── */}
+        {isTask && totalSubtasks > 0 ? (
           <div className="pt-0.5">
             {/* Progress bar */}
             <div className="flex items-center justify-between mb-1.5">
@@ -446,11 +488,10 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
             </div>
             <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${
-                  subtaskPercent === 100
-                    ? 'bg-green-500 dark:bg-green-400'
-                    : 'bg-blue-500 dark:bg-blue-400'
-                }`}
+                className={`h-full rounded-full transition-all ${subtaskPercent === 100
+                  ? 'bg-green-500 dark:bg-green-400'
+                  : 'bg-blue-500 dark:bg-blue-400'
+                  }`}
                 style={{ width: `${subtaskPercent}%` }}
               />
             </div>
@@ -462,7 +503,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               </div>
             )}
           </div>
-        ) : (
+        ) : isTask ? (
           <button
             onClick={() => setCreateSubtaskOpen(true)}
             className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
@@ -470,7 +511,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
             <PlusIcon />
             Agregar subtarea
           </button>
-        )}
+        ) : null}
 
         {/* Create subtask modal — only for tasks with no existing subtasks */}
         {createSubtaskOpen && (
