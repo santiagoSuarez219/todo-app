@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form';
+import { useEffect, useRef } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -35,6 +36,8 @@ interface Props {
   loading?: boolean;
 }
 
+// ─── Labels ───────────────────────────────────────────────────────────────────
+
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente',
   in_progress: 'En progreso',
@@ -53,12 +56,6 @@ const ENERGY_LABELS: Record<string, string> = {
   high: 'Alta',
   medium: 'Media',
   low: 'Baja',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  task: 'Tarea',
-  event: 'Evento',
-  reminder: 'Recordatorio',
 };
 
 const DEVICE_LABELS: Record<string, string> = {
@@ -85,26 +82,73 @@ const inputCls =
 
 const labelCls = 'block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1';
 
-export default function ActivityForm({ initial, projects = [], parentId, hideProject = false, onSubmit, onCancel, loading }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      name: initial?.name ?? '',
-      description: initial?.description ?? '',
-      projectId: initial?.project?.id ?? null,
-      status: initial?.status ?? ActivityStatus.PENDING,
-      priority: initial?.priority ?? Priority.MEDIUM,
-      energy: initial?.energy ?? Energy.MEDIUM,
-      type: initial?.type ?? ActivityType.TASK,
-      device: initial?.device ?? null,
-      actionDate: initial?.actionDate ? initial.actionDate.slice(0, 16) : '',
-      dueDate: initial?.dueDate ? initial.dueDate.slice(0, 16) : '',
-      duration: initial?.duration != null ? String(initial.duration) : '',
-      durationUnit: initial?.durationUnit ?? null,
-      location: initial?.location ?? '',
-      automatizacion: initial?.automatizacion ?? null,
-    },
-  });
+// ─── Type selector pills ──────────────────────────────────────────────────────
+
+const TYPE_OPTIONS = [
+  { value: ActivityType.TASK,     label: 'Tarea',       icon: '✓' },
+  { value: ActivityType.REMINDER, label: 'Recordatorio', icon: '🔔' },
+  { value: ActivityType.EVENT,    label: 'Evento',       icon: '📅' },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ActivityForm({
+  initial,
+  projects = [],
+  parentId,
+  hideProject = false,
+  onSubmit,
+  onCancel,
+  loading,
+}: Props) {
+  const { register, handleSubmit, setValue, control, formState: { errors } } =
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+      defaultValues: {
+        name: initial?.name ?? '',
+        description: initial?.description ?? '',
+        projectId: initial?.project?.id ?? null,
+        status: initial?.status ?? ActivityStatus.PENDING,
+        priority: initial?.priority ?? Priority.MEDIUM,
+        energy: initial?.energy ?? Energy.MEDIUM,
+        type: initial?.type ?? ActivityType.TASK,
+        device: initial?.device ?? null,
+        actionDate: initial?.actionDate ? initial.actionDate.slice(0, 16) : '',
+        dueDate: initial?.dueDate ? initial.dueDate.slice(0, 16) : '',
+        duration: initial?.duration != null ? String(initial.duration) : '',
+        durationUnit: initial?.durationUnit ?? null,
+        location: initial?.location ?? '',
+        automatizacion: initial?.automatizacion ?? null,
+      },
+    });
+
+  const watchedType = useWatch({ control, name: 'type' }) ?? ActivityType.TASK;
+  const isTask     = watchedType === ActivityType.TASK;
+  const isReminder = watchedType === ActivityType.REMINDER;
+  const isEvent    = watchedType === ActivityType.EVENT;
+
+  // Clear inapplicable fields when type changes (skip on first render)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+
+    const opts = { shouldDirty: false } as const;
+    if (isReminder) {
+      setValue('dueDate', null, opts);
+      setValue('duration', null, opts);
+      setValue('durationUnit', null, opts);
+      setValue('device', null, opts);
+      setValue('location', null, opts);
+      setValue('automatizacion', null, opts);
+    }
+    if (isEvent) {
+      setValue('duration', null, opts);
+      setValue('durationUnit', null, opts);
+      setValue('device', null, opts);
+      setValue('location', null, opts);
+      setValue('automatizacion', null, opts);
+    }
+  }, [watchedType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toDto(values: FormValues): CreateActivityDto {
     return {
@@ -128,25 +172,52 @@ export default function ActivityForm({ initial, projects = [], parentId, hidePro
 
   return (
     <form onSubmit={handleSubmit((values) => onSubmit(toDto(values)))} className="space-y-4">
-      {/* Nombre */}
+
+      {/* ── Tipo (primero) ── */}
+      <div>
+        <label className={labelCls}>Tipo de actividad</label>
+        <div className="flex gap-2">
+          {TYPE_OPTIONS.map(({ value, label, icon }) => (
+            <label
+              key={value}
+              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                watchedType === value
+                  ? 'bg-blue-700 dark:bg-blue-600 text-white border-blue-700 dark:border-blue-600'
+                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
+              }`}
+            >
+              <input
+                type="radio"
+                value={value}
+                className="sr-only"
+                {...register('type')}
+              />
+              <span>{icon}</span>
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Nombre ── */}
       <div>
         <label className={labelCls}>Nombre *</label>
         <input {...register('name')} className={inputCls} placeholder="Nombre de la actividad" />
         {errors.name && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.name.message}</p>}
       </div>
 
-      {/* Descripción */}
+      {/* ── Descripción ── */}
       <div>
         <label className={labelCls}>Descripción</label>
         <textarea
           {...register('description')}
           rows={3}
-          placeholder="Detalle adicional sobre la actividad..."
+          placeholder="Detalle adicional..."
           className={`${inputCls} resize-none`}
         />
       </div>
 
-      {/* Proyecto — oculto cuando es subtarea (se hereda del padre) */}
+      {/* ── Proyecto — oculto en subtareas ── */}
       {!hideProject && projects.length > 0 && (
         <div>
           <label className={labelCls}>Proyecto</label>
@@ -159,7 +230,7 @@ export default function ActivityForm({ initial, projects = [], parentId, hidePro
         </div>
       )}
 
-      {/* Estado / Prioridad / Energía */}
+      {/* ── Estado / Prioridad / Energía ── */}
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className={labelCls}>Estado</label>
@@ -187,81 +258,90 @@ export default function ActivityForm({ initial, projects = [], parentId, hidePro
         </div>
       </div>
 
-      {/* Tipo / Dispositivo */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* ── Fechas — label y tipo varían por tipo de actividad ── */}
+      <div className={`grid gap-3 ${isTask || isEvent ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <div>
-          <label className={labelCls}>Tipo</label>
-          <select {...register('type')} className={inputCls}>
-            {Object.values(ActivityType).map((s) => (
-              <option key={s} value={s}>{TYPE_LABELS[s] ?? s}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>Dispositivo</label>
-          <select {...register('device')} className={inputCls}>
-            <option value="">Ninguno</option>
-            {Object.values(Device).map((s) => (
-              <option key={s} value={s}>{DEVICE_LABELS[s] ?? s}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Fechas */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Fecha de acción</label>
-          <input type="datetime-local" {...register('actionDate')} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>Fecha de vencimiento</label>
-          <input type="datetime-local" {...register('dueDate')} className={inputCls} />
-        </div>
-      </div>
-
-      {/* Duración */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Duración</label>
+          <label className={labelCls}>
+            {isTask ? 'Fecha de acción' : isReminder ? 'Fecha y hora' : 'Inicio'}
+          </label>
           <input
-            type="number"
-            min="0"
-            step="0.5"
-            {...register('duration')}
+            type={isTask ? 'date' : 'datetime-local'}
+            {...register('actionDate')}
             className={inputCls}
-            placeholder="0"
           />
         </div>
-        <div>
-          <label className={labelCls}>Unidad</label>
-          <select {...register('durationUnit')} className={inputCls}>
-            <option value="">Ninguna</option>
-            {Object.values(DurationUnit).map((s) => (
-              <option key={s} value={s}>{UNIT_LABELS[s] ?? s}</option>
-            ))}
-          </select>
-        </div>
+        {(isTask || isEvent) && (
+          <div>
+            <label className={labelCls}>
+              {isTask ? 'Fecha límite' : 'Fin'}
+            </label>
+            <input
+              type={isTask ? 'date' : 'datetime-local'}
+              {...register('dueDate')}
+              className={inputCls}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Automatización */}
-      <div>
-        <label className={labelCls}>Automatización</label>
-        <select {...register('automatizacion')} className={inputCls}>
-          <option value="">Sin clasificar</option>
-          {Object.values(Automatizacion).map((s) => (
-            <option key={s} value={s}>{AUTOMATIZACION_LABELS[s] ?? s}</option>
-          ))}
-        </select>
-      </div>
+      {/* ── Campos exclusivos de TASK ── */}
+      {isTask && (
+        <>
+          {/* Dispositivo */}
+          <div>
+            <label className={labelCls}>Dispositivo</label>
+            <select {...register('device')} className={inputCls}>
+              <option value="">Ninguno</option>
+              {Object.values(Device).map((s) => (
+                <option key={s} value={s}>{DEVICE_LABELS[s] ?? s}</option>
+              ))}
+            </select>
+          </div>
 
-      {/* Ubicación */}
-      <div>
-        <label className={labelCls}>Ubicación</label>
-        <input {...register('location')} className={inputCls} placeholder="Lugar de la actividad" />
-      </div>
+          {/* Duración */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Duración</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                {...register('duration')}
+                className={inputCls}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Unidad</label>
+              <select {...register('durationUnit')} className={inputCls}>
+                <option value="">Ninguna</option>
+                {Object.values(DurationUnit).map((s) => (
+                  <option key={s} value={s}>{UNIT_LABELS[s] ?? s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      {/* Actions */}
+          {/* Automatización */}
+          <div>
+            <label className={labelCls}>Automatización</label>
+            <select {...register('automatizacion')} className={inputCls}>
+              <option value="">Sin clasificar</option>
+              {Object.values(Automatizacion).map((s) => (
+                <option key={s} value={s}>{AUTOMATIZACION_LABELS[s] ?? s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Ubicación */}
+          <div>
+            <label className={labelCls}>Ubicación</label>
+            <input {...register('location')} className={inputCls} placeholder="Lugar de la actividad" />
+          </div>
+        </>
+      )}
+
+      {/* ── Actions ── */}
       <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
         <button
           type="button"
