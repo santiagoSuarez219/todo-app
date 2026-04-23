@@ -30,7 +30,7 @@
 2. Para TASK, truncar la hora de `actionDate` y `dueDate` (mantener solo la fecha). Para EVENT y REMINDER conservar hora completa.
 3. Llamar a `sanitizeByType` al inicio de `create()` y `update()`.
 
-- [ ] Implementado
+- [x] Implementado
 
 ---
 
@@ -44,7 +44,7 @@
 1. Agregar comentarios JSDoc sobre `actionDate` y `dueDate` describiendo su semántica por tipo.
 2. Verificar que `duration`, `durationUnit`, `device`, `location`, `automatizacion` y `parentId` tengan `@IsOptional()`.
 
-- [ ] Implementado
+- [x] Implementado
 
 ---
 
@@ -66,7 +66,7 @@
    - `location`: solo si `isTask`
    - `automatizacion`: solo si `isTask`
 
-- [ ] Implementado
+- [x] Implementado
 
 ---
 
@@ -83,7 +83,7 @@
 4. Usar una ref `isFirstRender` para que el efecto no se ejecute en el montaje inicial.
 5. Usar `setValue(field, null, { shouldDirty: false })` para no marcar el formulario como modificado innecesariamente.
 
-- [ ] Implementado
+- [x] Implementado
 
 ---
 
@@ -102,7 +102,7 @@
 3. Duración, dispositivo, ubicación, automatización: renderizar solo si `isTask` y el valor no es nulo.
 4. Sección de subtareas (botón toggle + `SubtaskSection`): solo si `isTask`.
 
-- [ ] Implementado
+- [x] Implementado
 
 ---
 
@@ -121,7 +121,7 @@
    - TASK y EVENT: `dueDate < hoy`
    - REMINDER: `actionDate < hoy`
 
-- [ ] Implementado
+- [x] Implementado
 
 ---
 

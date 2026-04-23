@@ -7,13 +7,13 @@ export default function WeekView() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Esta semana</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Esta semana</h1>
 
       {isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
       {isError && <p className="text-sm text-red-500">Error al cargar actividades.</p>}
       {data && data.length === 0 && <EmptyState message="No tienes actividades esta semana." />}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-1">
         {data?.map((activity) => (
           <ActivityCard key={activity.id} activity={activity} />
         ))}
