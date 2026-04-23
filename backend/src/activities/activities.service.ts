@@ -230,7 +230,16 @@ export class ActivitiesService {
     now.setHours(0, 0, 0, 0);
     return this.paginate(
       this.baseQuery()
-        .where('activity.dueDate < :now', { now })
+        .where(
+          // TASK/EVENT: vencida si dueDate < hoy
+          // REMINDER: vencida si actionDate < ahora
+          `(
+            (activity.type != 'reminder' AND activity.dueDate < :now)
+            OR
+            (activity.type = 'reminder' AND activity.actionDate < :now)
+          )`,
+          { now },
+        )
         .andWhere('activity.status != :status', { status: ActivityStatus.COMPLETED }),
       pagination,
     ).getMany();
