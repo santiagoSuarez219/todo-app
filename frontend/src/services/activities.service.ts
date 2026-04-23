@@ -88,6 +88,17 @@ export async function getActivitySubtasks(
   return getList(`/activities/${id}/subtasks`, params);
 }
 
+export async function createSubtask(
+  parentId: string,
+  dto: CreateActivityDto,
+): Promise<Activity> {
+  const { data } = await apiClient.post<{ data: Activity }>('/activities', {
+    ...dto,
+    parentId,
+  });
+  return data.data;
+}
+
 export async function searchActivities(
   query: string,
   params?: PaginationParams,

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getActivities, getActivity, createActivity, updateActivity, deleteActivity,
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
-  getActivitiesByProject, searchActivities,
+  getActivitiesByProject, searchActivities, getActivitySubtasks, createSubtask,
 } from '../services/activities.service';
 import type { CreateActivityDto, UpdateActivityDto, PaginationParams } from '../types';
 
@@ -79,5 +79,24 @@ export function useDeleteActivity() {
   return useMutation({
     mutationFn: (id: string) => deleteActivity(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['activities'] }),
+  });
+}
+
+export function useActivitySubtasks(activityId: string) {
+  return useQuery({
+    queryKey: ['activities', activityId, 'subtasks'],
+    queryFn: () => getActivitySubtasks(activityId),
+    enabled: !!activityId,
+  });
+}
+
+export function useCreateSubtask(parentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateActivityDto) => createSubtask(parentId, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['activities', parentId, 'subtasks'] });
+      qc.invalidateQueries({ queryKey: ['activities'] });
+    },
   });
 }
