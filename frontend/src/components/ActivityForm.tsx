@@ -29,6 +29,7 @@ interface Props {
   initial?: Partial<Activity>;
   projects?: Project[];
   parentId?: string;
+  hideProject?: boolean;
   onSubmit: (dto: CreateActivityDto) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -84,7 +85,7 @@ const inputCls =
 
 const labelCls = 'block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1';
 
-export default function ActivityForm({ initial, projects = [], parentId, onSubmit, onCancel, loading }: Props) {
+export default function ActivityForm({ initial, projects = [], parentId, hideProject = false, onSubmit, onCancel, loading }: Props) {
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -145,8 +146,8 @@ export default function ActivityForm({ initial, projects = [], parentId, onSubmi
         />
       </div>
 
-      {/* Proyecto */}
-      {projects.length > 0 && (
+      {/* Proyecto — oculto cuando es subtarea (se hereda del padre) */}
+      {!hideProject && projects.length > 0 && (
         <div>
           <label className={labelCls}>Proyecto</label>
           <select {...register('projectId')} className={inputCls}>

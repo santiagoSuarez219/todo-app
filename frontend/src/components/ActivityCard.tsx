@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import type { Activity, ActivityStatus, Automatizacion, CreateActivityDto } from '../types';
+import type { Activity, ActivityStatus, Automatizacion, CreateActivityDto, Project } from '../types';
 import { useUpdateActivity, useDeleteActivity, useActivitySubtasks, useCreateSubtask } from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
 import StatusBadge from './StatusBadge';
@@ -176,8 +176,15 @@ function StatusDropdown({ activity }: { activity: Activity }) {
 
 // ─── CreateSubtaskModal ───────────────────────────────────────────────────────
 
-function CreateSubtaskModal({ parentId, onClose }: { parentId: string; onClose: () => void }) {
-  const { data: projects } = useProjects();
+function CreateSubtaskModal({
+  parentId,
+  parentProject,
+  onClose,
+}: {
+  parentId: string;
+  parentProject: Project | null;
+  onClose: () => void;
+}) {
   const { mutateAsync, isPending } = useCreateSubtask(parentId);
 
   async function handleSubmit(dto: CreateActivityDto) {
@@ -185,11 +192,17 @@ function CreateSubtaskModal({ parentId, onClose }: { parentId: string; onClose: 
     onClose();
   }
 
+  // Pre-fill project from parent; hide the selector since it's inherited
+  const initial: Partial<Activity> = parentProject
+    ? { project: parentProject } as Partial<Activity>
+    : {};
+
   return (
     <Modal title="Nueva subtarea" onClose={onClose}>
       <ActivityForm
+        initial={initial}
         parentId={parentId}
-        projects={projects ?? []}
+        hideProject
         onSubmit={handleSubmit}
         onCancel={onClose}
         loading={isPending}
@@ -200,23 +213,23 @@ function CreateSubtaskModal({ parentId, onClose }: { parentId: string; onClose: 
 
 // ─── SubtaskSection ───────────────────────────────────────────────────────────
 
-function SubtaskSection({ parentId }: { parentId: string }) {
+function SubtaskSection({
+  parentId,
+  parentProject,
+}: {
+  parentId: string;
+  parentProject: Project | null;
+}) {
   const { data: subtasks = [], isLoading } = useActivitySubtasks(parentId);
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
-    <div className="mt-1 space-y-2">
+    <div className="space-y-2">
       {isLoading && (
         <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 py-2">
           <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
           Cargando subtareas…
         </div>
-      )}
-
-      {!isLoading && subtasks.length === 0 && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 italic py-1">
-          Sin subtareas aún
-        </p>
       )}
 
       {subtasks.map((sub) => (
@@ -225,14 +238,18 @@ function SubtaskSection({ parentId }: { parentId: string }) {
 
       <button
         onClick={() => setCreateOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium mt-1 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
       >
         <PlusIcon />
         Agregar subtarea
       </button>
 
       {createOpen && (
-        <CreateSubtaskModal parentId={parentId} onClose={() => setCreateOpen(false)} />
+        <CreateSubtaskModal
+          parentId={parentId}
+          parentProject={parentProject}
+          onClose={() => setCreateOpen(false)}
+        />
       )}
     </div>
   );
@@ -278,6 +295,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
+  const [createSubtaskOpen, setCreateSubtaskOpen] = useState(false);
   const { mutate: doDelete, isPending: isDeleting } = useDeleteActivity();
 
   const now = new Date();
@@ -410,18 +428,19 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           </div>
         )}
 
-        {/* ── Row 7: subtask progress + toggle ── */}
-        {totalSubtasks > 0 && (
+        {/* ── Row 7: subtask area ── */}
+        {totalSubtasks > 0 ? (
           <div className="pt-0.5">
+            {/* Progress bar */}
             <div className="flex items-center justify-between mb-1.5">
               <button
                 onClick={() => setSubtasksOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
               >
                 <ChevronIcon up={subtasksOpen} />
-                Subtareas
+                Ver subtareas ({totalSubtasks})
               </button>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 {completedSubtasks}/{totalSubtasks}
               </span>
             </div>
@@ -435,16 +454,17 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
                 style={{ width: `${subtaskPercent}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-right">
-              {subtaskPercent}%
-            </p>
-          </div>
-        )}
 
-        {/* ── Row 8: subtask toggle (when no existing subtasks) ── */}
-        {totalSubtasks === 0 && (
+            {/* Expanded subtask list (lazy-mount) */}
+            {subtasksOpen && (
+              <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                <SubtaskSection parentId={activity.id} parentProject={activity.project} />
+              </div>
+            )}
+          </div>
+        ) : (
           <button
-            onClick={() => setSubtasksOpen((v) => !v)}
+            onClick={() => setCreateSubtaskOpen(true)}
             className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
           >
             <PlusIcon />
@@ -452,11 +472,13 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           </button>
         )}
 
-        {/* ── Subtask expanded section (lazy-mount) ── */}
-        {subtasksOpen && (
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
-            <SubtaskSection parentId={activity.id} />
-          </div>
+        {/* Create subtask modal — only for tasks with no existing subtasks */}
+        {createSubtaskOpen && (
+          <CreateSubtaskModal
+            parentId={activity.id}
+            parentProject={activity.project}
+            onClose={() => setCreateSubtaskOpen(false)}
+          />
         )}
       </div>
 
