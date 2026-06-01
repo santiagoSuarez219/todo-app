@@ -58,6 +58,24 @@ export function useSearchActivities(query: string, params?: PaginationParams) {
   });
 }
 
+export function useBacklogActivities() {
+  return useQuery({
+    queryKey: ['activities', 'backlog'],
+    queryFn: async () => {
+      const all = await getActivities({ limit: 100 });
+      return all.filter(
+        (a) =>
+          !a.parent &&
+          !a.project &&
+          !a.dueDate &&
+          !a.actionDate &&
+          a.status !== 'completed' &&
+          a.status !== 'cancelled',
+      );
+    },
+  });
+}
+
 export function useCreateActivity() {
   const qc = useQueryClient();
   return useMutation({

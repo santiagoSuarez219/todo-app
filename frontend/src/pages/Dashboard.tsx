@@ -83,7 +83,7 @@ export default function Dashboard() {
   const allQ = useActivities({ limit: 50 });
 
   const now = new Date();
-  const list = allQ.data ?? [];
+  const list = (allQ.data ?? []).filter((a) => !a.parent);
 
   const filteredActivities = (() => {
     switch (activeTab) {
@@ -95,7 +95,7 @@ export default function Dashboard() {
         if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
         return !!a.dueDate && new Date(a.dueDate) < now;
       });
-      default:          return list;
+      default:          return list.filter((a) => a.status !== 'completed');
     }
   })();
 
@@ -176,12 +176,12 @@ export default function Dashboard() {
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                   }`}>
                   {tab.key === 'overdue'
-                    ? (allQ.data ?? []).filter((a) => {
+                    ? list.filter((a) => {
                         if (a.status === 'completed') return false;
                         if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
                         return !!a.dueDate && new Date(a.dueDate) < now;
                       }).length
-                    : (allQ.data ?? []).filter((a) => a.status === tab.key).length}
+                    : list.filter((a) => a.status === tab.key).length}
                 </span>
               )}
             </button>

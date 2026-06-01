@@ -17,6 +17,9 @@ export default function ProjectDetail() {
   const { data: project, isLoading: projectLoading } = useProject(id!);
   const { data: activities, isLoading: activitiesLoading } = useActivitiesByProject(id!);
   const { data: allProjects } = useProjects();
+  const visibleActivities = (activities ?? []).filter(
+    (a) => !a.parent && a.status !== 'completed',
+  );
 
   const createActivity = useCreateActivity();
 
@@ -70,11 +73,11 @@ export default function ProjectDetail() {
             ))}
           </div>
         )}
-        {!activitiesLoading && activities?.length === 0 && (
-          <EmptyState message="Este proyecto no tiene actividades aún." />
+        {!activitiesLoading && visibleActivities.length === 0 && (
+          <EmptyState message="Este proyecto no tiene actividades pendientes." />
         )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {activities?.map((activity) => (
+          {visibleActivities.map((activity) => (
             <ActivityCard key={activity.id} activity={activity} />
           ))}
         </div>
