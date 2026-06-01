@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 
-dotenv.config({ path: resolve(__dirname, '../../.env') });
+dotenv.config({ path: resolve(__dirname, '../.env') });
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
