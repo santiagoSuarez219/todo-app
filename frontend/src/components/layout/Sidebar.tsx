@@ -44,6 +44,14 @@ function FolderIcon() {
   );
 }
 
+function BacklogIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+    </svg>
+  );
+}
+
 function GridIcon() {
   return (
     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -87,6 +95,9 @@ export default function Sidebar() {
         </NavLink>
         <NavLink to="/activities/overdue" className={linkCls}>
           <OverdueIcon /> Vencidas
+        </NavLink>
+        <NavLink to="/activities/backlog" className={linkCls}>
+          <BacklogIcon /> Backlog
         </NavLink>
 
         {/* Projects section */}

@@ -6,6 +6,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import TodayView from './pages/TodayView';
 import WeekView from './pages/WeekView';
 import OverdueView from './pages/OverdueView';
+import BacklogView from './pages/BacklogView';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="activities/today" element={<TodayView />} />
         <Route path="activities/this-week" element={<WeekView />} />
         <Route path="activities/overdue" element={<OverdueView />} />
+        <Route path="activities/backlog" element={<BacklogView />} />
       </Route>
     </Routes>
   );
