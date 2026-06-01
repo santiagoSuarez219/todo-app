@@ -298,4 +298,3 @@ chore(deps): upgrade expo-sqlite to v14
 
 ## AskUserQuestion
 Utiliza la herramienta `AskUserQuestion` para aclarar cualquier duda sobre requisitos, diseño o implementación antes de comenzar a escribir código.
-```
