@@ -307,6 +307,90 @@ function fmt(dateStr: string, withTime = false) {
   });
 }
 
+function toInputValue(dateStr: string, withTime: boolean) {
+  const d = new Date(dateStr);
+  if (withTime) {
+    // datetime-local requires "YYYY-MM-DDTHH:mm"
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+// ─── InlineDueDateEditor ──────────────────────────────────────────────────────
+
+function InlineDueDateEditor({
+  activity,
+  withTime = false,
+  label,
+  overdue = false,
+}: {
+  activity: Activity;
+  withTime?: boolean;
+  label: string;
+  overdue?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { mutate, isPending } = useUpdateActivity();
+
+  useEffect(() => {
+    if (!editing || !inputRef.current) return;
+    inputRef.current.focus();
+    try { inputRef.current.showPicker?.(); } catch { /* browser may block */ }
+  }, [editing]);
+
+  function commit(value: string) {
+    setEditing(false);
+    if (!value || !activity.dueDate) return;
+    const next = withTime ? new Date(value).toISOString() : value;
+    const current = toInputValue(activity.dueDate, withTime);
+    if (next === current) return;
+    mutate({ id: activity.id, dto: { dueDate: next } });
+  }
+
+  const baseTextCls = overdue
+    ? 'text-red-600 dark:text-red-400'
+    : 'text-gray-500 dark:text-gray-400';
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1.5">
+        {overdue ? <WarningIcon /> : <CalendarIcon />}
+        <input
+          ref={inputRef}
+          type={withTime ? 'datetime-local' : 'date'}
+          defaultValue={activity.dueDate ? toInputValue(activity.dueDate, withTime) : ''}
+          onBlur={(e) => commit(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit(e.currentTarget.value);
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          disabled={isPending}
+          className="text-xs border border-blue-300 dark:border-blue-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+        />
+        {isPending && (
+          <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      title="Editar fecha límite"
+      className={`group flex items-center gap-1.5 text-xs font-medium ${baseTextCls} hover:text-blue-700 dark:hover:text-blue-400 transition-colors`}
+    >
+      {overdue ? <WarningIcon /> : <CalendarIcon />}
+      <span>{label}: {activity.dueDate ? fmt(activity.dueDate, withTime) : '—'}</span>
+      <span className="opacity-0 group-hover:opacity-60 transition-opacity">
+        <EditIcon />
+      </span>
+    </button>
+  );
+}
+
 // ─── ActivityCard ─────────────────────────────────────────────────────────────
 
 export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
@@ -432,12 +516,13 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
                 <span>Inicio: {fmt(activity.actionDate)}</span>
               </div>
             )}
-            {/* TASK: fecha límite (sin hora) */}
+            {/* TASK: fecha límite (sin hora) — editable inline */}
             {isTask && activity.dueDate && (
-              <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                {isOverdue ? <WarningIcon /> : <CalendarIcon />}
-                <span>Vence: {fmt(activity.dueDate)}</span>
-              </div>
+              <InlineDueDateEditor
+                activity={activity}
+                label="Vence"
+                overdue={!!isOverdue}
+              />
             )}
             {/* REMINDER: fecha + hora */}
             {isReminder && activity.actionDate && (
@@ -453,11 +538,14 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
                 <span>Inicio: {fmt(activity.actionDate, true)}</span>
               </div>
             )}
+            {/* EVENT: fin con hora — editable inline */}
             {isEvent && activity.dueDate && (
-              <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                {isOverdue ? <WarningIcon /> : <CalendarIcon />}
-                <span>Fin: {fmt(activity.dueDate, true)}</span>
-              </div>
+              <InlineDueDateEditor
+                activity={activity}
+                withTime
+                label="Fin"
+                overdue={!!isOverdue}
+              />
             )}
           </div>
         )}
