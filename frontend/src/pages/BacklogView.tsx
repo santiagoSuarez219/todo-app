@@ -233,7 +233,7 @@ export default function BacklogView() {
       {isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
       {isError && <p className="text-sm text-red-500">Error al cargar el backlog.</p>}
       {!isLoading && data.length === 0 && (
-        <EmptyState message="El backlog está vacío. Agrega tareas sin fecha ni proyecto." />
+        <EmptyState message="El backlog está vacío. Agrega tareas sin proyecto asignado." />
       )}
 
       {/* Task list */}

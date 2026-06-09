@@ -50,6 +50,7 @@ Todas las respuestas vienen envueltas: `{ data: ... }`
 | `GET` | `/activities/tomorrow` | Actividades de mañana | paginación |
 | `GET` | `/activities/this-week` | Actividades semana actual (Lun–Dom) | paginación |
 | `GET` | `/activities/overdue` | Vencidas (`dueDate < hoy`, status ≠ completed) | paginación |
+| `GET` | `/activities/without-project` | Sin proyecto asociado (`project = null`) | paginación |
 | `GET` | `/activities/project/:projectId` | Por proyecto (UUID) | paginación |
 | `GET` | `/activities/type/:type` | Por tipo (`task` \| `event` \| `reminder`) | paginación |
 | `GET` | `/activities/priority/:priority` | Por prioridad (`high` \| `medium` \| `low`) | paginación |
