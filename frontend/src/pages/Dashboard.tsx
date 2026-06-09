@@ -11,14 +11,15 @@ import EmptyState from '../components/EmptyState';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type FilterTab = 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue';
+type FilterTab = 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'no_date';
 
 const TABS: { key: FilterTab; label: string }[] = [
-  { key: 'all', label: 'Todas' },
-  { key: 'pending', label: 'Pendientes' },
+  { key: 'all',         label: 'Todas' },
+  { key: 'pending',     label: 'Pendientes' },
   { key: 'in_progress', label: 'En progreso' },
-  { key: 'completed', label: 'Completadas' },
-  { key: 'overdue', label: 'Atrasadas' },
+  { key: 'completed',   label: 'Completadas' },
+  { key: 'overdue',     label: 'Atrasadas' },
+  { key: 'no_date',     label: 'Sin fecha' },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -95,6 +96,7 @@ export default function Dashboard() {
         if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
         return !!a.dueDate && new Date(a.dueDate) < now;
       });
+      case 'no_date':   return list.filter((a) => !a.actionDate && !a.dueDate);
       default:          return list.filter((a) => a.status !== 'completed');
     }
   })();
@@ -181,6 +183,8 @@ export default function Dashboard() {
                         if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
                         return !!a.dueDate && new Date(a.dueDate) < now;
                       }).length
+                    : tab.key === 'no_date'
+                    ? list.filter((a) => !a.actionDate && !a.dueDate).length
                     : list.filter((a) => a.status === tab.key).length}
                 </span>
               )}

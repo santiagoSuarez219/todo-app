@@ -179,6 +179,13 @@ export class ActivitiesService {
     ).getMany();
   }
 
+  findWithoutProject(pagination: PaginationDto): Promise<Activity[]> {
+    return this.paginate(
+      this.baseQuery().where('activity.project IS NULL'),
+      pagination,
+    ).getMany();
+  }
+
   findToday(pagination: PaginationDto): Promise<Activity[]> {
     const { start, end } = this.todayRange();
     return this.paginate(

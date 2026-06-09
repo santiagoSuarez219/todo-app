@@ -3,6 +3,7 @@ import {
   getActivities, getActivity, createActivity, updateActivity, deleteActivity,
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
   getActivitiesByProject, searchActivities, getActivitySubtasks, createSubtask,
+  getWithoutProjectActivities,
 } from '../services/activities.service';
 import type { CreateActivityDto, UpdateActivityDto, PaginationParams } from '../types';
 
@@ -58,21 +59,10 @@ export function useSearchActivities(query: string, params?: PaginationParams) {
   });
 }
 
-export function useBacklogActivities() {
+export function useBacklogActivities(params?: PaginationParams) {
   return useQuery({
-    queryKey: ['activities', 'backlog'],
-    queryFn: async () => {
-      const all = await getActivities({ limit: 100 });
-      return all.filter(
-        (a) =>
-          !a.parent &&
-          !a.project &&
-          !a.dueDate &&
-          !a.actionDate &&
-          a.status !== 'completed' &&
-          a.status !== 'cancelled',
-      );
-    },
+    queryKey: ['activities', 'backlog', params],
+    queryFn: () => getWithoutProjectActivities(params),
   });
 }
 

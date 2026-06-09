@@ -81,6 +81,10 @@ export async function getActivitiesByStatus(
   return getList(`/activities/status/${status}`, params);
 }
 
+export async function getWithoutProjectActivities(params?: PaginationParams): Promise<Activity[]> {
+  return getList('/activities/without-project', params);
+}
+
 export async function getActivitySubtasks(
   id: string,
   params?: PaginationParams,

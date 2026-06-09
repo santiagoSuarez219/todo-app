@@ -7,7 +7,7 @@ const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(255),
   status: z.nativeEnum(ProjectStatus).optional(),
   startDate: z.string().min(1, 'La fecha de inicio es requerida'),
-  endDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable().transform(v => v === '' ? undefined : v),
 });
 
 type FormValues = z.infer<typeof schema>;

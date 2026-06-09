@@ -346,6 +346,21 @@ export class McpService {
     );
 
     server.tool(
+      'get_activities_without_project',
+      'Get all activities that are not associated with any project',
+      paginationSchema,
+      async (pagination) => {
+        try {
+          return ok(
+            await this.activitiesService.findWithoutProject(pagination as PaginationDto),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
       'get_activities_by_project',
       'Get all activities belonging to a specific project',
       {
@@ -418,6 +433,24 @@ export class McpService {
               status as ActivityStatus,
               pagination as PaginationDto,
             ),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'search_activities',
+      'Search activities by name, description or project name (case-insensitive)',
+      {
+        query: z.string().min(1).describe('Search term'),
+        ...paginationSchema,
+      },
+      async ({ query, ...pagination }) => {
+        try {
+          return ok(
+            await this.activitiesService.search(query, pagination as PaginationDto),
           );
         } catch (e) {
           return err(e);
