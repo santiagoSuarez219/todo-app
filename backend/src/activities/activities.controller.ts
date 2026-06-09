@@ -81,6 +81,13 @@ export class ActivitiesController {
     return this.activitiesService.findOverdue(pagination);
   }
 
+  @Get('without-project')
+  @ApiOperation({ summary: 'Get activities not associated with any project' })
+  @ApiOkResponse({ type: [Activity] })
+  findWithoutProject(@Query() pagination: PaginationDto): Promise<Activity[]> {
+    return this.activitiesService.findWithoutProject(pagination);
+  }
+
   @Get('project/:projectId')
   @ApiOperation({ summary: 'Get activities by project' })
   @ApiParam({ name: 'projectId', type: 'string', format: 'uuid' })

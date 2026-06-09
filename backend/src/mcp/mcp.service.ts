@@ -346,6 +346,21 @@ export class McpService {
     );
 
     server.tool(
+      'get_activities_without_project',
+      'Get all activities that are not associated with any project',
+      paginationSchema,
+      async (pagination) => {
+        try {
+          return ok(
+            await this.activitiesService.findWithoutProject(pagination as PaginationDto),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
       'get_activities_by_project',
       'Get all activities belonging to a specific project',
       {
