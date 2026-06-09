@@ -441,6 +441,24 @@ export class McpService {
     );
 
     server.tool(
+      'search_activities',
+      'Search activities by name, description or project name (case-insensitive)',
+      {
+        query: z.string().min(1).describe('Search term'),
+        ...paginationSchema,
+      },
+      async ({ query, ...pagination }) => {
+        try {
+          return ok(
+            await this.activitiesService.search(query, pagination as PaginationDto),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
       'get_activity_subtasks',
       'Get all subtasks of a given activity',
       {
