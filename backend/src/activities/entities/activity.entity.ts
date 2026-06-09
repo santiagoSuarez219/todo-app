@@ -29,7 +29,7 @@ export class Activity {
 
   @ManyToOne(() => Project, (project) => project.activities, {
     nullable: true,
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
   })
   project: Project | null;
 
