@@ -32,7 +32,7 @@ const inputCls =
 const labelCls = 'block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1';
 
 export default function ProjectForm({ initial, onSubmit, onCancel, loading }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       name: initial?.name ?? '',
@@ -42,8 +42,10 @@ export default function ProjectForm({ initial, onSubmit, onCancel, loading }: Pr
     },
   });
 
+  const handleFormSubmit = (values: FormValues) => onSubmit(values as CreateProjectDto);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Nombre */}
       <div>
         <label className={labelCls}>Nombre *</label>
