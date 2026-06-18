@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   MaxLength,
   Min,
@@ -115,4 +116,10 @@ export class CreateActivityDto {
   @IsBoolean()
   @IsOptional()
   scheduledForToday?: boolean;
+
+  @ApiPropertyOptional({ description: 'URL of an associated Notion page' })
+  @IsString()
+  @IsUrl()
+  @IsOptional()
+  notionUrl?: string | null;
 }

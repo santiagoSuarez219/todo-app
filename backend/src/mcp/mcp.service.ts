@@ -241,6 +241,11 @@ export class McpService {
           .boolean()
           .optional()
           .describe('Schedule this activity to appear in the Today view'),
+        notionUrl: z
+          .string()
+          .url()
+          .optional()
+          .describe('URL of an associated Notion page'),
       },
       async (dto) => {
         try {
@@ -273,6 +278,12 @@ export class McpService {
           .boolean()
           .optional()
           .describe('Set or unset scheduling for Today view'),
+        notionUrl: z
+          .string()
+          .url()
+          .nullable()
+          .optional()
+          .describe('URL of an associated Notion page, null to clear'),
       },
       async ({ id, ...dto }) => {
         try {

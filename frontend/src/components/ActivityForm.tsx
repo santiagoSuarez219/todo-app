@@ -22,6 +22,7 @@ const schema = z.object({
   durationUnit: z.string().nullish(),
   location: z.string().max(255).nullish(),
   automatizacion: z.string().nullish(),
+  notionUrl: z.string().url({ message: 'Debe ser una URL válida' }).nullish(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -119,6 +120,7 @@ export default function ActivityForm({
         durationUnit: initial?.durationUnit ?? null,
         location: initial?.location ?? '',
         automatizacion: initial?.automatizacion ?? null,
+        notionUrl: initial?.notionUrl ?? null,
       },
     });
 
@@ -167,6 +169,7 @@ export default function ActivityForm({
       durationUnit: (values.durationUnit as CreateActivityDto['durationUnit']) || null,
       location: values.location || null,
       automatizacion: (values.automatizacion as CreateActivityDto['automatizacion']) || null,
+      notionUrl: values.notionUrl || null,
     };
   }
 
@@ -215,6 +218,20 @@ export default function ActivityForm({
           placeholder="Detalle adicional..."
           className={`${inputCls} resize-none`}
         />
+      </div>
+
+      {/* ── Notion URL ── */}
+      <div>
+        <label className={labelCls}>Página de Notion</label>
+        <input
+          type="url"
+          {...register('notionUrl')}
+          placeholder="https://www.notion.so/..."
+          className={inputCls}
+        />
+        {errors.notionUrl && (
+          <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.notionUrl.message}</p>
+        )}
       </div>
 
       {/* ── Proyecto — oculto en subtareas ── */}

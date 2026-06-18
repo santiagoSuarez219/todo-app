@@ -97,6 +97,9 @@ export class Activity {
   @Column({ type: 'boolean', default: false })
   scheduledForToday: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  notionUrl: string | null;
+
   @ManyToOne(() => Activity, (activity) => activity.subtasks, {
     nullable: true,
     onDelete: 'SET NULL',

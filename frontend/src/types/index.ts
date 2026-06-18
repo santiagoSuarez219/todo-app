@@ -89,6 +89,7 @@ export interface Activity {
   subtasks: Activity[];
   automatizacion: Automatizacion | null;
   scheduledForToday: boolean;
+  notionUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,6 +122,7 @@ export interface CreateActivityDto {
   location?: string | null;
   automatizacion?: Automatizacion | null;
   scheduledForToday?: boolean;
+  notionUrl?: string | null;
 }
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;
