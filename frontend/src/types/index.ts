@@ -58,6 +58,25 @@ export const Automatizacion = {
 } as const;
 export type Automatizacion = (typeof Automatizacion)[keyof typeof Automatizacion];
 
+export const RecurrenceFrequency = {
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+  BIWEEKLY: 'biweekly',
+  MONTHLY: 'monthly',
+  YEARLY: 'yearly',
+} as const;
+export type RecurrenceFrequency = (typeof RecurrenceFrequency)[keyof typeof RecurrenceFrequency];
+
+export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface RecurrenceConfig {
+  isRecurring: boolean;
+  recurrenceFrequency?: RecurrenceFrequency;
+  recurrenceDays?: WeekDay[];
+  recurrenceDayOfMonth?: number;
+  recurrenceEndDate?: string | null;
+}
+
 // ─── Entities ───────────────────────────────────────────────────────────────
 
 export interface Project {
@@ -90,6 +109,14 @@ export interface Activity {
   automatizacion: Automatizacion | null;
   scheduledForToday: boolean;
   notionUrl: string | null;
+  isTemplate: boolean;
+  isRecurring: boolean;
+  templateId: string | null;
+  recurrenceFrequency: RecurrenceFrequency | null;
+  recurrenceDays: WeekDay[] | null;
+  recurrenceDayOfMonth: number | null;
+  recurrenceEndDate: string | null;
+  instanceDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -123,6 +150,11 @@ export interface CreateActivityDto {
   automatizacion?: Automatizacion | null;
   scheduledForToday?: boolean;
   notionUrl?: string | null;
+  isRecurring?: boolean;
+  recurrenceFrequency?: RecurrenceFrequency;
+  recurrenceDays?: WeekDay[];
+  recurrenceDayOfMonth?: number;
+  recurrenceEndDate?: string | null;
 }
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;

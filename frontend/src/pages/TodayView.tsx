@@ -20,7 +20,7 @@ function SectionHeader({ title }: { title: string }) {
 export default function TodayView() {
   const { data, isLoading, isError } = useTodayActivities();
 
-  const visible = (data ?? []).filter((a) => !a.parent && a.status !== 'completed');
+  const visible = (data ?? []).filter((a) => !a.parent && a.status !== 'completed' && !a.isTemplate);
 
   const byDate: Activity[] = visible.filter(
     (a) => isDateToday(a.actionDate) || isDateToday(a.dueDate),

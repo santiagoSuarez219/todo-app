@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { LessThan, MoreThan, Repository, SelectQueryBuilder } from 'typeorm';
 import { Activity } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -13,6 +13,7 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { ActivityType } from '../common/enums/activity-type.enum';
 import { Priority } from '../common/enums/priority.enum';
+import { RecurrenceFrequency } from '../common/enums/recurrence-frequency.enum';
 
 @Injectable()
 export class ActivitiesService {
@@ -96,12 +97,127 @@ export class ActivitiesService {
     return sanitized;
   }
 
+  // ─── Recurrence helpers ──────────────────────────────────────────────────────
+
+  buildInstanceFromTemplate(template: Activity, date: Date): Activity {
+    const instance = this.activitiesRepository.create({
+      name: template.name,
+      description: template.description,
+      type: template.type,
+      priority: template.priority,
+      energy: template.energy,
+      device: template.device,
+      duration: template.duration,
+      durationUnit: template.durationUnit,
+      location: template.location,
+      project: template.project,
+      status: ActivityStatus.PENDING,
+      isTemplate: false,
+      isRecurring: false,
+      templateId: template.id,
+      instanceDate: date.toISOString().split('T')[0],
+      // For reminders: set actionDate to the instance date
+      actionDate:
+        template.type === ActivityType.REMINDER
+          ? new Date(date.setHours(9, 0, 0, 0))
+          : null,
+      // scheduledForToday if the instance date is today
+      scheduledForToday: this.isToday(date),
+    });
+    return instance;
+  }
+
+  private isToday(date: Date): boolean {
+    const today = new Date();
+    return (
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate()
+    );
+  }
+
+  shouldGenerateForDate(template: Activity, date: Date): boolean {
+    const freq = template.recurrenceFrequency;
+    if (!freq) return false;
+
+    if (
+      template.recurrenceEndDate &&
+      date > new Date(template.recurrenceEndDate)
+    ) {
+      return false;
+    }
+
+    const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
+
+    switch (freq) {
+      case RecurrenceFrequency.DAILY:
+        return true;
+
+      case RecurrenceFrequency.WEEKLY:
+        return !!(
+          template.recurrenceDays && template.recurrenceDays.includes(dayOfWeek)
+        );
+
+      case RecurrenceFrequency.BIWEEKLY: {
+        if (
+          !template.recurrenceDays ||
+          !template.recurrenceDays.includes(dayOfWeek)
+        ) {
+          return false;
+        }
+        // Check if it's the correct biweekly cycle relative to template's actionDate
+        if (!template.actionDate) return false;
+        const origin = new Date(template.actionDate);
+        const diffMs = date.getTime() - origin.getTime();
+        const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+        return diffWeeks % 2 === 0;
+      }
+
+      case RecurrenceFrequency.MONTHLY:
+        return date.getDate() === template.recurrenceDayOfMonth;
+
+      case RecurrenceFrequency.YEARLY: {
+        if (!template.actionDate) return false;
+        const origin = new Date(template.actionDate);
+        return (
+          date.getMonth() === origin.getMonth() &&
+          date.getDate() === origin.getDate()
+        );
+      }
+
+      default:
+        return false;
+    }
+  }
+
+  async generateInstanceForDate(
+    template: Activity,
+    date: Date,
+  ): Promise<Activity | null> {
+    const dateStr = date.toISOString().split('T')[0];
+    const existing = await this.activitiesRepository.findOne({
+      where: { templateId: template.id, instanceDate: dateStr },
+    });
+    if (existing) return null;
+
+    const instance = this.buildInstanceFromTemplate(template, date);
+    return this.activitiesRepository.save(instance);
+  }
+
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
   async create(dto: CreateActivityDto): Promise<Activity> {
-    const { projectId, parentId, ...rest } = this.sanitizeByType(dto);
+    const { projectId, parentId, isRecurring, recurrenceEndDate, ...rest } =
+      this.sanitizeByType(dto);
 
-    const activity = this.activitiesRepository.create(rest);
+    const activity = this.activitiesRepository.create({
+      ...rest,
+      isRecurring: isRecurring ?? false,
+      isTemplate: isRecurring ?? false,
+      recurrenceEndDate: recurrenceEndDate
+        ? new Date(recurrenceEndDate)
+        : null,
+    });
 
     if (projectId) {
       activity.project = await this.projectsService.findOne(projectId);
@@ -135,11 +251,25 @@ export class ActivitiesService {
 
   async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
     const activity = await this.findOne(id);
-    // Use the current type if not provided in the update DTO
     const effectiveDto = { ...dto, type: dto.type ?? activity.type } as CreateActivityDto;
-    const { projectId, parentId, ...rest } = this.sanitizeByType(effectiveDto);
+    const {
+      projectId,
+      parentId,
+      isRecurring,
+      recurrenceEndDate,
+      ...rest
+    } = this.sanitizeByType(effectiveDto);
 
-    Object.assign(activity, rest);
+    Object.assign(activity, {
+      ...rest,
+      ...(isRecurring !== undefined && {
+        isRecurring,
+        isTemplate: isRecurring,
+      }),
+      ...(recurrenceEndDate !== undefined && {
+        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+      }),
+    });
 
     if (projectId !== undefined) {
       activity.project = projectId
@@ -162,12 +292,70 @@ export class ActivitiesService {
       }
     }
 
-    return this.activitiesRepository.save(activity);
+    const saved = await this.activitiesRepository.save(activity);
+
+    // Propagate inheritable fields to future pending instances
+    if (saved.isTemplate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
+      await this.activitiesRepository
+        .createQueryBuilder()
+        .update(Activity)
+        .set({
+          name: saved.name,
+          description: saved.description,
+          priority: saved.priority,
+          energy: saved.energy,
+          device: saved.device,
+          duration: saved.duration,
+          durationUnit: saved.durationUnit,
+        })
+        .where('templateId = :id', { id })
+        .andWhere('status = :status', { status: ActivityStatus.PENDING })
+        .andWhere('instanceDate > :today', { today: todayStr })
+        .execute();
+    }
+
+    return saved;
   }
 
   async remove(id: string): Promise<void> {
     const activity = await this.findOne(id);
     await this.activitiesRepository.remove(activity);
+  }
+
+  // ─── Recurrence queries ───────────────────────────────────────────────────────
+
+  getInstancesByTemplate(templateId: string): Promise<Activity[]> {
+    return this.baseQuery()
+      .where('activity.templateId = :templateId', { templateId })
+      .orderBy('activity.instanceDate', 'ASC')
+      .getMany();
+  }
+
+  async cancelFutureInstances(templateId: string): Promise<void> {
+    await this.findOne(templateId); // validate exists
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    await this.activitiesRepository
+      .createQueryBuilder()
+      .update(Activity)
+      .set({ status: ActivityStatus.CANCELLED })
+      .where('templateId = :templateId', { templateId })
+      .andWhere('status = :status', { status: ActivityStatus.PENDING })
+      .andWhere('instanceDate > :today', { today: todayStr })
+      .execute();
+  }
+
+  findActiveTemplates(): Promise<Activity[]> {
+    return this.activitiesRepository.find({
+      where: { isTemplate: true, isRecurring: true },
+      relations: { project: true },
+    });
   }
 
   // ─── Consultas especializadas ────────────────────────────────────────────────
@@ -189,14 +377,16 @@ export class ActivitiesService {
   findToday(pagination: PaginationDto): Promise<Activity[]> {
     const { start, end } = this.todayRange();
     return this.paginate(
-      this.baseQuery().where(
-        `(
-          (activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)
-          OR
-          (activity.scheduledForToday = true AND activity.status != :completedStatus)
-        )`,
-        { start, end, completedStatus: ActivityStatus.COMPLETED },
-      ),
+      this.baseQuery()
+        .where('activity.isTemplate = false')
+        .andWhere(
+          `(
+            (activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)
+            OR
+            (activity.scheduledForToday = true AND activity.status != :completedStatus)
+          )`,
+          { start, end, completedStatus: ActivityStatus.COMPLETED },
+        ),
       pagination,
     ).getMany();
   }
@@ -209,10 +399,12 @@ export class ActivitiesService {
     const end = new Date(tomorrow);
     end.setHours(23, 59, 59, 999);
     return this.paginate(
-      this.baseQuery().where(
-        '(activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)',
-        { start, end },
-      ),
+      this.baseQuery()
+        .where('activity.isTemplate = false')
+        .andWhere(
+          '(activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)',
+          { start, end },
+        ),
       pagination,
     ).getMany();
   }
@@ -228,10 +420,12 @@ export class ActivitiesService {
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
     return this.paginate(
-      this.baseQuery().where(
-        '(activity.actionDate BETWEEN :monday AND :sunday OR activity.dueDate BETWEEN :monday AND :sunday)',
-        { monday, sunday },
-      ),
+      this.baseQuery()
+        .where('activity.isTemplate = false')
+        .andWhere(
+          '(activity.actionDate BETWEEN :monday AND :sunday OR activity.dueDate BETWEEN :monday AND :sunday)',
+          { monday, sunday },
+        ),
       pagination,
     ).getMany();
   }
@@ -241,9 +435,8 @@ export class ActivitiesService {
     now.setHours(0, 0, 0, 0);
     return this.paginate(
       this.baseQuery()
-        .where(
-          // TASK/EVENT: vencida si dueDate < hoy
-          // REMINDER: vencida si actionDate < ahora
+        .where('activity.isTemplate = false')
+        .andWhere(
           `(
             (activity.type != 'reminder' AND activity.dueDate < :now)
             OR
@@ -278,7 +471,7 @@ export class ActivitiesService {
   }
 
   async findSubtasks(id: string, pagination: PaginationDto): Promise<Activity[]> {
-    await this.findOne(id); // valida que existe
+    await this.findOne(id);
     return this.paginate(
       this.baseQuery().where('parent.id = :id', { id }),
       pagination,

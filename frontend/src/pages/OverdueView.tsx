@@ -4,7 +4,7 @@ import EmptyState from '../components/EmptyState';
 
 export default function OverdueView() {
   const { data, isLoading, isError } = useOverdueActivities();
-  const visible = (data ?? []).filter((a) => !a.parent && a.status !== 'completed');
+  const visible = (data ?? []).filter((a) => !a.parent && a.status !== 'completed' && !a.isTemplate);
 
   return (
     <div className="space-y-6">

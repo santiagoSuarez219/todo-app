@@ -109,3 +109,11 @@ export async function searchActivities(
 ): Promise<Activity[]> {
   return getList(`/activities/search/${encodeURIComponent(query)}`, params);
 }
+
+export async function getActivityInstances(templateId: string): Promise<Activity[]> {
+  return getList(`/activities/${templateId}/instances`);
+}
+
+export async function cancelFutureInstances(templateId: string): Promise<void> {
+  await apiClient.delete(`/activities/${templateId}/future-instances`);
+}

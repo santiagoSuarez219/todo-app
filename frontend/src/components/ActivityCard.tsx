@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { Activity, ActivityStatus, Automatizacion, CreateActivityDto, Project } from '../types';
-import { useUpdateActivity, useDeleteActivity, useActivitySubtasks, useCreateSubtask } from '../hooks/useActivities';
+import { useUpdateActivity, useDeleteActivity, useActivitySubtasks, useCreateSubtask, useCancelFutureInstances } from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
@@ -97,6 +97,32 @@ function NotionIcon() {
     </svg>
   );
 }
+
+function RecurringIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15" />
+    </svg>
+  );
+}
+
+function BanIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+    </svg>
+  );
+}
+
+// ─── Recurrence helpers ───────────────────────────────────────────────────────
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  daily: 'diariamente',
+  weekly: 'semanalmente',
+  biweekly: 'quincenalmente',
+  monthly: 'mensualmente',
+  yearly: 'anualmente',
+};
 
 // ─── AutomatizacionBadge ──────────────────────────────────────────────────────
 
@@ -412,10 +438,12 @@ function InlineDueDateEditor({
 export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [cancelInstancesOpen, setCancelInstancesOpen] = useState(false);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
   const [createSubtaskOpen, setCreateSubtaskOpen] = useState(false);
   const { mutate: doDelete, isPending: isDeleting } = useDeleteActivity();
   const { mutate: toggleSchedule, isPending: isScheduling } = useUpdateActivity();
+  const { mutate: doCancelInstances, isPending: isCancelling } = useCancelFutureInstances();
 
   const isTask     = activity.type === 'task';
   const isReminder = activity.type === 'reminder';
@@ -485,6 +513,17 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               <EditIcon />
               <span>Editar</span>
             </button>
+            {activity.isTemplate && (
+              <button
+                onClick={() => setCancelInstancesOpen(true)}
+                disabled={isCancelling}
+                title="Cancelar instancias futuras"
+                className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-400 px-1.5 py-1 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors disabled:opacity-50"
+              >
+                <BanIcon />
+                <span>Cancelar futuras</span>
+              </button>
+            )}
             <button
               onClick={handleDeleteClick}
               title="Eliminar actividad"
@@ -498,9 +537,29 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
 
         {/* ── Row 2: title + description ── */}
         <div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
-            {activity.name}
-          </p>
+          <div className="flex items-start gap-2">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug flex-1">
+              {activity.name}
+            </p>
+            {activity.isTemplate && (
+              <span
+                title={`Se repite ${FREQUENCY_LABELS[activity.recurrenceFrequency ?? ''] ?? ''}`}
+                className="shrink-0 inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+              >
+                <RecurringIcon />
+                Recurrente
+              </span>
+            )}
+            {!activity.isTemplate && activity.templateId && (
+              <span
+                title="Instancia de actividad recurrente"
+                className="shrink-0 inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
+              >
+                <RecurringIcon />
+                Auto
+              </span>
+            )}
+          </div>
           {activity.description && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
               {activity.description}
@@ -672,6 +731,19 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         }
         onCancel={() => setDeleteOpen(false)}
         loading={isDeleting}
+      />
+
+      {/* ── Cancel future instances confirm ── */}
+      <ConfirmDialog
+        open={cancelInstancesOpen}
+        title="Cancelar instancias futuras"
+        message={`¿Cancelar todas las instancias futuras pendientes de "${activity.name}"? El template y las instancias pasadas no se modificarán.`}
+        confirmLabel="Cancelar instancias"
+        onConfirm={() =>
+          doCancelInstances(activity.id, { onSuccess: () => setCancelInstancesOpen(false) })
+        }
+        onCancel={() => setCancelInstancesOpen(false)}
+        loading={isCancelling}
       />
     </>
   );

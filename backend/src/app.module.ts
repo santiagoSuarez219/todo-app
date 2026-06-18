@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -41,6 +42,7 @@ import { McpModule } from './mcp/mcp.module';
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),
+    ScheduleModule.forRoot(),
     ProjectsModule,
     ActivitiesModule,
     McpModule,

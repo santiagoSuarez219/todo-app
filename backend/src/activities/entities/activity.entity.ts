@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -14,6 +15,7 @@ import { Energy } from '../../common/enums/energy.enum';
 import { DurationUnit } from '../../common/enums/duration-unit.enum';
 import { Device } from '../../common/enums/device.enum';
 import { Automatizacion } from '../../common/enums/automatizacion.enum';
+import { RecurrenceFrequency } from '../../common/enums/recurrence-frequency.enum';
 import { Project } from '../../projects/entities/project.entity';
 
 @Entity('activities')
@@ -108,6 +110,42 @@ export class Activity {
 
   @OneToMany(() => Activity, (activity) => activity.parent)
   subtasks: Activity[];
+
+  // ─── Recurrence ─────────────────────────────────────────────────────────────
+
+  @Column({ type: 'boolean', default: false })
+  isTemplate: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isRecurring: boolean;
+
+  @Column({ type: 'uuid', nullable: true })
+  templateId: string | null;
+
+  @ManyToOne(() => Activity, (activity) => activity.instances, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'templateId' })
+  template: Activity | null;
+
+  @OneToMany(() => Activity, (activity) => activity.template, { eager: false })
+  instances: Activity[];
+
+  @Column({ type: 'varchar', nullable: true })
+  recurrenceFrequency: RecurrenceFrequency | null;
+
+  @Column({ type: 'integer', array: true, nullable: true })
+  recurrenceDays: number[] | null;
+
+  @Column({ type: 'integer', nullable: true })
+  recurrenceDayOfMonth: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  recurrenceEndDate: Date | null;
+
+  @Column({ type: 'date', nullable: true })
+  instanceDate: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

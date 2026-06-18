@@ -284,6 +284,16 @@ export class McpService {
           .nullable()
           .optional()
           .describe('URL of an associated Notion page, null to clear'),
+        isRecurring: z.boolean().optional().describe('Enable or disable recurrence'),
+        recurrenceFrequency: z
+          .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
+          .optional(),
+        recurrenceDays: z
+          .array(z.number().int().min(0).max(6))
+          .optional()
+          .describe('Days of week (0=Sun … 6=Sat)'),
+        recurrenceDayOfMonth: z.number().int().min(1).max(31).optional(),
+        recurrenceEndDate: z.string().nullable().optional(),
       },
       async ({ id, ...dto }) => {
         try {
@@ -489,6 +499,88 @@ export class McpService {
           return ok(
             await this.activitiesService.findSubtasks(id, pagination as PaginationDto),
           );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    // ── Recurrence tools ───────────────────────────────────────────────────────
+
+    server.tool(
+      'create_recurring_activity',
+      'Create a recurring activity template that generates instances automatically (daily, weekly, biweekly, monthly or yearly)',
+      {
+        name: z.string().min(1).max(255).describe('Activity name'),
+        type: z
+          .enum(['reminder', 'event', 'task'])
+          .optional()
+          .describe('Activity type (default: task)'),
+        recurrenceFrequency: z
+          .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
+          .describe('How often the activity repeats'),
+        recurrenceDays: z
+          .array(z.number().int().min(0).max(6))
+          .optional()
+          .describe('Days of week (0=Sun, 1=Mon … 6=Sat). Required for weekly/biweekly.'),
+        recurrenceDayOfMonth: z
+          .number()
+          .int()
+          .min(1)
+          .max(31)
+          .optional()
+          .describe('Day of month (1-31). Required for monthly frequency.'),
+        recurrenceEndDate: z
+          .string()
+          .optional()
+          .describe('ISO 8601 date until which instances are generated (null = indefinite)'),
+        projectId: z.string().uuid().optional().describe('UUID of the associated project'),
+        actionDate: z.string().optional().describe('Start date/time (ISO 8601)'),
+        priority: z.enum(['high', 'medium', 'low']).optional(),
+        energy: z.enum(['high', 'medium', 'low']).optional(),
+        duration: z.number().min(0).optional(),
+        durationUnit: z.enum(['hours', 'days']).optional(),
+        device: z.enum(['phone', 'computer', 'tablet']).optional(),
+        location: z.string().max(255).optional(),
+        description: z.string().optional(),
+        notionUrl: z.string().url().optional(),
+      },
+      async (dto) => {
+        try {
+          return ok(
+            await this.activitiesService.create({ ...dto, isRecurring: true } as any),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'get_activity_instances',
+      'Get all generated instances of a recurring activity template',
+      {
+        templateId: z.string().uuid().describe('UUID of the recurring template activity'),
+      },
+      async ({ templateId }) => {
+        try {
+          return ok(await this.activitiesService.getInstancesByTemplate(templateId));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'cancel_future_instances',
+      'Cancel all future pending instances of a recurring activity template',
+      {
+        templateId: z.string().uuid().describe('UUID of the recurring template activity'),
+      },
+      async ({ templateId }) => {
+        try {
+          await this.activitiesService.cancelFutureInstances(templateId);
+          return ok({ message: `Future instances of template ${templateId} cancelled` });
         } catch (e) {
           return err(e);
         }

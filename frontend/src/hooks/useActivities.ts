@@ -3,7 +3,7 @@ import {
   getActivities, getActivity, createActivity, updateActivity, deleteActivity,
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
   getActivitiesByProject, searchActivities, getActivitySubtasks, createSubtask,
-  getWithoutProjectActivities,
+  getWithoutProjectActivities, getActivityInstances, cancelFutureInstances,
 } from '../services/activities.service';
 import type { CreateActivityDto, UpdateActivityDto, PaginationParams } from '../types';
 
@@ -106,5 +106,21 @@ export function useCreateSubtask(parentId: string) {
       qc.invalidateQueries({ queryKey: ['activities', parentId, 'subtasks'] });
       qc.invalidateQueries({ queryKey: ['activities'] });
     },
+  });
+}
+
+export function useActivityInstances(templateId: string) {
+  return useQuery({
+    queryKey: ['activities', templateId, 'instances'],
+    queryFn: () => getActivityInstances(templateId),
+    enabled: !!templateId,
+  });
+}
+
+export function useCancelFutureInstances() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (templateId: string) => cancelFutureInstances(templateId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['activities'] }),
   });
 }
