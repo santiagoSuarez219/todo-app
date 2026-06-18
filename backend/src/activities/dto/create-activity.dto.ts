@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNotEmpty,
@@ -109,4 +110,9 @@ export class CreateActivityDto {
   @IsEnum(Automatizacion)
   @IsOptional()
   automatizacion?: Automatizacion;
+
+  @ApiPropertyOptional({ description: 'Schedule this activity to appear in the Today view' })
+  @IsBoolean()
+  @IsOptional()
+  scheduledForToday?: boolean;
 }

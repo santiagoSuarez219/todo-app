@@ -82,6 +82,14 @@ function TrashIcon() {
   );
 }
 
+function SunIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z" />
+    </svg>
+  );
+}
+
 // ─── AutomatizacionBadge ──────────────────────────────────────────────────────
 
 const AUTOMATIZACION_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -399,6 +407,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   const [subtasksOpen, setSubtasksOpen] = useState(false);
   const [createSubtaskOpen, setCreateSubtaskOpen] = useState(false);
   const { mutate: doDelete, isPending: isDeleting } = useDeleteActivity();
+  const { mutate: toggleSchedule, isPending: isScheduling } = useUpdateActivity();
 
   const isTask     = activity.type === 'task';
   const isReminder = activity.type === 'reminder';
@@ -445,6 +454,21 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         <div className="flex items-center justify-between gap-2">
           <StatusDropdown activity={activity} />
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() =>
+                toggleSchedule({ id: activity.id, dto: { scheduledForToday: !activity.scheduledForToday } })
+              }
+              disabled={isScheduling}
+              title={activity.scheduledForToday ? 'Quitar de hoy' : 'Programar para hoy'}
+              className={`flex items-center gap-1 text-xs px-1.5 py-1 rounded transition-colors disabled:opacity-50 ${
+                activity.scheduledForToday
+                  ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+              }`}
+            >
+              <SunIcon />
+              <span>Para hoy</span>
+            </button>
             <button
               onClick={handleEditClick}
               title="Editar actividad"

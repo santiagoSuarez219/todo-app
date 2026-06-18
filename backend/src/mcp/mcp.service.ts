@@ -237,6 +237,10 @@ export class McpService {
           .uuid()
           .optional()
           .describe('UUID of the parent activity (creates a subtask)'),
+        scheduledForToday: z
+          .boolean()
+          .optional()
+          .describe('Schedule this activity to appear in the Today view'),
       },
       async (dto) => {
         try {
@@ -265,6 +269,10 @@ export class McpService {
         type: z.enum(['reminder', 'event', 'task']).optional(),
         location: z.string().max(255).nullable().optional(),
         parentId: z.string().uuid().nullable().optional().describe('Set null to remove from parent'),
+        scheduledForToday: z
+          .boolean()
+          .optional()
+          .describe('Set or unset scheduling for Today view'),
       },
       async ({ id, ...dto }) => {
         try {

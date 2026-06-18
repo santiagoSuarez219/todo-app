@@ -94,6 +94,9 @@ export class Activity {
   })
   automatizacion: Automatizacion | null;
 
+  @Column({ type: 'boolean', default: false })
+  scheduledForToday: boolean;
+
   @ManyToOne(() => Activity, (activity) => activity.subtasks, {
     nullable: true,
     onDelete: 'SET NULL',

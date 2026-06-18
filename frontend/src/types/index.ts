@@ -88,6 +88,7 @@ export interface Activity {
   parent: Activity | null;
   subtasks: Activity[];
   automatizacion: Automatizacion | null;
+  scheduledForToday: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -119,6 +120,7 @@ export interface CreateActivityDto {
   type?: ActivityType;
   location?: string | null;
   automatizacion?: Automatizacion | null;
+  scheduledForToday?: boolean;
 }
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;

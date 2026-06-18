@@ -190,8 +190,12 @@ export class ActivitiesService {
     const { start, end } = this.todayRange();
     return this.paginate(
       this.baseQuery().where(
-        '(activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)',
-        { start, end },
+        `(
+          (activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)
+          OR
+          (activity.scheduledForToday = true AND activity.status != :completedStatus)
+        )`,
+        { start, end, completedStatus: ActivityStatus.COMPLETED },
       ),
       pagination,
     ).getMany();
