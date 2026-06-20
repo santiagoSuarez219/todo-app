@@ -190,7 +190,7 @@ export class McpService {
 
     server.tool(
       'create_activity',
-      'Create a new activity or subtask',
+      'Create a new activity or subtask. Types: task (with deadline) or reminder (with date+time)',
       {
         name: z.string().min(1).max(255).describe('Activity name'),
         projectId: z
@@ -198,14 +198,12 @@ export class McpService {
           .uuid()
           .optional()
           .describe('UUID of the associated project'),
-        actionDate: z
-          .string()
-          .optional()
-          .describe('Scheduled date/time (ISO 8601, e.g. 2026-04-13T09:00:00Z)'),
         dueDate: z
           .string()
           .optional()
-          .describe('Deadline date/time (ISO 8601)'),
+          .describe(
+            'For task: deadline date (ISO 8601, e.g. 2026-04-13). For reminder: exact date+time (e.g. 2026-04-13T09:00:00Z)',
+          ),
         priority: z
           .enum(['high', 'medium', 'low'])
           .optional()
@@ -218,20 +216,10 @@ export class McpService {
           .enum(['high', 'medium', 'low'])
           .optional()
           .describe('Energy level required (default: medium)'),
-        duration: z.number().min(0).optional().describe('Duration value'),
-        durationUnit: z
-          .enum(['hours', 'days'])
-          .optional()
-          .describe('Duration unit'),
-        device: z
-          .enum(['phone', 'computer', 'tablet'])
-          .optional()
-          .describe('Recommended device'),
         type: z
-          .enum(['reminder', 'event', 'task'])
+          .enum(['reminder', 'task'])
           .optional()
           .describe('Activity type (default: task)'),
-        location: z.string().max(255).optional().describe('Location'),
         parentId: z
           .string()
           .uuid()
@@ -246,6 +234,7 @@ export class McpService {
           .url()
           .optional()
           .describe('URL of an associated Notion page'),
+        description: z.string().optional(),
       },
       async (dto) => {
         try {
@@ -263,16 +252,11 @@ export class McpService {
         id: z.string().uuid().describe('Activity UUID'),
         name: z.string().min(1).max(255).optional(),
         projectId: z.string().uuid().nullable().optional().describe('Set null to detach from project'),
-        actionDate: z.string().nullable().optional(),
         dueDate: z.string().nullable().optional(),
         priority: z.enum(['high', 'medium', 'low']).optional(),
         status: z.enum(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold']).optional(),
         energy: z.enum(['high', 'medium', 'low']).optional(),
-        duration: z.number().min(0).nullable().optional(),
-        durationUnit: z.enum(['hours', 'days']).nullable().optional(),
-        device: z.enum(['phone', 'computer', 'tablet']).nullable().optional(),
-        type: z.enum(['reminder', 'event', 'task']).optional(),
-        location: z.string().max(255).nullable().optional(),
+        type: z.enum(['reminder', 'task']).optional(),
         parentId: z.string().uuid().nullable().optional().describe('Set null to remove from parent'),
         scheduledForToday: z
           .boolean()
@@ -294,6 +278,7 @@ export class McpService {
           .describe('Days of week (0=Sun … 6=Sat)'),
         recurrenceDayOfMonth: z.number().int().min(1).max(31).optional(),
         recurrenceEndDate: z.string().nullable().optional(),
+        description: z.string().optional(),
       },
       async ({ id, ...dto }) => {
         try {
@@ -324,7 +309,7 @@ export class McpService {
 
     server.tool(
       'get_today_activities',
-      "Get activities scheduled for today (filtered by actionDate)",
+      'Get activities scheduled for today (by dueDate or scheduledForToday flag)',
       paginationSchema,
       async (pagination) => {
         try {
@@ -337,7 +322,7 @@ export class McpService {
 
     server.tool(
       'get_tomorrow_activities',
-      "Get activities scheduled for tomorrow (filtered by actionDate)",
+      'Get activities scheduled for tomorrow (by dueDate)',
       paginationSchema,
       async (pagination) => {
         try {
@@ -350,7 +335,7 @@ export class McpService {
 
     server.tool(
       'get_this_week_activities',
-      'Get activities for the current week (Monday to Sunday, filtered by actionDate)',
+      'Get activities for the current week (Monday to Sunday, filtered by dueDate)',
       paginationSchema,
       async (pagination) => {
         try {
@@ -409,9 +394,9 @@ export class McpService {
 
     server.tool(
       'get_activities_by_type',
-      'Get activities filtered by type (task, reminder or event)',
+      'Get activities filtered by type (task or reminder)',
       {
-        type: z.enum(['reminder', 'event', 'task']).describe('Activity type'),
+        type: z.enum(['reminder', 'task']).describe('Activity type'),
         ...paginationSchema,
       },
       async ({ type, ...pagination }) => {
@@ -513,7 +498,7 @@ export class McpService {
       {
         name: z.string().min(1).max(255).describe('Activity name'),
         type: z
-          .enum(['reminder', 'event', 'task'])
+          .enum(['reminder', 'task'])
           .optional()
           .describe('Activity type (default: task)'),
         recurrenceFrequency: z
@@ -535,13 +520,12 @@ export class McpService {
           .optional()
           .describe('ISO 8601 date until which instances are generated (null = indefinite)'),
         projectId: z.string().uuid().optional().describe('UUID of the associated project'),
-        actionDate: z.string().optional().describe('Start date/time (ISO 8601)'),
+        dueDate: z
+          .string()
+          .optional()
+          .describe('Reference date/time for biweekly/yearly cycle calculations (ISO 8601)'),
         priority: z.enum(['high', 'medium', 'low']).optional(),
         energy: z.enum(['high', 'medium', 'low']).optional(),
-        duration: z.number().min(0).optional(),
-        durationUnit: z.enum(['hours', 'days']).optional(),
-        device: z.enum(['phone', 'computer', 'tablet']).optional(),
-        location: z.string().max(255).optional(),
         description: z.string().optional(),
         notionUrl: z.string().url().optional(),
       },

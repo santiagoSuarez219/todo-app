@@ -12,9 +12,6 @@ import { ActivityStatus } from '../../common/enums/activity-status.enum';
 import { ActivityType } from '../../common/enums/activity-type.enum';
 import { Priority } from '../../common/enums/priority.enum';
 import { Energy } from '../../common/enums/energy.enum';
-import { DurationUnit } from '../../common/enums/duration-unit.enum';
-import { Device } from '../../common/enums/device.enum';
-import { Automatizacion } from '../../common/enums/automatizacion.enum';
 import { RecurrenceFrequency } from '../../common/enums/recurrence-frequency.enum';
 import { Project } from '../../projects/entities/project.entity';
 
@@ -34,9 +31,6 @@ export class Activity {
     onDelete: 'CASCADE',
   })
   project: Project | null;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  actionDate: Date | null;
 
   @Column({ type: 'timestamptz', nullable: true })
   dueDate: Date | null;
@@ -62,39 +56,12 @@ export class Activity {
   })
   energy: Energy;
 
-  @Column({ type: 'numeric', nullable: true })
-  duration: number | null;
-
-  @Column({
-    type: 'enum',
-    enum: DurationUnit,
-    nullable: true,
-  })
-  durationUnit: DurationUnit | null;
-
-  @Column({
-    type: 'enum',
-    enum: Device,
-    nullable: true,
-  })
-  device: Device | null;
-
   @Column({
     type: 'enum',
     enum: ActivityType,
     default: ActivityType.TASK,
   })
   type: ActivityType;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  location: string | null;
-
-  @Column({
-    type: 'enum',
-    enum: Automatizacion,
-    nullable: true,
-  })
-  automatizacion: Automatizacion | null;
 
   @Column({ type: 'boolean', default: false })
   scheduledForToday: boolean;

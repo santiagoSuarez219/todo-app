@@ -23,14 +23,11 @@ export default function TodayView() {
   const visible = (data ?? []).filter((a) => !a.parent && a.status !== 'completed' && !a.isTemplate);
 
   const byDate: Activity[] = visible.filter(
-    (a) => isDateToday(a.actionDate) || isDateToday(a.dueDate),
+    (a) => isDateToday(a.dueDate),
   );
 
   const bySchedule: Activity[] = visible.filter(
-    (a) =>
-      a.scheduledForToday &&
-      !isDateToday(a.actionDate) &&
-      !isDateToday(a.dueDate),
+    (a) => a.scheduledForToday && !isDateToday(a.dueDate),
   );
 
   return (

@@ -19,7 +19,6 @@ export type ActivityStatus = (typeof ActivityStatus)[keyof typeof ActivityStatus
 
 export const ActivityType = {
   REMINDER: 'reminder',
-  EVENT: 'event',
   TASK: 'task',
 } as const;
 export type ActivityType = (typeof ActivityType)[keyof typeof ActivityType];
@@ -37,26 +36,6 @@ export const Energy = {
   LOW: 'low',
 } as const;
 export type Energy = (typeof Energy)[keyof typeof Energy];
-
-export const Device = {
-  PHONE: 'phone',
-  COMPUTER: 'computer',
-  TABLET: 'tablet',
-} as const;
-export type Device = (typeof Device)[keyof typeof Device];
-
-export const DurationUnit = {
-  HOURS: 'hours',
-  DAYS: 'days',
-} as const;
-export type DurationUnit = (typeof DurationUnit)[keyof typeof DurationUnit];
-
-export const Automatizacion = {
-  FULLY_AUTOMATABLE: 'fully_automatable',
-  PARTIALLY_AUTOMATABLE: 'partially_automatable',
-  NOT_AUTOMATABLE: 'not_automatable',
-} as const;
-export type Automatizacion = (typeof Automatizacion)[keyof typeof Automatizacion];
 
 export const RecurrenceFrequency = {
   DAILY: 'daily',
@@ -94,19 +73,13 @@ export interface Activity {
   name: string;
   description: string | null;
   project: Project | null;
-  actionDate: string | null;
   dueDate: string | null;
   priority: Priority;
   status: ActivityStatus;
   energy: Energy;
-  duration: number | null;
-  durationUnit: DurationUnit | null;
-  device: Device | null;
   type: ActivityType;
-  location: string | null;
   parent: Activity | null;
   subtasks: Activity[];
-  automatizacion: Automatizacion | null;
   scheduledForToday: boolean;
   notionUrl: string | null;
   isTemplate: boolean;
@@ -137,17 +110,11 @@ export interface CreateActivityDto {
   description?: string | null;
   projectId?: string | null;
   parentId?: string | null;
-  actionDate?: string | null;
   dueDate?: string | null;
   priority?: Priority;
   status?: ActivityStatus;
   energy?: Energy;
-  duration?: number | null;
-  durationUnit?: DurationUnit | null;
-  device?: Device | null;
   type?: ActivityType;
-  location?: string | null;
-  automatizacion?: Automatizacion | null;
   scheduledForToday?: boolean;
   notionUrl?: string | null;
   isRecurring?: boolean;
