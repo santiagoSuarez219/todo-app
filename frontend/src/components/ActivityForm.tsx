@@ -3,7 +3,7 @@ import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  ActivityStatus, ActivityType, Priority, Energy, Device, DurationUnit, Automatizacion,
+  ActivityStatus, ActivityType, Priority, Energy,
   RecurrenceFrequency,
   type CreateActivityDto, type Activity, type Project, type WeekDay,
 } from '../types';
@@ -26,13 +26,7 @@ const schema = z.object({
   priority: z.string().optional(),
   energy: z.string().optional(),
   type: z.string().optional(),
-  device: z.string().nullish(),
-  actionDate: z.string().nullish(),
   dueDate: z.string().nullish(),
-  duration: z.string().nullish(),
-  durationUnit: z.string().nullish(),
-  location: z.string().max(255).nullish(),
-  automatizacion: z.string().nullish(),
   notionUrl: z.string().url({ message: 'Debe ser una URL válida' }).nullish(),
   // ── Recurrence ──
   isRecurring: z.boolean().default(false),
@@ -94,23 +88,6 @@ const ENERGY_LABELS: Record<string, string> = {
   low: 'Baja',
 };
 
-const DEVICE_LABELS: Record<string, string> = {
-  phone: 'Teléfono',
-  computer: 'Computadora',
-  tablet: 'Tablet',
-};
-
-const UNIT_LABELS: Record<string, string> = {
-  hours: 'Horas',
-  days: 'Días',
-};
-
-const AUTOMATIZACION_LABELS: Record<string, string> = {
-  fully_automatable: 'Se puede automatizar completamente',
-  partially_automatable: 'Se puede automatizar parcialmente',
-  not_automatable: 'No se puede automatizar',
-};
-
 const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
   daily: 'Diaria',
   weekly: 'Semanal',
@@ -131,7 +108,6 @@ const labelCls = 'block text-xs font-medium text-gray-700 dark:text-gray-300 mb-
 const TYPE_OPTIONS = [
   { value: ActivityType.TASK,     label: 'Tarea',       icon: '✓' },
   { value: ActivityType.REMINDER, label: 'Recordatorio', icon: '🔔' },
-  { value: ActivityType.EVENT,    label: 'Evento',       icon: '📅' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -156,13 +132,7 @@ export default function ActivityForm({
         priority: initial?.priority ?? Priority.MEDIUM,
         energy: initial?.energy ?? Energy.MEDIUM,
         type: initial?.type ?? ActivityType.TASK,
-        device: initial?.device ?? null,
-        actionDate: initial?.actionDate ? initial.actionDate.slice(0, 16) : '',
         dueDate: initial?.dueDate ? initial.dueDate.slice(0, 16) : '',
-        duration: initial?.duration != null ? String(initial.duration) : '',
-        durationUnit: initial?.durationUnit ?? null,
-        location: initial?.location ?? '',
-        automatizacion: initial?.automatizacion ?? null,
         notionUrl: initial?.notionUrl ?? null,
         isRecurring: initial?.isRecurring ?? false,
         recurrenceFrequency: initial?.recurrenceFrequency ?? undefined,
@@ -173,9 +143,7 @@ export default function ActivityForm({
     });
 
   const watchedType = useWatch({ control, name: 'type' }) ?? ActivityType.TASK;
-  const isTask     = watchedType === ActivityType.TASK;
   const isReminder = watchedType === ActivityType.REMINDER;
-  const isEvent    = watchedType === ActivityType.EVENT;
 
   const isRecurring       = useWatch({ control, name: 'isRecurring' });
   const recurrenceFreq    = useWatch({ control, name: 'recurrenceFrequency' });
@@ -183,27 +151,11 @@ export default function ActivityForm({
   const showDayPicker     = recurrenceFreq === RecurrenceFrequency.WEEKLY || recurrenceFreq === RecurrenceFrequency.BIWEEKLY;
   const showDayOfMonth    = recurrenceFreq === RecurrenceFrequency.MONTHLY;
 
-  // Clear inapplicable fields when type changes (skip on first render)
+  // Clear dueDate when type changes to reminder (date-only → datetime-local)
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
-
-    const opts = { shouldDirty: false } as const;
-    if (isReminder) {
-      setValue('dueDate', null, opts);
-      setValue('duration', null, opts);
-      setValue('durationUnit', null, opts);
-      setValue('device', null, opts);
-      setValue('location', null, opts);
-      setValue('automatizacion', null, opts);
-    }
-    if (isEvent) {
-      setValue('duration', null, opts);
-      setValue('durationUnit', null, opts);
-      setValue('device', null, opts);
-      setValue('location', null, opts);
-      setValue('automatizacion', null, opts);
-    }
+    setValue('dueDate', null, { shouldDirty: false });
   }, [watchedType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleDay(day: WeekDay) {
@@ -224,13 +176,7 @@ export default function ActivityForm({
       priority: (values.priority as CreateActivityDto['priority']) || undefined,
       energy: (values.energy as CreateActivityDto['energy']) || undefined,
       type: (values.type as CreateActivityDto['type']) || undefined,
-      device: (values.device as CreateActivityDto['device']) || null,
-      actionDate: values.actionDate || null,
       dueDate: values.dueDate || null,
-      duration: values.duration ? Number(values.duration) : null,
-      durationUnit: (values.durationUnit as CreateActivityDto['durationUnit']) || null,
-      location: values.location || null,
-      automatizacion: (values.automatizacion as CreateActivityDto['automatizacion']) || null,
       notionUrl: values.notionUrl || null,
     };
 
@@ -349,88 +295,17 @@ export default function ActivityForm({
         </div>
       </div>
 
-      {/* ── Fechas — label y tipo varían por tipo de actividad ── */}
-      <div className={`grid gap-3 ${isTask || isEvent ? 'grid-cols-2' : 'grid-cols-1'}`}>
-        <div>
-          <label className={labelCls}>
-            {isTask ? 'Fecha de acción' : isReminder ? 'Fecha y hora' : 'Inicio'}
-          </label>
-          <input
-            type={isTask ? 'date' : 'datetime-local'}
-            {...register('actionDate')}
-            className={inputCls}
-          />
-        </div>
-        {(isTask || isEvent) && (
-          <div>
-            <label className={labelCls}>
-              {isTask ? 'Fecha límite' : 'Fin'}
-            </label>
-            <input
-              type={isTask ? 'date' : 'datetime-local'}
-              {...register('dueDate')}
-              className={inputCls}
-            />
-          </div>
-        )}
+      {/* ── Fecha — semántica por tipo ── */}
+      <div>
+        <label className={labelCls}>
+          {isReminder ? 'Fecha y hora del recordatorio' : 'Fecha límite'}
+        </label>
+        <input
+          type={isReminder ? 'datetime-local' : 'date'}
+          {...register('dueDate')}
+          className={inputCls}
+        />
       </div>
-
-      {/* ── Campos exclusivos de TASK ── */}
-      {isTask && (
-        <>
-          {/* Dispositivo */}
-          <div>
-            <label className={labelCls}>Dispositivo</label>
-            <select {...register('device')} className={inputCls}>
-              <option value="">Ninguno</option>
-              {Object.values(Device).map((s) => (
-                <option key={s} value={s}>{DEVICE_LABELS[s] ?? s}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Duración */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Duración</label>
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                {...register('duration')}
-                className={inputCls}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Unidad</label>
-              <select {...register('durationUnit')} className={inputCls}>
-                <option value="">Ninguna</option>
-                {Object.values(DurationUnit).map((s) => (
-                  <option key={s} value={s}>{UNIT_LABELS[s] ?? s}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Automatización */}
-          <div>
-            <label className={labelCls}>Automatización</label>
-            <select {...register('automatizacion')} className={inputCls}>
-              <option value="">Sin clasificar</option>
-              {Object.values(Automatizacion).map((s) => (
-                <option key={s} value={s}>{AUTOMATIZACION_LABELS[s] ?? s}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Ubicación */}
-          <div>
-            <label className={labelCls}>Ubicación</label>
-            <input {...register('location')} className={inputCls} placeholder="Lugar de la actividad" />
-          </div>
-        </>
-      )}
 
       {/* ── Repetición ── */}
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">

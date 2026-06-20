@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Activity } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -35,8 +35,7 @@ export class ActivitiesService {
         `CASE activity.priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`,
         'priority_order',
       )
-      .orderBy('activity.actionDate', 'ASC', 'NULLS LAST')
-      .addOrderBy('activity.dueDate', 'ASC', 'NULLS LAST')
+      .orderBy('activity.dueDate', 'ASC', 'NULLS LAST')
       .addOrderBy('priority_order', 'ASC');
   }
 
@@ -62,36 +61,14 @@ export class ActivitiesService {
     const sanitized = { ...dto };
 
     if (type === ActivityType.REMINDER) {
-      sanitized.dueDate = undefined;
-      sanitized.duration = undefined;
-      sanitized.durationUnit = undefined;
-      sanitized.device = undefined;
-      sanitized.location = undefined;
-      sanitized.automatizacion = undefined;
       sanitized.parentId = undefined;
     }
 
-    if (type === ActivityType.EVENT) {
-      sanitized.duration = undefined;
-      sanitized.durationUnit = undefined;
-      sanitized.device = undefined;
-      sanitized.location = undefined;
-      sanitized.automatizacion = undefined;
-      sanitized.parentId = undefined;
-    }
-
-    // For TASK: strip time from actionDate and dueDate (keep date only)
-    if (type === ActivityType.TASK) {
-      if (sanitized.actionDate) {
-        const d = new Date(sanitized.actionDate);
-        d.setHours(0, 0, 0, 0);
-        sanitized.actionDate = d.toISOString();
-      }
-      if (sanitized.dueDate) {
-        const d = new Date(sanitized.dueDate);
-        d.setHours(0, 0, 0, 0);
-        sanitized.dueDate = d.toISOString();
-      }
+    // For TASK: strip time from dueDate (keep date only)
+    if (type === ActivityType.TASK && sanitized.dueDate) {
+      const d = new Date(sanitized.dueDate);
+      d.setHours(0, 0, 0, 0);
+      sanitized.dueDate = d.toISOString();
     }
 
     return sanitized;
@@ -106,22 +83,17 @@ export class ActivitiesService {
       type: template.type,
       priority: template.priority,
       energy: template.energy,
-      device: template.device,
-      duration: template.duration,
-      durationUnit: template.durationUnit,
-      location: template.location,
       project: template.project,
       status: ActivityStatus.PENDING,
       isTemplate: false,
       isRecurring: false,
       templateId: template.id,
       instanceDate: date.toISOString().split('T')[0],
-      // For reminders: set actionDate to the instance date
-      actionDate:
+      // For reminders: set dueDate to instance date at 9am
+      dueDate:
         template.type === ActivityType.REMINDER
           ? new Date(date.setHours(9, 0, 0, 0))
           : null,
-      // scheduledForToday if the instance date is today
       scheduledForToday: this.isToday(date),
     });
     return instance;
@@ -147,7 +119,7 @@ export class ActivitiesService {
       return false;
     }
 
-    const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
+    const dayOfWeek = date.getDay();
 
     switch (freq) {
       case RecurrenceFrequency.DAILY:
@@ -165,9 +137,9 @@ export class ActivitiesService {
         ) {
           return false;
         }
-        // Check if it's the correct biweekly cycle relative to template's actionDate
-        if (!template.actionDate) return false;
-        const origin = new Date(template.actionDate);
+        // Use dueDate as origin for biweekly cycle calculation
+        if (!template.dueDate) return false;
+        const origin = new Date(template.dueDate);
         const diffMs = date.getTime() - origin.getTime();
         const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
         return diffWeeks % 2 === 0;
@@ -177,8 +149,8 @@ export class ActivitiesService {
         return date.getDate() === template.recurrenceDayOfMonth;
 
       case RecurrenceFrequency.YEARLY: {
-        if (!template.actionDate) return false;
-        const origin = new Date(template.actionDate);
+        if (!template.dueDate) return false;
+        const origin = new Date(template.dueDate);
         return (
           date.getMonth() === origin.getMonth() &&
           date.getDate() === origin.getDate()
@@ -308,9 +280,6 @@ export class ActivitiesService {
           description: saved.description,
           priority: saved.priority,
           energy: saved.energy,
-          device: saved.device,
-          duration: saved.duration,
-          durationUnit: saved.durationUnit,
         })
         .where('templateId = :id', { id })
         .andWhere('status = :status', { status: ActivityStatus.PENDING })
@@ -336,7 +305,7 @@ export class ActivitiesService {
   }
 
   async cancelFutureInstances(templateId: string): Promise<void> {
-    await this.findOne(templateId); // validate exists
+    await this.findOne(templateId);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
@@ -381,7 +350,7 @@ export class ActivitiesService {
         .where('activity.isTemplate = false')
         .andWhere(
           `(
-            (activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)
+            (activity.dueDate BETWEEN :start AND :end)
             OR
             (activity.scheduledForToday = true AND activity.status != :completedStatus)
           )`,
@@ -402,7 +371,7 @@ export class ActivitiesService {
       this.baseQuery()
         .where('activity.isTemplate = false')
         .andWhere(
-          '(activity.actionDate BETWEEN :start AND :end OR activity.dueDate BETWEEN :start AND :end)',
+          'activity.dueDate BETWEEN :start AND :end',
           { start, end },
         ),
       pagination,
@@ -423,7 +392,7 @@ export class ActivitiesService {
       this.baseQuery()
         .where('activity.isTemplate = false')
         .andWhere(
-          '(activity.actionDate BETWEEN :monday AND :sunday OR activity.dueDate BETWEEN :monday AND :sunday)',
+          'activity.dueDate BETWEEN :monday AND :sunday',
           { monday, sunday },
         ),
       pagination,
@@ -436,14 +405,7 @@ export class ActivitiesService {
     return this.paginate(
       this.baseQuery()
         .where('activity.isTemplate = false')
-        .andWhere(
-          `(
-            (activity.type != 'reminder' AND activity.dueDate < :now)
-            OR
-            (activity.type = 'reminder' AND activity.actionDate < :now)
-          )`,
-          { now },
-        )
+        .andWhere('activity.dueDate < :now', { now })
         .andWhere('activity.status != :status', { status: ActivityStatus.COMPLETED }),
       pagination,
     ).getMany();

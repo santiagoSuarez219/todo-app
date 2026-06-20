@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import type { Activity, ActivityStatus, Automatizacion, CreateActivityDto, Project } from '../types';
+import type { Activity, ActivityStatus, CreateActivityDto, Project } from '../types';
 import { useUpdateActivity, useDeleteActivity, useActivitySubtasks, useCreateSubtask, useCancelFutureInstances } from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
 import StatusBadge from './StatusBadge';
@@ -123,24 +123,6 @@ const FREQUENCY_LABELS: Record<string, string> = {
   monthly: 'mensualmente',
   yearly: 'anualmente',
 };
-
-// ─── AutomatizacionBadge ──────────────────────────────────────────────────────
-
-const AUTOMATIZACION_CONFIG: Record<string, { label: string; cls: string }> = {
-  fully_automatable: { label: 'Automatizable', cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' },
-  partially_automatable: { label: 'Parcialmente', cls: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' },
-  not_automatable: { label: 'No automatizable', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
-};
-
-function AutomatizacionBadge({ value }: { value: Automatizacion }) {
-  const config = AUTOMATIZACION_CONFIG[value];
-  if (!config) return null;
-  return (
-    <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border font-medium ${config.cls}`}>
-      ⚡ {config.label}
-    </span>
-  );
-}
 
 // ─── Status options ───────────────────────────────────────────────────────────
 
@@ -325,7 +307,6 @@ function EditActivityModal({ activity, onClose }: { activity: Activity; onClose:
 const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
   task:     { label: 'Tarea',        cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
   reminder: { label: 'Recordatorio', cls: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' },
-  event:    { label: 'Evento',       cls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
 };
 
 function TypeBadge({ type }: { type: string }) {
@@ -447,28 +428,18 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
 
   const isTask     = activity.type === 'task';
   const isReminder = activity.type === 'reminder';
-  const isEvent    = activity.type === 'event';
 
   const now = new Date();
   const isOverdue =
     activity.status !== 'completed' &&
-    (isTask || isEvent
-      ? activity.dueDate && new Date(activity.dueDate) < now
-      : isReminder && activity.actionDate && new Date(activity.actionDate) < now);
+    activity.dueDate &&
+    new Date(activity.dueDate) < now;
 
   const totalSubtasks = isTask ? (activity.subtasks?.length ?? 0) : 0;
   const completedSubtasks =
     activity.subtasks?.filter((s) => s.status === 'completed').length ?? 0;
   const subtaskPercent =
     totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
-
-  const durationLabel =
-    activity.duration && activity.durationUnit
-      ? `${activity.duration} ${activity.durationUnit === 'hours'
-        ? activity.duration === 1 ? 'hora' : 'horas'
-        : activity.duration === 1 ? 'día' : 'días'
-      }`
-      : null;
 
   function handleEditClick() {
     if (onEdit) { onEdit(activity); } else { setEditOpen(true); }
@@ -601,27 +572,17 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
 
         <div></div>
 
-        {/* ── Row 4: priority + energy + automatizacion (solo TASK) ── */}
+        {/* ── Row 4: priority + energy ── */}
         <div className="flex items-center gap-3 flex-wrap">
           <PriorityBadge priority={activity.priority} />
           <EnergyIndicator energy={activity.energy} />
-          {isTask && activity.automatizacion && (
-            <AutomatizacionBadge value={activity.automatizacion} />
-          )}
         </div>
 
-        {/* ── Row 5: fechas (semántica por tipo) ── */}
-        {(activity.actionDate || activity.dueDate) && (
+        {/* ── Row 5: fecha ── */}
+        {activity.dueDate && (
           <div className="flex flex-col gap-1.5">
-            {/* TASK: fecha de acción (sin hora) */}
-            {isTask && activity.actionDate && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                <CalendarIcon />
-                <span>Inicio: {fmt(activity.actionDate)}</span>
-              </div>
-            )}
             {/* TASK: fecha límite (sin hora) — editable inline */}
-            {isTask && activity.dueDate && (
+            {isTask && (
               <InlineDueDateEditor
                 activity={activity}
                 label="Vence"
@@ -629,40 +590,16 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               />
             )}
             {/* REMINDER: fecha + hora */}
-            {isReminder && activity.actionDate && (
+            {isReminder && (
               <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
                 {isOverdue ? <WarningIcon /> : <CalendarIcon />}
-                <span>Recordatorio: {fmt(activity.actionDate, true)}</span>
+                <span>Recordatorio: {fmt(activity.dueDate, true)}</span>
               </div>
-            )}
-            {/* EVENT: inicio y fin con hora */}
-            {isEvent && activity.actionDate && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                <CalendarIcon />
-                <span>Inicio: {fmt(activity.actionDate, true)}</span>
-              </div>
-            )}
-            {/* EVENT: fin con hora — editable inline */}
-            {isEvent && activity.dueDate && (
-              <InlineDueDateEditor
-                activity={activity}
-                withTime
-                label="Fin"
-                overdue={!!isOverdue}
-              />
             )}
           </div>
         )}
 
-        {/* ── Row 6: duración (solo TASK) ── */}
-        {isTask && durationLabel && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-            <ClockIcon />
-            <span>{durationLabel}</span>
-          </div>
-        )}
-
-        {/* ── Row 7: subtask area (solo TASK) ── */}
+        {/* ── Row 6: subtask area (solo TASK) ── */}
         {isTask && totalSubtasks > 0 ? (
           <div className="pt-0.5">
             {/* Progress bar */}
