@@ -143,30 +143,22 @@ export default function Dashboard() {
 
       {/* ── All activities ── */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-base font-medium text-gray-800 dark:text-gray-200">
-              Todas las tareas
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Vista general de tus actividades
-            </p>
-          </div>
-          <Link
-            to="/activities"
-            className="text-sm text-blue-700 dark:text-blue-400 hover:underline"
-          >
-            Ver todas →
-          </Link>
+        <div className="mb-4">
+          <h2 className="text-base font-medium text-gray-800 dark:text-gray-200">
+            Todas las tareas
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Vista general de tus actividades
+          </p>
         </div>
 
         {/* Filter tabs */}
-        <div className="flex gap-0 mb-5 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-0 mb-5 border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-none">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm transition-colors border-b-2 -mb-px ${activeTab === tab.key
+              className={`px-4 py-2 text-sm transition-colors border-b-2 -mb-px whitespace-nowrap ${activeTab === tab.key
                 ? 'border-blue-700 dark:border-blue-400 text-blue-700 dark:text-blue-400 font-medium'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
                 }`}

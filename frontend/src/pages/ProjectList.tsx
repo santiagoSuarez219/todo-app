@@ -74,7 +74,7 @@ export default function ProjectList() {
         </div>
         <button
           onClick={openCreate}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-700 dark:bg-blue-600 text-white hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
+          className="hidden sm:block px-4 py-2 text-sm font-medium rounded-lg bg-blue-700 dark:bg-blue-600 text-white hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
         >
           + Nuevo proyecto
         </button>
@@ -136,7 +136,7 @@ export default function ProjectList() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Fin
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Acciones
                 </th>
               </tr>
@@ -166,7 +166,7 @@ export default function ProjectList() {
                       ? new Date(project.endDate).toLocaleDateString('es-CO')
                       : <span className="text-gray-300 dark:text-gray-600">—</span>}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="hidden sm:table-cell px-4 py-3">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => openEdit(project)}
