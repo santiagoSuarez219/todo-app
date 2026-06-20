@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import type { Activity, ActivityStatus, CreateActivityDto, Project } from '../types';
+import type { Activity, ActivityStatus, CreateActivityDto, Priority, Project } from '../types';
 import { useUpdateActivity, useDeleteActivity, useActivitySubtasks, useCreateSubtask, useCancelFutureInstances } from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
 import StatusBadge from './StatusBadge';
@@ -302,23 +301,6 @@ function EditActivityModal({ activity, onClose }: { activity: Activity; onClose:
   );
 }
 
-// ─── TypeBadge ────────────────────────────────────────────────────────────────
-
-const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
-  task:     { label: 'Tarea',        cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
-  reminder: { label: 'Recordatorio', cls: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' },
-};
-
-function TypeBadge({ type }: { type: string }) {
-  const cfg = TYPE_BADGE[type];
-  if (!cfg) return null;
-  return (
-    <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border font-medium ${cfg.cls}`}>
-      {cfg.label}
-    </span>
-  );
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(dateStr: string, withTime = false) {
@@ -411,6 +393,217 @@ function InlineDueDateEditor({
         <EditIcon />
       </span>
     </button>
+  );
+}
+
+// ─── InlineNameEditor ────────────────────────────────────────────────────────
+
+function InlineNameEditor({ activity }: { activity: Activity }) {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { mutate, isPending } = useUpdateActivity();
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  function commit() {
+    const input = inputRef.current;
+    if (!input) return;
+    const trimmed = input.value.trim();
+    setEditing(false);
+    if (!trimmed || trimmed === activity.name) return;
+    mutate({ id: activity.id, dto: { name: trimmed } });
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1.5 flex-1">
+        <input
+          ref={inputRef}
+          type="text"
+          defaultValue={activity.name}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          disabled={isPending}
+          className="w-full text-sm font-semibold bg-transparent border-b border-blue-400 dark:border-blue-500 text-gray-900 dark:text-white focus:outline-none pb-0.5 disabled:opacity-50"
+        />
+        {isPending && <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin shrink-0" />}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="group flex items-start gap-1.5 text-left flex-1"
+    >
+      <span className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
+        {activity.name}
+      </span>
+      <span className="opacity-0 group-hover:opacity-60 transition-opacity mt-0.5 shrink-0 text-gray-400 dark:text-gray-500">
+        <EditIcon />
+      </span>
+    </button>
+  );
+}
+
+// ─── InlinePriorityEditor ─────────────────────────────────────────────────────
+
+const PRIORITY_OPTIONS: { value: Priority; label: string; dot: string }[] = [
+  { value: 'high',   label: '↑ Alta',  dot: 'bg-red-400' },
+  { value: 'medium', label: '→ Media', dot: 'bg-yellow-400' },
+  { value: 'low',    label: '↓ Baja',  dot: 'bg-green-400' },
+];
+
+function InlinePriorityEditor({ activity }: { activity: Activity }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { mutate, isPending } = useUpdateActivity();
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  function handleSelect(priority: Priority) {
+    if (priority === activity.priority) { setOpen(false); return; }
+    mutate({ id: activity.id, dto: { priority } }, { onSettled: () => setOpen(false) });
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        disabled={isPending}
+        className="flex items-center gap-1 focus:outline-none disabled:opacity-50"
+        aria-label="Cambiar prioridad"
+      >
+        <PriorityBadge priority={activity.priority} />
+        <span className="text-gray-400 dark:text-gray-500"><ChevronIcon up={open} /></span>
+        {isPending && <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-20 w-36 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+          {PRIORITY_OPTIONS.map(({ value, label, dot }) => (
+            <button
+              key={value}
+              onClick={() => handleSelect(value)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${
+                value === activity.priority
+                  ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+              {label}
+              {value === activity.priority && (
+                <svg className="w-3 h-3 ml-auto text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── InlineProjectEditor ──────────────────────────────────────────────────────
+
+function InlineProjectEditor({ activity }: { activity: Activity }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { mutate, isPending } = useUpdateActivity();
+  const { data: projects = [] } = useProjects();
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  function handleSelect(projectId: string | null) {
+    if (projectId === (activity.project?.id ?? null)) { setOpen(false); return; }
+    mutate({ id: activity.id, dto: { projectId } }, { onSettled: () => setOpen(false) });
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        disabled={isPending}
+        className="group flex items-center gap-1 focus:outline-none disabled:opacity-50"
+        aria-label="Cambiar proyecto"
+      >
+        {activity.project ? (
+          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+            <FolderIcon />
+            {activity.project.name}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            + Proyecto
+          </span>
+        )}
+        <span className="opacity-0 group-hover:opacity-60 transition-opacity text-gray-400 dark:text-gray-500">
+          <ChevronIcon up={open} />
+        </span>
+        {isPending && <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-20 min-w-[160px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+          <button
+            onClick={() => handleSelect(null)}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${
+              !activity.project
+                ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <span className="text-gray-400">—</span>
+            Sin proyecto
+            {!activity.project && (
+              <svg className="w-3 h-3 ml-auto text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+              </svg>
+            )}
+          </button>
+          {projects.map((project) => (
+            <button
+              key={project.id}
+              onClick={() => handleSelect(project.id)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${
+                activity.project?.id === project.id
+                  ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <FolderIcon />
+              {project.name}
+              {activity.project?.id === project.id && (
+                <svg className="w-3 h-3 ml-auto text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -509,9 +702,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         {/* ── Row 2: title + description ── */}
         <div>
           <div className="flex items-start gap-2">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug flex-1">
-              {activity.name}
-            </p>
+            <InlineNameEditor activity={activity} />
             {activity.isTemplate && (
               <span
                 title={`Se repite ${FREQUENCY_LABELS[activity.recurrenceFrequency ?? ''] ?? ''}`}
@@ -538,34 +729,21 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           )}
         </div>
 
-        {/* ── Row 2b: type badge ── */}
-        <TypeBadge type={activity.type} />
-
         {/* ── Row 3: project chip + notion chip ── */}
-        {(activity.project || activity.notionUrl) && (
-          <div className="flex flex-wrap gap-1.5">
-            {activity.project && (
-              <Link
-                to={`/projects/${activity.project.id}`}
-                className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-              >
-                <FolderIcon />
-                {activity.project.name}
-              </Link>
-            )}
-            {activity.notionUrl && (
-              <a
-                href={activity.notionUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                <NotionIcon />
-                Notion
-              </a>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-1.5">
+          <InlineProjectEditor activity={activity} />
+          {activity.notionUrl && (
+            <a
+              href={activity.notionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              <NotionIcon />
+              Notion
+            </a>
+          )}
+        </div>
 
         {/* ── Separator ── */}
         <hr className="border-gray-100 dark:border-gray-700" />
@@ -574,7 +752,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
 
         {/* ── Row 4: priority + energy ── */}
         <div className="flex items-center gap-3 flex-wrap">
-          <PriorityBadge priority={activity.priority} />
+          <InlinePriorityEditor activity={activity} />
           <EnergyIndicator energy={activity.energy} />
         </div>
 
