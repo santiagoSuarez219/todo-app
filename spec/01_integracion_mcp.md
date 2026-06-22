@@ -1,4 +1,4 @@
-# Plan de Implementacion: Integracion MCP (Model Context Protocol)
+# Plan de Implementacion: [DONE] Integracion MCP (Model Context Protocol)
 
 ---
 

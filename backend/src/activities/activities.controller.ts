@@ -154,6 +154,27 @@ export class ActivitiesController {
     return this.activitiesService.findSubtasks(id, pagination);
   }
 
+  @Get(':id/instances')
+  @ApiOperation({ summary: 'Get all instances of a recurring activity template' })
+  @ApiOkResponse({ type: [Activity] })
+  @ApiNotFoundResponse()
+  getInstances(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<Activity[]> {
+    return this.activitiesService.getInstancesByTemplate(id);
+  }
+
+  @Delete(':id/future-instances')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Cancel all future pending instances of a recurring template' })
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse()
+  cancelFutureInstances(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.activitiesService.cancelFutureInstances(id);
+  }
+
   // ─── Rutas dinámicas (siempre al final) ─────────────────────────────────────
 
   @Get(':id')

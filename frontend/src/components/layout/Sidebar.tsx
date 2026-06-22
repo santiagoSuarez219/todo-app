@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
-import { useCreateActivity } from '../../hooks/useActivities';
-import type { CreateActivityDto } from '../../types';
-import Modal from '../Modal';
-import ActivityForm from '../ActivityForm';
+import { useDarkMode } from '../../hooks/useDarkMode';
+
+interface Props {
+  onCreateActivity: () => void;
+}
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -89,29 +89,6 @@ function MoonIcon() {
   );
 }
 
-// ─── Create Activity Modal ─────────────────────────────────────────────────────
-
-function CreateActivityModal({ onClose }: { onClose: () => void }) {
-  const { data: projects } = useProjects();
-  const { mutateAsync, isPending } = useCreateActivity();
-
-  async function handleSubmit(dto: CreateActivityDto) {
-    await mutateAsync(dto);
-    onClose();
-  }
-
-  return (
-    <Modal title="Nueva actividad" onClose={onClose}>
-      <ActivityForm
-        projects={projects ?? []}
-        onSubmit={handleSubmit}
-        onCancel={onClose}
-        loading={isPending}
-      />
-    </Modal>
-  );
-}
-
 // ─── Link style ───────────────────────────────────────────────────────────────
 
 const linkCls = ({ isActive }: { isActive: boolean }) =>
@@ -122,117 +99,104 @@ const linkCls = ({ isActive }: { isActive: boolean }) =>
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-export default function Sidebar() {
+export default function Sidebar({ onCreateActivity }: Props) {
   const { data: projects, isLoading } = useProjects();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [dark, setDark] = useState(() =>
-    document.documentElement.classList.contains('dark')
-  );
-
-  function toggleDark() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('color-theme', next ? 'dark' : 'light');
-  }
+  const { dark, toggleDark } = useDarkMode();
 
   return (
-    <>
-      <aside className="w-56 shrink-0 h-screen sticky top-0 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-        {/* Brand */}
-        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <span className="text-base font-semibold tracking-tight text-gray-900 dark:text-white">ToDo</span>
-        </div>
+    <aside className="w-56 shrink-0 h-screen sticky top-0 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col overflow-hidden">
+      {/* Brand */}
+      <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <span className="text-base font-semibold tracking-tight text-gray-900 dark:text-white">ToDo</span>
+      </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-2 space-y-0.5">
-          <NavLink to="/" end className={linkCls}>
-            <HomeIcon /> Tareas
-          </NavLink>
-          <NavLink to="/activities/today" className={linkCls}>
-            <TodayIcon /> Hoy
-          </NavLink>
-          <NavLink to="/activities/this-week" className={linkCls}>
-            <WeekIcon /> Esta semana
-          </NavLink>
-          <NavLink to="/activities/overdue" className={linkCls}>
-            <OverdueIcon /> Vencidas
-          </NavLink>
-          <NavLink to="/activities/backlog" className={linkCls}>
-            <BacklogIcon /> Backlog
-          </NavLink>
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-2 space-y-0.5">
+        <NavLink to="/" end className={linkCls}>
+          <HomeIcon /> Tareas
+        </NavLink>
+        <NavLink to="/activities/today" className={linkCls}>
+          <TodayIcon /> Hoy
+        </NavLink>
+        <NavLink to="/activities/this-week" className={linkCls}>
+          <WeekIcon /> Esta semana
+        </NavLink>
+        <NavLink to="/activities/overdue" className={linkCls}>
+          <OverdueIcon /> Vencidas
+        </NavLink>
+        <NavLink to="/activities/backlog" className={linkCls}>
+          <BacklogIcon /> Backlog
+        </NavLink>
 
-          {/* Projects section */}
-          <div className="pt-4">
-            <div className="flex items-center justify-between px-3 mb-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                Proyectos
-              </span>
-              <NavLink
-                to="/projects"
-                className={({ isActive }) =>
-                  `p-0.5 rounded transition-colors ${isActive
-                    ? 'text-blue-700 dark:text-blue-400'
-                    : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`
-                }
-                title="Ver todos los proyectos"
-              >
-                <GridIcon />
-              </NavLink>
-            </div>
-
-            {isLoading && (
-              <div className="space-y-1 px-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-7 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                ))}
-              </div>
-            )}
-
-            {projects?.map((project) => (
-              <NavLink
-                key={project.id}
-                to={`/projects/${project.id}`}
-                className={linkCls}
-              >
-                <FolderIcon />
-                <span className="truncate">{project.name}</span>
-              </NavLink>
-            ))}
-
-            {!isLoading && projects?.length === 0 && (
-              <p className="px-3 text-xs text-gray-400 dark:text-gray-500 italic">
-                Sin proyectos
-              </p>
-            )}
+        {/* Projects section */}
+        <div className="pt-4">
+          <div className="flex items-center justify-between px-3 mb-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Proyectos
+            </span>
+            <NavLink
+              to="/projects"
+              className={({ isActive }) =>
+                `p-0.5 rounded transition-colors ${isActive
+                  ? 'text-blue-700 dark:text-blue-400'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`
+              }
+              title="Ver todos los proyectos"
+            >
+              <GridIcon />
+            </NavLink>
           </div>
-        </nav>
-        {/* Add task button */}
-        <div className="px-3 pt-4 pb-2 shrink-0">
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            <PlusIcon />
-            Agregar tarea
-          </button>
-        </div>
 
-        {/* Footer — dark mode toggle */}
-        <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0">
-          <button
-            onClick={toggleDark}
-            aria-label="Toggle dark mode"
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            {dark ? <SunIcon /> : <MoonIcon />}
-            {dark ? 'Modo claro' : 'Modo oscuro'}
-          </button>
-        </div>
-      </aside>
+          {isLoading && (
+            <div className="space-y-1 px-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-7 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
+              ))}
+            </div>
+          )}
 
-      {createOpen && <CreateActivityModal onClose={() => setCreateOpen(false)} />}
-    </>
+          {projects?.map((project) => (
+            <NavLink
+              key={project.id}
+              to={`/projects/${project.id}`}
+              className={linkCls}
+            >
+              <FolderIcon />
+              <span className="truncate">{project.name}</span>
+            </NavLink>
+          ))}
+
+          {!isLoading && projects?.length === 0 && (
+            <p className="px-3 text-xs text-gray-400 dark:text-gray-500 italic">
+              Sin proyectos
+            </p>
+          )}
+        </div>
+      </nav>
+
+      {/* Add task button */}
+      <div className="px-3 pt-4 pb-2 shrink-0">
+        <button
+          onClick={onCreateActivity}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-lg transition-colors"
+        >
+          <PlusIcon />
+          Agregar tarea
+        </button>
+      </div>
+
+      {/* Footer — dark mode toggle */}
+      <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0">
+        <button
+          onClick={toggleDark}
+          aria-label="Toggle dark mode"
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          {dark ? <SunIcon /> : <MoonIcon />}
+          {dark ? 'Modo claro' : 'Modo oscuro'}
+        </button>
+      </div>
+    </aside>
   );
 }

@@ -1,4 +1,4 @@
-# Plan de Implementacion: Dockerizacion Full-Stack y Auto-Start
+# Plan de Implementacion: [DONE] Dockerizacion Full-Stack y Auto-Start
 
 ---
 

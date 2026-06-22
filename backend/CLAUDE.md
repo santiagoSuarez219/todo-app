@@ -1,6 +1,6 @@
 # CLAUDE.md — Backend
 
-Referencia técnica del backend del proyecto ToDo. Actualizar cuando cambien endpoints, entidades, lógica de negocio o convenciones.
+> Referencia técnica del backend. Leer antes de modificar cualquier archivo del servidor.
 
 ---
 
@@ -19,9 +19,36 @@ Referencia técnica del backend del proyecto ToDo. Actualizar cuando cambien end
 **Prefijo global:** `/api/v1` (excepto `/mcp`)
 **Swagger UI:** `http://localhost:3000/api/v1/docs`
 
+### Comandos
+
+```bash
+# Instalar dependencias
+npm install
+
+# Desarrollo
+npm run start:dev
+
+# Build
+npm run build
+
+# Producción
+npm run start:prod
+
+# Tests
+npm run test
+
+# Correr migraciones
+npx typeorm migration:run -d src/data-source.ts
+
+# Generar migración
+npx typeorm migration:generate src/migrations/<Nombre> -d src/data-source.ts
+```
+
 ---
 
-## Variables de Entorno (`.env`)
+## Variables de entorno
+
+Archivo real: `.env` en la raíz del proyecto (nunca commitear).
 
 ```env
 DB_HOST=localhost
@@ -35,7 +62,24 @@ FRONTEND_URL=http://localhost:5173
 
 ---
 
-## Estructura de Módulos
+## Base de datos
+
+- `synchronize: false` — nunca se sincronizan esquemas automáticamente.
+- Toda modificación de esquema requiere una migración explícita.
+- Nunca ejecutar migraciones en entornos distintos al local sin confirmación.
+
+### Migraciones existentes
+
+```
+src/migrations/
+├── 1776080084318-InitialSchema.ts
+├── 1776475116575-AddDescriptionToActivities.ts
+└── 1776800000000-AddAutomatizacionToActivities.ts
+```
+
+---
+
+## Estructura de módulos
 
 ```
 src/
@@ -58,8 +102,8 @@ src/
 │   └── activities.controller.ts   Endpoints REST
 │
 ├── mcp/
-│   ├── mcp.service.ts             Define tools MCP (proyecta sobre services)
-│   └── mcp.controller.ts          Endpoint /mcp (JSON-RPC + SSE)
+│   ├── mcp.service.ts             Define tools MCP
+│   └── mcp.controller.ts          Endpoint /mcp (JSON-RPC)
 │
 ├── common/
 │   ├── dto/pagination.dto.ts      page (min 1) · limit (min 1, max 100, default 20)
@@ -67,10 +111,7 @@ src/
 │   ├── filters/http-exception.filter.ts
 │   └── interceptors/transform.interceptor.ts
 │
-└── migrations/                    Migraciones explícitas (synchronize: false)
-    ├── 1776080084318-InitialSchema.ts
-    ├── 1776475116575-AddDescriptionToActivities.ts
-    └── 1776800000000-AddAutomatizacionToActivities.ts
+└── migrations/
 ```
 
 ---
@@ -112,9 +153,7 @@ src/
 | `automatizacion` | `enum` | nullable |
 | `createdAt` / `updatedAt` | `timestamptz` | auto |
 
----
-
-## Enums
+### Enums (`src/common/enums/`)
 
 ```
 ProjectStatus:   active | inactive | paused | completed
@@ -127,32 +166,29 @@ DurationUnit:    hours | days
 Automatizacion:  fully_automatable | partially_automatable | not_automatable
 ```
 
-Ubicación: `src/common/enums/`
-
 ---
 
 ## Endpoints REST
 
 ### Formato de respuesta
 
-**Éxito:**
 ```json
+// Éxito
 { "statusCode": 200, "message": "success", "data": <payload> }
-```
-**Error:**
-```json
+
+// Error
 { "statusCode": 404, "message": "...", "data": null, "path": "...", "timestamp": "..." }
 ```
 
 ### Projects — `/api/v1/projects`
 
-| Método | Ruta | Body / Params | Respuesta |
-|--------|------|---------------|-----------|
-| `GET` | `/projects` | `?status=` (opcional) | `Project[]` |
-| `GET` | `/projects/:id` | UUID | `Project` |
-| `POST` | `/projects` | `CreateProjectDto` | `Project` 201 |
-| `PATCH` | `/projects/:id` | UUID + `UpdateProjectDto` | `Project` |
-| `DELETE` | `/projects/:id` | UUID | 204 |
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/projects` | Lista proyectos (`?status=` opcional) |
+| `GET` | `/projects/:id` | Obtiene proyecto por UUID |
+| `POST` | `/projects` | Crea proyecto (201) |
+| `PATCH` | `/projects/:id` | Actualiza proyecto |
+| `DELETE` | `/projects/:id` | Elimina proyecto (204) |
 
 ### Activities — `/api/v1/activities`
 
@@ -162,7 +198,7 @@ Ubicación: `src/common/enums/`
 | `GET` | `/activities/today` | `actionDate` o `dueDate` en el día actual |
 | `GET` | `/activities/tomorrow` | `actionDate` o `dueDate` mañana |
 | `GET` | `/activities/this-week` | Semana actual (Lun–Dom) |
-| `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
+| `GET` | `/activities/overdue` | Vencidas y no completadas |
 | `GET` | `/activities/project/:projectId` | Por proyecto |
 | `GET` | `/activities/type/:type` | Por tipo |
 | `GET` | `/activities/priority/:priority` | Por prioridad |
@@ -170,24 +206,24 @@ Ubicación: `src/common/enums/`
 | `GET` | `/activities/search/:query` | ILIKE en name, description, project.name |
 | `GET` | `/activities/:id` | Con project, parent y subtasks |
 | `GET` | `/activities/:id/subtasks` | Subtareas de una actividad |
-| `POST` | `/activities` | Crear actividad / subtarea |
+| `POST` | `/activities` | Crear actividad / subtarea (201) |
 | `PATCH` | `/activities/:id` | Actualizar |
 | `DELETE` | `/activities/:id` | Eliminar (204) |
 
-**Paginación** (query params en todos los GET de lista): `page` (default 1) · `limit` (default 20, max 100)
+**Paginación** (todos los GET de lista): `page` (default 1) · `limit` (default 20, max 100)
 
-**Orden de resultados** (aplicado en `baseQuery`): `actionDate ASC NULLS LAST` → `dueDate ASC NULLS LAST` → prioridad (`high=1, medium=2, low=3`)
+**Orden de resultados** (en `baseQuery`): `actionDate ASC NULLS LAST` → `dueDate ASC NULLS LAST` → prioridad (`high=1, medium=2, low=3`)
 
 ---
 
-## Lógica de Negocio Importante
+## Lógica de negocio importante
 
 ### Sanitización por tipo (`sanitizeByType`)
 
 Al crear o actualizar, el servicio limpia campos que no aplican según el tipo:
 
-| Tipo | Campos forzados a `null`/`undefined` |
-|------|--------------------------------------|
+| Tipo | Campos forzados a `null` |
+|------|--------------------------|
 | `reminder` | `dueDate`, `duration`, `durationUnit`, `device`, `location`, `automatizacion`, `parentId` |
 | `event` | `duration`, `durationUnit`, `device`, `location`, `automatizacion`, `parentId` |
 | `task` | `actionDate` y `dueDate` se truncan a medianoche (sin componente horario) |
@@ -207,23 +243,21 @@ Al crear o actualizar, el servicio limpia campos que no aplican según el tipo:
 
 ---
 
-## Infraestructura Global (`main.ts`)
+## Infraestructura global (`main.ts`)
 
 | Mecanismo | Comportamiento |
 |-----------|---------------|
 | `ValidationPipe` | `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true` |
-| `TransformInterceptor` | Envuelve todas las respuestas en `{ statusCode, message, data }` |
+| `TransformInterceptor` | Envuelve respuestas en `{ statusCode, message, data }` |
 | `HttpExceptionFilter` | Normaliza errores en `{ statusCode, message, data: null, path, timestamp }` |
-| CORS | Origen: `FRONTEND_URL` env var (default `http://localhost:5173`) |
-| Swagger | Disponible en `/api/v1/docs` |
+| CORS | Origen: `FRONTEND_URL` env var |
+| Swagger | `/api/v1/docs` |
 
 ---
 
 ## Servidor MCP (`/mcp`)
 
-El endpoint `/mcp` expone las mismas capacidades que el REST API como tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo (stateless).
-
-**Tools disponibles:**
+Endpoint stateless que expone las mismas capacidades del REST API como tools MCP para agentes de IA.
 
 | Tool | Descripción |
 |------|-------------|
@@ -249,28 +283,19 @@ El endpoint `/mcp` expone las mismas capacidades que el REST API como tools MCP 
 
 ---
 
-## Base de Datos
-
-- **Motor:** PostgreSQL 16 en Docker (`docker-compose.yml`, puerto externo `5433`)
-- **`synchronize: false`** — nunca se sincronizan esquemas automáticamente
-- **Migraciones:** `npx typeorm migration:run -d src/data-source.ts`
-- **Generar migración:** `npx typeorm migration:generate src/migrations/<Nombre> -d src/data-source.ts`
-
----
-
 ## Convenciones
 
-- Los servicios lanzan `NotFoundException` cuando no encuentran una entidad por ID
-- Nunca usar `synchronize: true` — siempre migraciones explícitas
-- Los enums viven en `src/common/enums/` — uno por archivo
-- Los DTOs usan `@IsOptional()` + decoradores de validación estrictos
-- `UpdateActivityDto` y `UpdateProjectDto` son `PartialType` de sus Create
-- El `baseQuery()` siempre hace `leftJoinAndSelect` de `project`, `parent` y `subtasks` para devolver entidades completas
-- La lógica de negocio va en el servicio, nunca en el controlador
+- Los servicios lanzan `NotFoundException` cuando no encuentran una entidad por ID.
+- Nunca usar `synchronize: true` — siempre migraciones explícitas.
+- Los enums viven en `src/common/enums/` — uno por archivo.
+- Los DTOs usan `@IsOptional()` + decoradores de validación estrictos.
+- `UpdateActivityDto` y `UpdateProjectDto` son `PartialType` de sus Create.
+- `baseQuery()` siempre hace `leftJoinAndSelect` de `project`, `parent` y `subtasks`.
+- La lógica de negocio va en el servicio, nunca en el controlador.
 
 ---
 
-## Archivos Clave
+## Archivos clave
 
 | Archivo | Rol |
 |---------|-----|
@@ -284,80 +309,3 @@ El endpoint `/mcp` expone las mismas capacidades que el REST API como tools MCP 
 | `src/mcp/mcp.service.ts` | Definición de tools MCP |
 | `src/common/interceptors/transform.interceptor.ts` | Wrapper de respuestas |
 | `src/common/filters/http-exception.filter.ts` | Formato de errores |
-
-## Git — Branching & Commits
-
-### Estructura de ramas
-
-| Propósito | Prefijo | Ejemplo |
-|-----------|---------|---------|
-| Nueva funcionalidad o spec | `feature/` | `feature/offline-sync` |
-| Corrección de bug | `bug/` | `bug/login-token-refresh` |
-| Preparación de despliegue | `deploy/` | `deploy/v1.0.0-android` |
-
-- `main` — rama de producción; solo recibe merges desde `deploy/`.
-- `development` — rama de integración y pruebas; **todas las ramas `feature/` y `bug/` se desprenden de aquí**.
-- Una vez mergeada una rama a `development`, **eliminar la rama de origen**.
-- Los ajustes de despliegue se implementan en `deploy/<nombre>` y se mergean a `main`.
-
-### Commits
-
-- Crear commits cuando la cantidad de cambios lo amerite (no hacer commits triviales de un solo carácter).
-- Los mensajes de commit deben estar **completamente en inglés** y seguir Conventional Commits:
-
-```
-<type>(<scope>): <short description>
-
-[optional body]
-
-[optional footer]
-```
-
-Tipos válidos: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `style`, `perf`, `ci`.
-
-Ejemplos:
-```
-feat(auth): add JWT persistence in expo-secure-store
-fix(sync): prevent duplicate batch upload on reconnect
-chore(deps): upgrade expo-sqlite to v14
-```
-
----
-
-## Formato de Análisis Técnico
-
-```markdown
-# Análisis Técnico: [Feature]
-
-## Problema
-
-[Descripción del problema a resolver]
-
-## Impacto Arquitectural
-
-- Backend: [cambios en modelos, servicios, API]
-- Frontend: [cambios en componentes, estado, UI]
-- Base de datos: [nuevas tablas, relaciones, índices]
-
-## Propuesta de Solución
-
-[Diseño técnico siguiendo Clean Architecture]
-
-## Plan de Implementación
-
-1. [Paso 1]
-2. [Paso 2]
-   ...
-
-## Prioridades de implementación
-
-1. Estructura base: Expo Router + Zustand + esquema SQLite
-2. Autenticación: login, persistencia de token, headers en requests
-3. Descarga y caché offline de instrumentos
-4. Flujo completo de encuesta (navegación + validación + guardado local)
-5. Sync con backend (upload de surveys pendientes)
-6. GPS y construcción de polígonos
-7. Multimodalidad: voz e imágenes
-
-## AskUserQuestion
-Utiliza la herramienta `AskUserQuestion` para aclarar cualquier duda sobre requisitos, diseño o implementación antes de comenzar a escribir código.
