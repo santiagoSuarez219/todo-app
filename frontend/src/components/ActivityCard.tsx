@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import type { Activity, ActivityStatus, Automatizacion, CreateActivityDto, Project } from '../types';
-import { useUpdateActivity, useDeleteActivity, useActivitySubtasks, useCreateSubtask } from '../hooks/useActivities';
+import type { Activity, ActivityStatus, CreateActivityDto, Priority, Project } from '../types';
+import { useUpdateActivity, useDeleteActivity, useActivitySubtasks, useCreateSubtask, useCancelFutureInstances } from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
@@ -82,23 +81,47 @@ function TrashIcon() {
   );
 }
 
-// ─── AutomatizacionBadge ──────────────────────────────────────────────────────
-
-const AUTOMATIZACION_CONFIG: Record<string, { label: string; cls: string }> = {
-  fully_automatable: { label: 'Automatizable', cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' },
-  partially_automatable: { label: 'Parcialmente', cls: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' },
-  not_automatable: { label: 'No automatizable', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
-};
-
-function AutomatizacionBadge({ value }: { value: Automatizacion }) {
-  const config = AUTOMATIZACION_CONFIG[value];
-  if (!config) return null;
+function SunIcon() {
   return (
-    <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border font-medium ${config.cls}`}>
-      ⚡ {config.label}
-    </span>
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z" />
+    </svg>
   );
 }
+
+function NotionIcon() {
+  return (
+    <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
+    </svg>
+  );
+}
+
+function RecurringIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15" />
+    </svg>
+  );
+}
+
+function BanIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+    </svg>
+  );
+}
+
+// ─── Recurrence helpers ───────────────────────────────────────────────────────
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  daily: 'diariamente',
+  weekly: 'semanalmente',
+  biweekly: 'quincenalmente',
+  monthly: 'mensualmente',
+  yearly: 'anualmente',
+};
 
 // ─── Status options ───────────────────────────────────────────────────────────
 
@@ -278,24 +301,6 @@ function EditActivityModal({ activity, onClose }: { activity: Activity; onClose:
   );
 }
 
-// ─── TypeBadge ────────────────────────────────────────────────────────────────
-
-const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
-  task:     { label: 'Tarea',        cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
-  reminder: { label: 'Recordatorio', cls: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' },
-  event:    { label: 'Evento',       cls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
-};
-
-function TypeBadge({ type }: { type: string }) {
-  const cfg = TYPE_BADGE[type];
-  if (!cfg) return null;
-  return (
-    <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full border font-medium ${cfg.cls}`}>
-      {cfg.label}
-    </span>
-  );
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(dateStr: string, withTime = false) {
@@ -391,39 +396,243 @@ function InlineDueDateEditor({
   );
 }
 
+// ─── InlineNameEditor ────────────────────────────────────────────────────────
+
+function InlineNameEditor({ activity }: { activity: Activity }) {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { mutate, isPending } = useUpdateActivity();
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  function commit() {
+    const input = inputRef.current;
+    if (!input) return;
+    const trimmed = input.value.trim();
+    setEditing(false);
+    if (!trimmed || trimmed === activity.name) return;
+    mutate({ id: activity.id, dto: { name: trimmed } });
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1.5 flex-1">
+        <input
+          ref={inputRef}
+          type="text"
+          defaultValue={activity.name}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          disabled={isPending}
+          className="w-full text-sm font-semibold bg-transparent border-b border-blue-400 dark:border-blue-500 text-gray-900 dark:text-white focus:outline-none pb-0.5 disabled:opacity-50"
+        />
+        {isPending && <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin shrink-0" />}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="group flex items-start gap-1.5 text-left flex-1"
+    >
+      <span className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
+        {activity.name}
+      </span>
+      <span className="opacity-0 group-hover:opacity-60 transition-opacity mt-0.5 shrink-0 text-gray-400 dark:text-gray-500">
+        <EditIcon />
+      </span>
+    </button>
+  );
+}
+
+// ─── InlinePriorityEditor ─────────────────────────────────────────────────────
+
+const PRIORITY_OPTIONS: { value: Priority; label: string; dot: string }[] = [
+  { value: 'high',   label: '↑ Alta',  dot: 'bg-red-400' },
+  { value: 'medium', label: '→ Media', dot: 'bg-yellow-400' },
+  { value: 'low',    label: '↓ Baja',  dot: 'bg-green-400' },
+];
+
+function InlinePriorityEditor({ activity }: { activity: Activity }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { mutate, isPending } = useUpdateActivity();
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  function handleSelect(priority: Priority) {
+    if (priority === activity.priority) { setOpen(false); return; }
+    mutate({ id: activity.id, dto: { priority } }, { onSettled: () => setOpen(false) });
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        disabled={isPending}
+        className="flex items-center gap-1 focus:outline-none disabled:opacity-50"
+        aria-label="Cambiar prioridad"
+      >
+        <PriorityBadge priority={activity.priority} />
+        <span className="text-gray-400 dark:text-gray-500"><ChevronIcon up={open} /></span>
+        {isPending && <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-20 w-36 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+          {PRIORITY_OPTIONS.map(({ value, label, dot }) => (
+            <button
+              key={value}
+              onClick={() => handleSelect(value)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${
+                value === activity.priority
+                  ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+              {label}
+              {value === activity.priority && (
+                <svg className="w-3 h-3 ml-auto text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── InlineProjectEditor ──────────────────────────────────────────────────────
+
+function InlineProjectEditor({ activity }: { activity: Activity }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { mutate, isPending } = useUpdateActivity();
+  const { data: projects = [] } = useProjects();
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  function handleSelect(projectId: string | null) {
+    if (projectId === (activity.project?.id ?? null)) { setOpen(false); return; }
+    mutate({ id: activity.id, dto: { projectId } }, { onSettled: () => setOpen(false) });
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        disabled={isPending}
+        className="group flex items-center gap-1 focus:outline-none disabled:opacity-50"
+        aria-label="Cambiar proyecto"
+      >
+        {activity.project ? (
+          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+            <FolderIcon />
+            {activity.project.name}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            + Proyecto
+          </span>
+        )}
+        <span className="opacity-0 group-hover:opacity-60 transition-opacity text-gray-400 dark:text-gray-500">
+          <ChevronIcon up={open} />
+        </span>
+        {isPending && <span className="w-3 h-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-20 min-w-[160px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1">
+          <button
+            onClick={() => handleSelect(null)}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${
+              !activity.project
+                ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <span className="text-gray-400">—</span>
+            Sin proyecto
+            {!activity.project && (
+              <svg className="w-3 h-3 ml-auto text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+              </svg>
+            )}
+          </button>
+          {projects.map((project) => (
+            <button
+              key={project.id}
+              onClick={() => handleSelect(project.id)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors ${
+                activity.project?.id === project.id
+                  ? 'bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-white font-medium'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <FolderIcon />
+              {project.name}
+              {activity.project?.id === project.id && (
+                <svg className="w-3 h-3 ml-auto text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── ActivityCard ─────────────────────────────────────────────────────────────
 
 export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [cancelInstancesOpen, setCancelInstancesOpen] = useState(false);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
   const [createSubtaskOpen, setCreateSubtaskOpen] = useState(false);
   const { mutate: doDelete, isPending: isDeleting } = useDeleteActivity();
+  const { mutate: toggleSchedule, isPending: isScheduling } = useUpdateActivity();
+  const { mutate: doCancelInstances, isPending: isCancelling } = useCancelFutureInstances();
 
   const isTask     = activity.type === 'task';
   const isReminder = activity.type === 'reminder';
-  const isEvent    = activity.type === 'event';
 
   const now = new Date();
   const isOverdue =
     activity.status !== 'completed' &&
-    (isTask || isEvent
-      ? activity.dueDate && new Date(activity.dueDate) < now
-      : isReminder && activity.actionDate && new Date(activity.actionDate) < now);
+    activity.dueDate &&
+    new Date(activity.dueDate) < now;
 
   const totalSubtasks = isTask ? (activity.subtasks?.length ?? 0) : 0;
   const completedSubtasks =
     activity.subtasks?.filter((s) => s.status === 'completed').length ?? 0;
   const subtaskPercent =
     totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
-
-  const durationLabel =
-    activity.duration && activity.durationUnit
-      ? `${activity.duration} ${activity.durationUnit === 'hours'
-        ? activity.duration === 1 ? 'hora' : 'horas'
-        : activity.duration === 1 ? 'día' : 'días'
-      }`
-      : null;
 
   function handleEditClick() {
     if (onEdit) { onEdit(activity); } else { setEditOpen(true); }
@@ -446,6 +655,21 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           <StatusDropdown activity={activity} />
           <div className="flex items-center gap-1 shrink-0">
             <button
+              onClick={() =>
+                toggleSchedule({ id: activity.id, dto: { scheduledForToday: !activity.scheduledForToday } })
+              }
+              disabled={isScheduling}
+              title={activity.scheduledForToday ? 'Quitar de hoy' : 'Programar para hoy'}
+              className={`flex items-center gap-1 text-xs px-1.5 py-1 rounded transition-colors disabled:opacity-50 ${
+                activity.scheduledForToday
+                  ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+              }`}
+            >
+              <SunIcon />
+              <span>Para hoy</span>
+            </button>
+            <button
               onClick={handleEditClick}
               title="Editar actividad"
               className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-700 dark:hover:text-blue-400 px-1.5 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
@@ -453,6 +677,17 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               <EditIcon />
               <span>Editar</span>
             </button>
+            {activity.isTemplate && (
+              <button
+                onClick={() => setCancelInstancesOpen(true)}
+                disabled={isCancelling}
+                title="Cancelar instancias futuras"
+                className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-400 px-1.5 py-1 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors disabled:opacity-50"
+              >
+                <BanIcon />
+                <span>Cancelar futuras</span>
+              </button>
+            )}
             <button
               onClick={handleDeleteClick}
               title="Eliminar actividad"
@@ -466,9 +701,27 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
 
         {/* ── Row 2: title + description ── */}
         <div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
-            {activity.name}
-          </p>
+          <div className="flex items-start gap-2">
+            <InlineNameEditor activity={activity} />
+            {activity.isTemplate && (
+              <span
+                title={`Se repite ${FREQUENCY_LABELS[activity.recurrenceFrequency ?? ''] ?? ''}`}
+                className="shrink-0 inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+              >
+                <RecurringIcon />
+                Recurrente
+              </span>
+            )}
+            {!activity.isTemplate && activity.templateId && (
+              <span
+                title="Instancia de actividad recurrente"
+                className="shrink-0 inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
+              >
+                <RecurringIcon />
+                Auto
+              </span>
+            )}
+          </div>
           {activity.description && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
               {activity.description}
@@ -476,48 +729,38 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           )}
         </div>
 
-        {/* ── Row 2b: type badge ── */}
-        <TypeBadge type={activity.type} />
-
-        {/* ── Row 3: project chip ── */}
-        {activity.project && (
-          <div>
-            <Link
-              to={`/projects/${activity.project.id}`}
-              className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+        {/* ── Row 3: project chip + notion chip ── */}
+        <div className="flex flex-wrap gap-1.5">
+          <InlineProjectEditor activity={activity} />
+          {activity.notionUrl && (
+            <a
+              href={activity.notionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              <FolderIcon />
-              {activity.project.name}
-            </Link>
-          </div>
-        )}
+              <NotionIcon />
+              Notion
+            </a>
+          )}
+        </div>
 
         {/* ── Separator ── */}
         <hr className="border-gray-100 dark:border-gray-700" />
 
         <div></div>
 
-        {/* ── Row 4: priority + energy + automatizacion (solo TASK) ── */}
+        {/* ── Row 4: priority + energy ── */}
         <div className="flex items-center gap-3 flex-wrap">
-          <PriorityBadge priority={activity.priority} />
+          <InlinePriorityEditor activity={activity} />
           <EnergyIndicator energy={activity.energy} />
-          {isTask && activity.automatizacion && (
-            <AutomatizacionBadge value={activity.automatizacion} />
-          )}
         </div>
 
-        {/* ── Row 5: fechas (semántica por tipo) ── */}
-        {(activity.actionDate || activity.dueDate) && (
+        {/* ── Row 5: fecha ── */}
+        {activity.dueDate && (
           <div className="flex flex-col gap-1.5">
-            {/* TASK: fecha de acción (sin hora) */}
-            {isTask && activity.actionDate && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                <CalendarIcon />
-                <span>Inicio: {fmt(activity.actionDate)}</span>
-              </div>
-            )}
             {/* TASK: fecha límite (sin hora) — editable inline */}
-            {isTask && activity.dueDate && (
+            {isTask && (
               <InlineDueDateEditor
                 activity={activity}
                 label="Vence"
@@ -525,40 +768,16 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               />
             )}
             {/* REMINDER: fecha + hora */}
-            {isReminder && activity.actionDate && (
+            {isReminder && (
               <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
                 {isOverdue ? <WarningIcon /> : <CalendarIcon />}
-                <span>Recordatorio: {fmt(activity.actionDate, true)}</span>
+                <span>Recordatorio: {fmt(activity.dueDate, true)}</span>
               </div>
-            )}
-            {/* EVENT: inicio y fin con hora */}
-            {isEvent && activity.actionDate && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                <CalendarIcon />
-                <span>Inicio: {fmt(activity.actionDate, true)}</span>
-              </div>
-            )}
-            {/* EVENT: fin con hora — editable inline */}
-            {isEvent && activity.dueDate && (
-              <InlineDueDateEditor
-                activity={activity}
-                withTime
-                label="Fin"
-                overdue={!!isOverdue}
-              />
             )}
           </div>
         )}
 
-        {/* ── Row 6: duración (solo TASK) ── */}
-        {isTask && durationLabel && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-            <ClockIcon />
-            <span>{durationLabel}</span>
-          </div>
-        )}
-
-        {/* ── Row 7: subtask area (solo TASK) ── */}
+        {/* ── Row 6: subtask area (solo TASK) ── */}
         {isTask && totalSubtasks > 0 ? (
           <div className="pt-0.5">
             {/* Progress bar */}
@@ -627,6 +846,19 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         }
         onCancel={() => setDeleteOpen(false)}
         loading={isDeleting}
+      />
+
+      {/* ── Cancel future instances confirm ── */}
+      <ConfirmDialog
+        open={cancelInstancesOpen}
+        title="Cancelar instancias futuras"
+        message={`¿Cancelar todas las instancias futuras pendientes de "${activity.name}"? El template y las instancias pasadas no se modificarán.`}
+        confirmLabel="Cancelar instancias"
+        onConfirm={() =>
+          doCancelInstances(activity.id, { onSuccess: () => setCancelInstancesOpen(false) })
+        }
+        onCancel={() => setCancelInstancesOpen(false)}
+        loading={isCancelling}
       />
     </>
   );

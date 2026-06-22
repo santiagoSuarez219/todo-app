@@ -19,7 +19,6 @@ export type ActivityStatus = (typeof ActivityStatus)[keyof typeof ActivityStatus
 
 export const ActivityType = {
   REMINDER: 'reminder',
-  EVENT: 'event',
   TASK: 'task',
 } as const;
 export type ActivityType = (typeof ActivityType)[keyof typeof ActivityType];
@@ -38,25 +37,24 @@ export const Energy = {
 } as const;
 export type Energy = (typeof Energy)[keyof typeof Energy];
 
-export const Device = {
-  PHONE: 'phone',
-  COMPUTER: 'computer',
-  TABLET: 'tablet',
+export const RecurrenceFrequency = {
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+  BIWEEKLY: 'biweekly',
+  MONTHLY: 'monthly',
+  YEARLY: 'yearly',
 } as const;
-export type Device = (typeof Device)[keyof typeof Device];
+export type RecurrenceFrequency = (typeof RecurrenceFrequency)[keyof typeof RecurrenceFrequency];
 
-export const DurationUnit = {
-  HOURS: 'hours',
-  DAYS: 'days',
-} as const;
-export type DurationUnit = (typeof DurationUnit)[keyof typeof DurationUnit];
+export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export const Automatizacion = {
-  FULLY_AUTOMATABLE: 'fully_automatable',
-  PARTIALLY_AUTOMATABLE: 'partially_automatable',
-  NOT_AUTOMATABLE: 'not_automatable',
-} as const;
-export type Automatizacion = (typeof Automatizacion)[keyof typeof Automatizacion];
+export interface RecurrenceConfig {
+  isRecurring: boolean;
+  recurrenceFrequency?: RecurrenceFrequency;
+  recurrenceDays?: WeekDay[];
+  recurrenceDayOfMonth?: number;
+  recurrenceEndDate?: string | null;
+}
 
 // ─── Entities ───────────────────────────────────────────────────────────────
 
@@ -75,19 +73,23 @@ export interface Activity {
   name: string;
   description: string | null;
   project: Project | null;
-  actionDate: string | null;
   dueDate: string | null;
   priority: Priority;
   status: ActivityStatus;
   energy: Energy;
-  duration: number | null;
-  durationUnit: DurationUnit | null;
-  device: Device | null;
   type: ActivityType;
-  location: string | null;
   parent: Activity | null;
   subtasks: Activity[];
-  automatizacion: Automatizacion | null;
+  scheduledForToday: boolean;
+  notionUrl: string | null;
+  isTemplate: boolean;
+  isRecurring: boolean;
+  templateId: string | null;
+  recurrenceFrequency: RecurrenceFrequency | null;
+  recurrenceDays: WeekDay[] | null;
+  recurrenceDayOfMonth: number | null;
+  recurrenceEndDate: string | null;
+  instanceDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -108,17 +110,18 @@ export interface CreateActivityDto {
   description?: string | null;
   projectId?: string | null;
   parentId?: string | null;
-  actionDate?: string | null;
   dueDate?: string | null;
   priority?: Priority;
   status?: ActivityStatus;
   energy?: Energy;
-  duration?: number | null;
-  durationUnit?: DurationUnit | null;
-  device?: Device | null;
   type?: ActivityType;
-  location?: string | null;
-  automatizacion?: Automatizacion | null;
+  scheduledForToday?: boolean;
+  notionUrl?: string | null;
+  isRecurring?: boolean;
+  recurrenceFrequency?: RecurrenceFrequency;
+  recurrenceDays?: WeekDay[];
+  recurrenceDayOfMonth?: number;
+  recurrenceEndDate?: string | null;
 }
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;
