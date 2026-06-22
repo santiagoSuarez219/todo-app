@@ -93,10 +93,9 @@ export default function Dashboard() {
       case 'completed': return list.filter((a) => a.status === 'completed');
       case 'overdue':   return list.filter((a) => {
         if (a.status === 'completed') return false;
-        if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
         return !!a.dueDate && new Date(a.dueDate) < now;
       });
-      case 'no_date':   return list.filter((a) => !a.actionDate && !a.dueDate);
+      case 'no_date':   return list.filter((a) => !a.dueDate);
       default:          return list.filter((a) => a.status !== 'completed');
     }
   })();
@@ -172,11 +171,10 @@ export default function Dashboard() {
                   {tab.key === 'overdue'
                     ? list.filter((a) => {
                         if (a.status === 'completed') return false;
-                        if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
                         return !!a.dueDate && new Date(a.dueDate) < now;
                       }).length
                     : tab.key === 'no_date'
-                    ? list.filter((a) => !a.actionDate && !a.dueDate).length
+                    ? list.filter((a) => !a.dueDate).length
                     : list.filter((a) => a.status === tab.key).length}
                 </span>
               )}

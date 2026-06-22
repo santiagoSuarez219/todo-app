@@ -29,7 +29,7 @@ const schema = z.object({
   dueDate: z.string().nullish(),
   notionUrl: z.string().url({ message: 'Debe ser una URL válida' }).nullish(),
   // ── Recurrence ──
-  isRecurring: z.boolean().default(false),
+  isRecurring: z.boolean(),
   recurrenceFrequency: z.nativeEnum(RecurrenceFrequency).optional(),
   recurrenceDays: z.array(z.number().min(0).max(6)).optional(),
   recurrenceDayOfMonth: z.coerce.number().min(1).max(31).optional(),
