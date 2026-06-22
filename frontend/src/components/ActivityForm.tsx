@@ -123,7 +123,8 @@ export default function ActivityForm({
 }: Props) {
   const { register, handleSubmit, setValue, control, formState: { errors } } =
     useForm<FormValues>({
-      resolver: zodResolver(schema),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      resolver: zodResolver(schema) as any,
       defaultValues: {
         name: initial?.name ?? '',
         description: initial?.description ?? '',
