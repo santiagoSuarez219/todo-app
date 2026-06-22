@@ -1,4 +1,4 @@
-# Spec 07 — Diferenciación por Tipo de Actividad
+# Spec 07 — [DONE] Diferenciación por Tipo de Actividad
 
 ## Comportamiento deseado por tipo
 

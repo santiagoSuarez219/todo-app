@@ -1,4 +1,4 @@
-# Plan de Implementacion: Campo Descripcion y Busqueda de Actividades
+# Plan de Implementacion: [DONE] Campo Descripcion y Busqueda de Actividades
 
 ---
 

@@ -1,4 +1,4 @@
-# Plan de Implementacion: Frontend React + Vite + TailwindCSS
+# Plan de Implementacion: [DONE] Frontend React + Vite + TailwindCSS
 
 ---
 

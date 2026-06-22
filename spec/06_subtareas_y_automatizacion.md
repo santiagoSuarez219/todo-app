@@ -1,4 +1,4 @@
-# Spec 06 — Subtareas UI y Campo `automatizacion`
+# Spec 06 — [DESCARTADO] Subtareas UI y Campo `automatizacion`
 
 ## Principios del Plan
 

@@ -1,4 +1,4 @@
-# Spec 08 — Responsive Layout con Tabbar Mobile
+# Spec 08 — [DONE] Responsive Layout con Tabbar Mobile
 
 ## Objetivo
 

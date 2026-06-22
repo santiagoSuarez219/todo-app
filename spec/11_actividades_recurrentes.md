@@ -1,4 +1,4 @@
-# Spec 11 — Actividades Recurrentes
+# Spec 11 — [DONE] Actividades Recurrentes
 
 ## Objetivo
 
