@@ -93,11 +93,11 @@ El módulo sigue exactamente los mismos patrones arquitecturales del proyecto: N
 
 ### Fase 6 — Módulo NestJS, migraciones y registro (backend)
 
-- [ ] Crear `backend/src/finances/finances.module.ts` — importa `TypeOrmModule.forFeature` con las 8 entidades; declara y exporta todos los services y controllers
-- [ ] Crear migración `backend/src/migrations/<timestamp>-CreateExpensesAndIncomes.ts` — tablas `expenses` e `incomes` con enums de PostgreSQL
-- [ ] Crear migración `backend/src/migrations/<timestamp>-CreatePurchasesAccountsCardsCdts.ts` — tablas `purchases`, `accounts`, `credit_cards`, `cdts`
-- [ ] Crear migración `backend/src/migrations/<timestamp>-CreateBudgets.ts` — tablas `budgets` y `budget_items` con FK y onDelete CASCADE
-- [ ] Editar `backend/src/app.module.ts` — importar y registrar `FinancesModule`
+- [x] Crear `backend/src/finances/finances.module.ts` — importa `TypeOrmModule.forFeature` con las 8 entidades; declara y exporta todos los services y controllers
+- [x] Crear migración `backend/src/migrations/1782200000000-CreateExpensesAndIncomes.ts` — tablas `expenses` e `incomes` con enums de PostgreSQL
+- [x] Crear migración `backend/src/migrations/1782200000001-CreatePurchasesAccountsCardsCdts.ts` — tablas `purchases`, `accounts`, `credit_cards`, `cdts`
+- [x] Crear migración `backend/src/migrations/1782200000002-CreateBudgets.ts` — tablas `budgets` y `budget_items` con FK y onDelete CASCADE
+- [x] Editar `backend/src/app.module.ts` — importar y registrar `FinancesModule`
 
 ### Fase 7 — Tipos, servicios y hooks: Gastos e Ingresos (frontend)
 
