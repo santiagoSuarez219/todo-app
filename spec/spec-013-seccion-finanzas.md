@@ -57,11 +57,11 @@ El módulo sigue exactamente los mismos patrones arquitecturales del proyecto: N
 
 ### Fase 3 — Entidad Compra / Wishlist (backend)
 
-- [ ] Crear `backend/src/finances/entities/purchase.entity.ts` — campos: `id` (uuid PK), `description` (varchar 255), `estimatedPrice` (decimal 12,2 nullable), `priority` (enum PurchasePriority, default `media`), `store` (enum PurchaseStore, default `otra`), `status` (enum PurchaseStatus, default `pendiente`), `url` (varchar nullable), `notes` (text nullable), `createdAt`, `updatedAt`
-- [ ] Crear `backend/src/finances/dto/create-purchase.dto.ts`
-- [ ] Crear `backend/src/finances/dto/update-purchase.dto.ts` — PartialType de CreatePurchaseDto
-- [ ] Crear `backend/src/finances/purchases.service.ts` — CRUD + `findAll` con filtro opcional por `status`, acepta `PaginationDto`
-- [ ] Crear `backend/src/finances/purchases.controller.ts` — GET `/purchases` (con `?status=`), GET `/purchases/:id`, POST `/purchases`, PATCH `/purchases/:id`, DELETE `/purchases/:id` (204)
+- [x] Crear `backend/src/finances/entities/purchase.entity.ts` — campos: `id` (uuid PK), `description` (varchar 255), `estimatedPrice` (decimal 12,2 nullable), `priority` (enum PurchasePriority, default `media`), `store` (enum PurchaseStore, default `otra`), `status` (enum PurchaseStatus, default `pendiente`), `url` (varchar nullable), `notes` (text nullable), `createdAt`, `updatedAt`
+- [x] Crear `backend/src/finances/dto/create-purchase.dto.ts`
+- [x] Crear `backend/src/finances/dto/update-purchase.dto.ts` — PartialType de CreatePurchaseDto
+- [x] Crear `backend/src/finances/purchases.service.ts` — CRUD + `findAll` con filtro opcional por `status`, acepta `PaginationDto`
+- [x] Crear `backend/src/finances/purchases.controller.ts` — GET `/purchases` (con `?status=`), GET `/purchases/:id`, POST `/purchases`, PATCH `/purchases/:id`, DELETE `/purchases/:id` (204)
 
 ### Fase 4 — Entidades Cuenta, Tarjeta de Crédito y CDT (backend)
 
