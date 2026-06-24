@@ -65,21 +65,21 @@ El módulo sigue exactamente los mismos patrones arquitecturales del proyecto: N
 
 ### Fase 4 — Entidades Cuenta, Tarjeta de Crédito y CDT (backend)
 
-- [ ] Crear `backend/src/finances/entities/account.entity.ts` — campos: `id` (uuid PK), `name` (varchar 255), `type` (enum AccountType), `bank` (varchar 255), `currentBalance` (decimal 15,2), `interestRate` (decimal 5,4 nullable), `createdAt`, `updatedAt`
-- [ ] Crear `backend/src/finances/entities/credit-card.entity.ts` — campos: `id` (uuid PK), `name` (varchar 255), `bank` (varchar 255), `interestRate` (decimal 5,4), `monthlyFee` (decimal 10,2), `totalLimit` (decimal 15,2), `availableLimit` (decimal 15,2), `createdAt`, `updatedAt`
-- [ ] Crear `backend/src/finances/entities/cdt.entity.ts` — campos: `id` (uuid PK), `bank` (varchar 255), `investedAmount` (decimal 15,2), `interestRate` (decimal 5,4), `startDate` (date), `endDate` (date), `createdAt`, `updatedAt`
-- [ ] Crear `backend/src/finances/dto/create-account.dto.ts`
-- [ ] Crear `backend/src/finances/dto/update-account.dto.ts` — PartialType
-- [ ] Crear `backend/src/finances/dto/create-credit-card.dto.ts`
-- [ ] Crear `backend/src/finances/dto/update-credit-card.dto.ts` — PartialType
-- [ ] Crear `backend/src/finances/dto/create-cdt.dto.ts`
-- [ ] Crear `backend/src/finances/dto/update-cdt.dto.ts` — PartialType
-- [ ] Crear `backend/src/finances/accounts.service.ts` — CRUD completo con `PaginationDto`
-- [ ] Crear `backend/src/finances/accounts.controller.ts` — endpoints REST estándar bajo `/accounts`
-- [ ] Crear `backend/src/finances/credit-cards.service.ts` — CRUD completo
-- [ ] Crear `backend/src/finances/credit-cards.controller.ts` — endpoints REST bajo `/credit-cards`
-- [ ] Crear `backend/src/finances/cdts.service.ts` — CRUD + método `findActive` (endDate >= hoy)
-- [ ] Crear `backend/src/finances/cdts.controller.ts` — endpoints REST bajo `/cdts` + GET `/cdts/active`
+- [x] Crear `backend/src/finances/entities/account.entity.ts` — campos: `id` (uuid PK), `name` (varchar 255), `type` (enum AccountType), `bank` (varchar 255), `currentBalance` (decimal 15,2), `interestRate` (decimal 5,4 nullable), `createdAt`, `updatedAt`
+- [x] Crear `backend/src/finances/entities/credit-card.entity.ts` — campos: `id` (uuid PK), `name` (varchar 255), `bank` (varchar 255), `interestRate` (decimal 5,4), `monthlyFee` (decimal 10,2), `totalLimit` (decimal 15,2), `availableLimit` (decimal 15,2), `createdAt`, `updatedAt`
+- [x] Crear `backend/src/finances/entities/cdt.entity.ts` — campos: `id` (uuid PK), `bank` (varchar 255), `investedAmount` (decimal 15,2), `interestRate` (decimal 5,4), `startDate` (date), `endDate` (date), `createdAt`, `updatedAt`
+- [x] Crear `backend/src/finances/dto/create-account.dto.ts`
+- [x] Crear `backend/src/finances/dto/update-account.dto.ts` — PartialType
+- [x] Crear `backend/src/finances/dto/create-credit-card.dto.ts`
+- [x] Crear `backend/src/finances/dto/update-credit-card.dto.ts` — PartialType
+- [x] Crear `backend/src/finances/dto/create-cdt.dto.ts`
+- [x] Crear `backend/src/finances/dto/update-cdt.dto.ts` — PartialType
+- [x] Crear `backend/src/finances/accounts.service.ts` — CRUD completo con `PaginationDto`
+- [x] Crear `backend/src/finances/accounts.controller.ts` — endpoints REST estándar bajo `/accounts`
+- [x] Crear `backend/src/finances/credit-cards.service.ts` — CRUD completo
+- [x] Crear `backend/src/finances/credit-cards.controller.ts` — endpoints REST bajo `/credit-cards`
+- [x] Crear `backend/src/finances/cdts.service.ts` — CRUD + método `findActive` (endDate >= hoy)
+- [x] Crear `backend/src/finances/cdts.controller.ts` — endpoints REST bajo `/cdts` + GET `/cdts/active`
 
 ### Fase 5 — Entidad Presupuesto (backend)
 
