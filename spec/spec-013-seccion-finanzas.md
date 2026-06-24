@@ -83,13 +83,13 @@ El módulo sigue exactamente los mismos patrones arquitecturales del proyecto: N
 
 ### Fase 5 — Entidad Presupuesto (backend)
 
-- [ ] Crear `backend/src/finances/entities/budget.entity.ts` — campos: `id` (uuid PK), `name` (varchar 255), `month` (integer 1–12), `year` (integer), `items` (OneToMany → BudgetItem), `createdAt`, `updatedAt`
-- [ ] Crear `backend/src/finances/entities/budget-item.entity.ts` — campos: `id` (uuid PK), `budget` (ManyToOne → Budget, onDelete CASCADE), `description` (varchar 255), `plannedAmount` (decimal 12,2), `createdAt`, `updatedAt`
-- [ ] Crear `backend/src/finances/dto/create-budget-item.dto.ts`
-- [ ] Crear `backend/src/finances/dto/create-budget.dto.ts` — campos: `name`, `month` (1–12), `year` (>= 2020), `items` (array opcional de CreateBudgetItemDto)
-- [ ] Crear `backend/src/finances/dto/update-budget.dto.ts` — PartialType sin items
-- [ ] Crear `backend/src/finances/budgets.service.ts` — CRUD; `findOne` hace leftJoinAndSelect de `items`; `findAll` filtra por `year` y `month` opcionales; creación en transacción para Budget + BudgetItems
-- [ ] Crear `backend/src/finances/budgets.controller.ts` — GET `/budgets` (con `?year=&month=`), GET `/budgets/:id`, POST `/budgets`, PATCH `/budgets/:id`, DELETE `/budgets/:id` (204); POST `/budgets/:id/items`, DELETE `/budgets/:budgetId/items/:itemId`
+- [x] Crear `backend/src/finances/entities/budget.entity.ts` — campos: `id` (uuid PK), `name` (varchar 255), `month` (integer 1–12), `year` (integer), `items` (OneToMany → BudgetItem), `createdAt`, `updatedAt`
+- [x] Crear `backend/src/finances/entities/budget-item.entity.ts` — campos: `id` (uuid PK), `budget` (ManyToOne → Budget, onDelete CASCADE), `description` (varchar 255), `plannedAmount` (decimal 12,2), `createdAt`, `updatedAt`
+- [x] Crear `backend/src/finances/dto/create-budget-item.dto.ts`
+- [x] Crear `backend/src/finances/dto/create-budget.dto.ts` — campos: `name`, `month` (1–12), `year` (>= 2020), `items` (array opcional de CreateBudgetItemDto)
+- [x] Crear `backend/src/finances/dto/update-budget.dto.ts` — PartialType sin items
+- [x] Crear `backend/src/finances/budgets.service.ts` — CRUD; `findOne` hace leftJoinAndSelect de `items`; `findAll` filtra por `year` y `month` opcionales; creación en transacción para Budget + BudgetItems
+- [x] Crear `backend/src/finances/budgets.controller.ts` — GET `/budgets` (con `?year=&month=`), GET `/budgets/:id`, POST `/budgets`, PATCH `/budgets/:id`, DELETE `/budgets/:id` (204); POST `/budgets/:id/items`, DELETE `/budgets/:budgetId/items/:itemId`
 
 ### Fase 6 — Módulo NestJS, migraciones y registro (backend)
 
