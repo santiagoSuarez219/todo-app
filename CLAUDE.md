@@ -1,12 +1,71 @@
-# CLAUDE.md — ToDo Project
+# CLAUDE.md — ToDo
 
-Memoria de contexto para el desarrollo de este proyecto. Actualizar cuando cambien decisiones de arquitectura, diseño o convenciones.
+> Este archivo es la fuente de verdad para Claude Code en este proyecto.
+> Léelo completo antes de ejecutar cualquier acción.
 
 ---
 
-## Arquitectura del Sistema
+## Inicialización de sesión
 
-### Stack
+Antes de cualquier tarea, Claude debe ejecutar estos pasos en orden:
+
+1. Leer este archivo completo.
+2. Leer `DESIGN.md` si la tarea involucra UI.
+3. Listar los specs activos (`[IN PROGRESS]` o `[TESTING]`) en `spec/`.
+4. Confirmar el repositorio activo y la rama actual con `git status`.
+5. Si hay contexto previo relevante (spec en curso, decisión de arquitectura,
+   deuda técnica pendiente), pedirlo al usuario antes de proceder.
+
+---
+
+## Reglas generales
+
+- Toda la comunicación con el usuario debe ser en español.
+- Antes de editar cualquier archivo, leer las secciones relevantes de su contenido.
+  Para archivos de más de 300 líneas, navegar por secciones antes de editar;
+  no asumir estructura sin haberla leído.
+- No adivines rutas, imports ni nombres de variables: confírmalos leyendo el código.
+- Si tienes dudas bloqueantes, usa `AskUserQuestion` antes de proceder.
+- Nunca interrumpas una tarea a mitad para pedir confirmación, salvo que el
+  riesgo de continuar sea alto (borrado de datos, cambios en producción, etc.).
+- Prefiere cambios quirúrgicos sobre refactors amplios no solicitados.
+- Para cualquier tarea que involucre UI, leer `DESIGN.md` antes de escribir código.
+
+---
+
+## Agentes especializados
+
+En `/.agents/` viven instrucciones para subagentes. Leer el archivo del agente
+antes de invocarlo. No improvisar su comportamiento.
+
+| Agente        | Cuándo invocarlo                                              |
+|---------------|---------------------------------------------------------------|
+| `@architect`  | Diseño de specs: fases, archivos impactados, sin código       |
+| `@reviewer`   | Revisión de código antes de marcar un spec como `[DONE]`     |
+| `@tester`     | Generación y ejecución de casos de prueba e2e                 |
+
+---
+
+## Contexto del proyecto
+
+App personal de gestión de actividades y proyectos. Permite crear, organizar y
+hacer seguimiento de tareas con atributos como prioridad, energía, tipo, fechas
+y subtareas. Incluye un servidor MCP para integración con asistentes de IA.
+Estado actual: MVP en desarrollo activo.
+
+---
+
+## Repositorios del ecosistema
+
+```
+01-ToDo/
+├── backend/    # API REST — NestJS 11 + PostgreSQL 16
+└── frontend/   # SPA — React 19 + Vite + TypeScript
+```
+
+---
+
+## Stack tecnológico
 
 | Capa | Tecnología |
 |------|-----------|
@@ -14,60 +73,149 @@ Memoria de contexto para el desarrollo de este proyecto. Actualizar cuando cambi
 | Routing | React Router 7 |
 | Estado servidor | TanStack React Query v5 (staleTime: 1min, retry: 1) |
 | Formularios | React Hook Form 7 + Zod |
-| HTTP | Axios (`VITE_API_URL=http://localhost:3000/api/v1`) |
+| HTTP | Axios |
 | Estilos | Tailwind CSS 4 (vía `@tailwindcss/vite`) |
 | Backend | NestJS 11 + TypeScript 5.7 |
 | ORM | TypeORM + PostgreSQL 16 |
 | MCP | `@modelcontextprotocol/sdk` (JSON-RPC + SSE en `/mcp`) |
 | Base de datos | PostgreSQL 16 (Docker, puerto 5433, db: `todo_db`) |
 
-### Diagrama
+### Comandos
 
+```bash
+# Base de datos (Docker)
+docker compose up -d
+
+# Backend
+cd backend
+npm install
+npm run start:dev
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+
+# Build producción
+cd backend && npm run build
+cd frontend && npm run build
+
+# Tests (backend)
+cd backend && npm run test
+cd backend && npm run test:e2e
+
+# Linter / Formatter
+cd backend && npm run lint && npm run format
+cd frontend && npm run lint
 ```
-Browser :5173
-  └── React SPA
-        Pages → Hooks → Services → Axios
-                                      │
-                              REST /api/v1
-                                      │
-                           NestJS :3000
-                             Controllers
-                             Services
-                             TypeORM
-                                      │
-                           PostgreSQL :5433
-                             projects
-                             activities (self-ref subtasks)
-
-                           + MCP Server /mcp
-                             (JSON-RPC tools para IA)
-```
-
-### Convenciones Backend
-
-- Prefijo global: `/api/v1`
-- Respuestas envueltas por `TransformInterceptor`: `{ data: ... }`
-- Errores formateados por `HttpExceptionFilter`
-- Validación con `ValidationPipe` (whitelist + transform)
-- CORS habilitado para `FRONTEND_URL` (`.env`)
-- Migraciones explícitas (synchronize: false)
-
-### Convenciones Frontend
-
-- Servicios (`src/services/`) son funciones async puras, sin React
-- Hooks (`src/hooks/`) envuelven servicios con React Query
-- Mutations invalidan query keys relevantes en `onSuccess`
-- Tipos centralizados en `src/types/index.ts`
-- API client en `src/lib/api-client.ts` (interceptor extrae mensaje de error)
 
 ---
 
-## Entidades del Dominio
+## Dependencias
 
-### Project
+- Package manager: `npm` — no mezclar managers en el mismo proyecto.
+- Antes de instalar cualquier dependencia nueva:
+  1. Verificar si ya existe algo equivalente en `package.json`.
+  2. Mencionarlo al usuario con justificación clara (qué resuelve, por qué esa librería).
+  3. Esperar confirmación explícita.
+- Preferir dependencias con mantenimiento activo y bajo footprint.
+- Nunca instalar dependencias de desarrollo en `dependencies` ni al revés.
+
+---
+
+## Variables de entorno
+
+- Archivo backend: `.env` (raíz del repo) — nunca commitear.
+- Archivo frontend: `frontend/.env.local` — nunca commitear.
+
+| Variable | Archivo | Descripción |
+|----------|---------|-------------|
+| `DB_PORT` | `.env` | Puerto PostgreSQL (5433) |
+| `DB_NAME` | `.env` | Nombre de la base de datos (`todo_db`) |
+| `DB_USER` | `.env` | Usuario de la base de datos |
+| `DB_PASSWORD` | `.env` | Contraseña de la base de datos |
+| `FRONTEND_URL` | `.env` | URL del frontend para CORS |
+| `VITE_API_URL` | `frontend/.env.local` | URL base de la API (`http://localhost:3002/api/v1`) |
+
+> ⚠️ Nunca escribas valores reales de variables de entorno en este archivo
+> ni en ningún archivo rastreado por git.
+
+---
+
+## Base de datos
+
+- Motor: PostgreSQL 16 en Docker (puerto 5433).
+- ORM: TypeORM con `synchronize: false` en producción.
+- En desarrollo se puede usar `synchronize: true` para iterar rápido.
+- Cuando hagas modificaciones al esquema, crea siempre una migración para producción.
+- Nunca ejecutar migraciones en entornos distintos al local sin confirmación explícita.
+- CLI de migraciones: configurado en `backend/src/data-source.ts`.
+
+---
+
+## Backend — API REST
+
+- Framework: NestJS 11 con prefijo global `/api/v1`.
+- Respuestas envueltas por `TransformInterceptor`: `{ data: ... }`.
+- Errores formateados por `HttpExceptionFilter`.
+- Validación con `ValidationPipe` (whitelist + transform).
+- CORS habilitado para `FRONTEND_URL` (`.env`).
+- Swagger disponible en desarrollo.
+
+- Base URL desarrollo: `http://localhost:3002/api/v1`
+
+| Método | Ruta                    | Descripción                      |
+|--------|-------------------------|----------------------------------|
+| GET    | `/projects`             | Listar proyectos                 |
+| POST   | `/projects`             | Crear proyecto                   |
+| GET    | `/projects/:id`         | Detalle de proyecto              |
+| PATCH  | `/projects/:id`         | Actualizar proyecto              |
+| DELETE | `/projects/:id`         | Eliminar proyecto                |
+| GET    | `/activities`           | Listar actividades (paginado)    |
+| POST   | `/activities`           | Crear actividad                  |
+| GET    | `/activities/:id`       | Detalle de actividad             |
+| PATCH  | `/activities/:id`       | Actualizar actividad             |
+| DELETE | `/activities/:id`       | Eliminar actividad               |
+
+---
+
+## Arquitectura y patrones internos
+
+### Backend (`backend/src/`)
+
+```
+src/
+├── activities/      # Módulo de actividades (controller, service, entity, DTOs)
+├── projects/        # Módulo de proyectos (controller, service, entity, DTOs)
+├── mcp/             # Servidor MCP (tools para integración con IA)
+├── common/          # Interceptors, filtros y pipes globales
+├── main.ts          # Bootstrap, CORS, pipes globales
+├── app.module.ts    # Módulo raíz
+└── data-source.ts   # Config TypeORM / CLI de migraciones
+```
+
+### Frontend (`frontend/src/`)
+
+```
+src/
+├── components/      # Componentes reutilizables (sin lógica de negocio)
+├── pages/           # Vistas/páginas por ruta
+├── hooks/           # Custom hooks (React Query)
+├── services/        # Llamadas HTTP puras (sin React)
+├── lib/             # API client (Axios) y utilidades
+└── types/           # Tipos e interfaces TypeScript globales (index.ts)
+```
+
+- Patrón de estado: TanStack React Query v5
+- Patrón de fetch: servicios async puros en `services/`, envueltos en hooks en `hooks/`
+- Mutations invalidan query keys relevantes en `onSuccess`
+
+### Entidades del dominio
+
+**Project**
 `id` · `name` · `status` (ACTIVE | INACTIVE | PAUSED | COMPLETED) · `startDate` · `endDate`
 
-### Activity
+**Activity**
 `id` · `name` · `description` · `project?` · `parent?` · `subtasks[]`
 `status` (PENDING | IN_PROGRESS | COMPLETED | CANCELLED | ON_HOLD)
 `priority` (HIGH | MEDIUM | LOW) · `energy` (HIGH | MEDIUM | LOW)
@@ -76,134 +224,15 @@ Browser :5173
 
 ---
 
-## Sistema de Diseño — Flowbite + Tailwind CSS 4
+## Sistema de diseño — Flowbite + Tailwind CSS 4
 
-### Fuente
+- Fuente: **JetBrains Mono** para todo el proyecto.
+- Paleta: gray, blue, green, red, yellow, purple, pink (escala 50–900).
+- Tokens semánticos en `frontend/src/index.css` (`@theme { ... }`).
+- Dark mode: clase `dark` en `<html>`, persistida en `localStorage` con clave `color-theme`.
+- Detalles completos de la paleta, tokens y tabla de clases en `DESIGN.md`.
 
-**JetBrains Mono** para todo el proyecto (texto, UI, código).
-
-```css
-/* index.css */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
-
-@theme {
-  --font-sans: 'JetBrains Mono', 'ui-monospace', monospace;
-  --font-body: 'JetBrains Mono', 'ui-monospace', monospace;
-  --font-mono: 'JetBrains Mono', 'ui-monospace', monospace;
-}
-```
-
-### Paleta Primitiva
-
-| Escala | 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 |
-|--------|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
-| **gray** | `#F9FAFB` | `#F3F4F6` | `#E5E7EB` | `#D1D5DB` | `#9CA3AF` | `#6B7280` | `#4B5563` | `#374151` | `#1F2937` | `#111827` |
-| **blue** | `#EBF5FF` | `#E1EFFE` | `#C3DDFD` | `#A4CAFE` | `#76A9FA` | `#3F83F8` | `#1C64F2` | `#1A56DB` | `#1E429F` | `#233876` |
-| **green** | `#F3FAF7` | `#DEF7EC` | `#BCF0DA` | `#84E1BC` | `#31C48D` | `#0E9F6E` | `#057A55` | `#046C4E` | `#03543F` | `#014737` |
-| **red** | `#FDF2F2` | `#FDE8E8` | `#FBD5D5` | `#F8B4B4` | `#F98080` | `#F05252` | `#E02424` | `#C81E1E` | `#9B1C1C` | `#771D1D` |
-| **yellow** | `#FDFDEA` | `#FDF6B2` | `#FCE96A` | `#FACA15` | `#E3A008` | `#C27803` | `#9F580A` | `#8E4B10` | `#723B13` | `#633112` |
-| **purple** | `#F6F5FF` | `#EDEBFE` | `#DCD7FE` | `#CABFFD` | `#AC94FA` | `#9061F9` | `#7E3AF2` | `#6C2BD9` | `#5521B5` | `#4A1D96` |
-| **pink** | `#FDF2F8` | `#FCE8F3` | `#FAD1E8` | `#F8B4D9` | `#F17EB8` | `#E74694` | `#D61F69` | `#BF125D` | `#99154B` | `#751A3D` |
-
-### Tokens Semánticos
-
-```css
-@theme {
-  /* Texto */
-  --color-body:              var(--color-gray-600);
-  --color-body-subtle:       var(--color-gray-500);
-  --color-heading:           var(--color-gray-900);
-  --color-fg-brand:          var(--color-blue-700);
-  --color-fg-brand-subtle:   var(--color-blue-200);
-  --color-fg-brand-strong:   var(--color-blue-900);
-  --color-fg-success:        var(--color-green-700);
-  --color-fg-danger:         var(--color-red-700);
-  --color-fg-warning:        var(--color-orange-600);
-  --color-fg-disabled:       var(--color-gray-400);
-
-  /* Fondos — jerarquía de superficies */
-  --color-neutral-primary:        white;
-  --color-neutral-secondary:      var(--color-gray-50);
-  --color-neutral-tertiary:       var(--color-gray-100);
-  --color-neutral-quaternary:     var(--color-gray-200);
-
-  /* Brand */
-  --color-brand-softer:    var(--color-blue-50);
-  --color-brand-soft:      var(--color-blue-100);
-  --color-brand:           var(--color-blue-700);
-  --color-brand-medium:    var(--color-blue-200);
-  --color-brand-strong:    var(--color-blue-800);
-
-  /* Estados */
-  --color-success:         var(--color-green-700);  /* emerald en Flowbite */
-  --color-danger:          var(--color-red-700);    /* rose en Flowbite */
-  --color-warning:         var(--color-yellow-500);
-
-  /* Bordes */
-  --color-border-light:    var(--color-gray-100);
-  --color-border-default:  var(--color-gray-200);
-  --color-border-brand:    var(--color-blue-200);
-  --color-border-dark:     var(--color-gray-800);
-
-  /* Border radius */
-  --radius-xs:   4px;
-  --radius-sm:   6px;
-  --radius:      8px;
-  --radius-base: 12px;
-  --radius-lg:   16px;
-}
-```
-
-### Modo Claro / Oscuro — Tabla de Referencia
-
-| Elemento | Modo Claro | Modo Oscuro |
-|----------|-----------|-------------|
-| Fondo página | `bg-white` | `dark:bg-gray-900` |
-| Fondo card / panel | `bg-white` | `dark:bg-gray-800` |
-| Fondo sidebar | `bg-gray-50` | `dark:bg-gray-800` |
-| Fondo input | `bg-white` | `dark:bg-gray-700` |
-| Fondo hover nav | `hover:bg-gray-100` | `dark:hover:bg-gray-700` |
-| Fondo deshabilitado | `bg-gray-100` | `dark:bg-gray-700` |
-| Texto principal | `text-gray-900` | `dark:text-white` |
-| Texto secundario | `text-gray-600` | `dark:text-gray-300` |
-| Texto sutil | `text-gray-500` | `dark:text-gray-400` |
-| Texto deshabilitado | `text-gray-400` | `dark:text-gray-500` |
-| Texto placeholder | `placeholder:text-gray-500` | `dark:placeholder:text-gray-400` |
-| Borde estándar | `border-gray-200` | `dark:border-gray-700` |
-| Borde input | `border-gray-300` | `dark:border-gray-600` |
-| Focus ring | `focus:ring-gray-200` | `dark:focus:ring-gray-700` |
-| Botón primario | `bg-blue-700 text-white` | `dark:bg-blue-600` |
-| Botón primario hover | `hover:bg-blue-800` | `dark:hover:bg-blue-700` |
-| Badge éxito | `bg-green-100 text-green-800` | `dark:bg-green-900 dark:text-green-300` |
-| Badge peligro | `bg-red-100 text-red-800` | `dark:bg-red-900 dark:text-red-300` |
-| Badge advertencia | `bg-yellow-100 text-yellow-800` | `dark:bg-yellow-900 dark:text-yellow-300` |
-| Badge info | `bg-blue-100 text-blue-800` | `dark:bg-blue-900 dark:text-blue-300` |
-
-### Implementación Dark Mode
-
-```javascript
-// Pegar en el <head> de index.html (antes del bundle) para evitar FOUC
-if (
-  localStorage.getItem('color-theme') === 'dark' ||
-  (!('color-theme' in localStorage) &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches)
-) {
-  document.documentElement.classList.add('dark');
-} else {
-  document.documentElement.classList.remove('dark');
-}
-```
-
-```css
-/* index.css — Tailwind v4 */
-@custom-variant dark (&:where(.dark, .dark *));
-```
-
-Toggle persiste en `localStorage` con clave `'color-theme'` (`'dark'` | `'light'`).
-
----
-
-## Rutas del Frontend
+### Rutas del frontend
 
 | Ruta | Componente | Descripción |
 |------|-----------|-------------|
@@ -214,29 +243,203 @@ Toggle persiste en `localStorage` con clave `'color-theme'` (`'dark'` | `'light'
 | `/activities/today` | `TodayView` | Actividades de hoy |
 | `/activities/this-week` | `WeekView` | Actividades de la semana |
 | `/activities/overdue` | `OverdueView` | Actividades vencidas |
+| `/activities/backlog` | `BacklogView` | Actividades sin fecha |
 
 ---
 
-## Archivos Clave
+## Convenciones de código
 
-### Backend
-- [backend/src/main.ts](backend/src/main.ts) — Bootstrap, CORS, pipes globales
-- [backend/src/app.module.ts](backend/src/app.module.ts) — Módulo raíz
-- [backend/src/data-source.ts](backend/src/data-source.ts) — Config TypeORM / CLI
-- [backend/src/activities/activities.service.ts](backend/src/activities/activities.service.ts) — Lógica de negocio
-- [backend/src/activities/activities.controller.ts](backend/src/activities/activities.controller.ts) — Endpoints REST
-- [backend/src/mcp/mcp.service.ts](backend/src/mcp/mcp.service.ts) — Definición de tools MCP
+- Lenguaje: **TypeScript estricto** (`strict: true`).
+- Nombres de archivos: `PascalCase` para componentes React, `camelCase` para hooks/services.
+- Nombres de funciones y variables: `camelCase`.
+- Exportaciones: preferir **named exports**; default export solo para componentes de página.
+- Estilos: Tailwind CSS 4 con tokens semánticos definidos en `index.css`.
+- No usar `any` salvo que sea absolutamente inevitable; documentarlo con `// TODO: type this`.
+- Tipos centralizados en `frontend/src/types/index.ts`.
+- API client en `frontend/src/lib/api-client.ts` (interceptor extrae mensaje de error).
 
-### Frontend
-- [frontend/src/App.tsx](frontend/src/App.tsx) — Router raíz
-- [frontend/src/types/index.ts](frontend/src/types/index.ts) — Tipos e interfaces globales
-- [frontend/src/lib/api-client.ts](frontend/src/lib/api-client.ts) — Instancia Axios
-- [frontend/src/services/activities.service.ts](frontend/src/services/activities.service.ts) — Llamadas HTTP actividades
-- [frontend/src/services/projects.service.ts](frontend/src/services/projects.service.ts) — Llamadas HTTP proyectos
-- [frontend/src/hooks/useActivities.ts](frontend/src/hooks/useActivities.ts) — React Query hooks
-- [frontend/src/index.css](frontend/src/index.css) — Estilos globales + tokens Tailwind
+---
 
-### Config
-- [.env](.env) — Variables de entorno backend (DB, CORS)
-- [frontend/.env.local](frontend/.env.local) — `VITE_API_URL`
-- [docker-compose.yml](docker-compose.yml) — PostgreSQL container
+## Testing
+
+- Framework backend: Jest (`*.spec.ts`).
+- Ubicación de tests backend: junto al módulo (`src/**/*.spec.ts`).
+- Tests e2e backend: `backend/test/` con configuración `jest-e2e.json`.
+- No hay tests en frontend actualmente.
+- Antes de cerrar una tarea con lógica crítica en el backend, verificar que existe
+  al menos un test que cubra el caso feliz.
+- No borrar ni modificar tests existentes sin instrucción explícita.
+- Los tests e2e son responsabilidad de `@tester` y se ejecutan como última fase de
+  cada spec antes del merge a `development`.
+
+---
+
+## Specs de funcionalidades
+
+### Ubicación y nomenclatura
+
+- Carpeta: `spec/` en el directorio raíz del proyecto.
+- Nomenclatura: `spec-{{NNN}}-{{slug-descriptivo}}.md`
+  (NNN = correlativo con cero a la izquierda, ej. `spec-007-offline-sync.md`)
+- Consultar specs anteriores antes de nombrar uno nuevo para evitar solapamiento.
+
+### Estados válidos
+
+| Estado         | Significado                                              |
+|----------------|----------------------------------------------------------|
+| `[IN PROGRESS]`| Implementación iniciada                                  |
+| `[TESTING]`    | Implementación completa, pendiente de pruebas manuales/e2e |
+| `[DONE]`       | Pruebas superadas, listo para merge a `development`      |
+
+- Los specs completados **no se borran**; se marcan con `[DONE]` en el título.
+- Solo specs en estado `[DONE]` con su archivo `test-NNN` correspondiente
+  pueden hacer merge a `development`.
+
+### Estructura mínima de un spec
+
+```md
+# spec-NNN — [Estado] Título descriptivo
+
+## Contexto
+Por qué se necesita esta funcionalidad y qué problema resuelve.
+
+## Alcance
+Qué incluye y qué **no** incluye este spec.
+
+## Impacto en el sistema
+Componentes, rutas, modelos o servicios afectados.
+
+## Fases de implementación
+
+### Fase 1 — Nombre
+- [ ] Paso concreto
+- [ ] Paso concreto
+
+### Fase 2 — Nombre
+- [ ] Paso concreto
+
+## Criterios de aceptación
+- El usuario puede hacer X.
+- El sistema responde con Y ante Z.
+
+## Pruebas e2e (si aplica)
+Descripción de los casos a automatizar en la última fase, ejecutados por @tester.
+```
+
+---
+
+## Nuevas funcionalidades
+
+### Antes de implementar
+
+1. Analizar el impacto del feature en todos los componentes del proyecto.
+2. Usar el subagente `@architect` para crear el plan de implementación:
+   - Solo descripción de fases, pasos y archivos a editar.
+   - Sin código.
+3. Guardar el plan en `spec/` con la nomenclatura definida.
+4. Esperar aprobación del usuario antes de escribir código.
+5. Crear una rama nueva desde `development` siguiendo las reglas de git.
+
+### Durante la implementación
+
+- Trabajar fase por fase según el spec; no saltarse pasos.
+- Al iniciar la Fase 1 de cualquier spec, cambiar su estado a `[IN PROGRESS]`.
+- Al completar cada fase, documentarla como completada en el propio spec.
+- Si el scope del spec debe cambiar (nuevo hallazgo, bloqueante estructural),
+  proponer la modificación al usuario **antes** de proceder. No editar el spec
+  unilateralmente ni implementar fuera de él.
+- Si se descubre deuda técnica fuera del scope, documentarla con un comentario
+  `// DEBT:` en el código y registrarla en `spec/backlog.md`, sin actuar
+  sobre ella en la tarea actual.
+- Si aparece un bloqueante no previsto en el spec, reportarlo antes de improvisar.
+- No modificar archivos fuera del alcance del spec sin avisar.
+
+### Después de terminar la implementación
+
+1. Crear el archivo de pruebas manuales en `docs/testing/` con la nomenclatura
+   `test-{{NNN}}-{{slug-descriptivo}}.md` (mismos NNN y slug que el spec).
+2. Cambiar el estado del spec a `[TESTING]`.
+3. El usuario ejecutará los casos manualmente e indicará cuáles pasan.
+   Claude marcará cada caso como completado en el archivo de test.
+4. Cuando todos los casos estén aprobados, invocar `@tester` para ejecutar
+   las pruebas e2e definidas en el spec (si aplica).
+5. Al superar todas las pruebas, marcar el spec como `[DONE]`.
+
+### Pruebas manuales — estructura del archivo
+
+- Todos los archivos `test-NNN` van en `docs/testing/` en el directorio raíz.
+- Solo incluir casos manuales de proyectos con UI (mobile o web). Los endpoints
+  se validan con pruebas e2e desde el propio spec.
+- Cada caso de prueba debe tener un código identificador único (`TC-001`, `TC-002`…).
+
+```md
+# test-NNN — Título descriptivo
+
+## Casos de prueba
+
+### TC-001 — Nombre del caso
+**Precondición:** ...
+**Pasos:**
+1. ...
+2. ...
+**Resultado esperado:** ...
+**Estado:** ⬜ Pendiente / ✅ Aprobado / ❌ Fallido
+```
+
+---
+
+## Acciones prohibidas
+
+> Claude nunca debe realizar las siguientes acciones sin confirmación explícita
+> del usuario en esa misma sesión:
+
+- Borrar archivos o carpetas (salvo temporales generados por la propia tarea).
+- Ejecutar migraciones de base de datos en entornos distintos al local.
+- Hacer push a `main` o `development` directamente.
+- Modificar variables de entorno de producción.
+- Instalar dependencias nuevas sin mencionarlo y esperar confirmación.
+- Hacer commit de archivos `.env*` reales.
+- Editar el spec activo para ampliar su scope sin aprobación del usuario.
+
+---
+
+## Git — Branching & Commits
+
+### Estructura de ramas
+
+| Propósito                         | Prefijo     | Ejemplo                          |
+|-----------------------------------|-------------|----------------------------------|
+| Nueva funcionalidad o spec        | `feature/`  | `feature/activity-filters`       |
+| Corrección de bug                 | `bug/`      | `bug/date-timezone-offset`       |
+| Preparación de despliegue         | `deploy/`   | `deploy/v1.0.0`                  |
+
+- `main` — producción; solo recibe merges desde `deploy/`.
+- `development` — integración y pruebas; todas las ramas `feature/` y `bug/`
+  se desprenden de aquí.
+- Al mergear una rama a `development`, eliminarla inmediatamente.
+- Los ajustes de despliegue van en `deploy/<nombre>` y se mergean a `main`.
+- Solo se puede hacer merge a `development` de specs en estado `[DONE]` que
+  cuenten con su archivo `test-NNN` aprobado.
+
+### Commits
+
+- Hacer commits cuando el volumen de cambios lo justifique; no commits triviales.
+- Mensajes **completamente en inglés**, siguiendo
+  [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <short description>
+
+[optional body]
+[optional footer]
+```
+
+Tipos válidos: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`,
+`style`, `perf`, `ci`.
+
+Ejemplos:
+```
+feat(activities): add inline quick-edit for name and priority
+fix(api): correct timezone offset on actionDate filtering
+chore(deps): upgrade typeorm to v0.3.21
+```

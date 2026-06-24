@@ -12,13 +12,13 @@ Referencia técnica del frontend del proyecto ToDo. Actualizar cuando cambien ru
 | Routing | React Router 7 |
 | Estado servidor | TanStack React Query v5 (`staleTime: 1min`, `retry: 1`) |
 | Formularios | React Hook Form 7 + Zod |
-| HTTP | Axios — baseURL: `/api/v1` (proxy a `http://localhost:3000`) |
+| HTTP | Axios — baseURL: `/api/v1` (proxy a `http://localhost:3002`) |
 | Estilos | Tailwind CSS 4 vía `@tailwindcss/vite` |
 | Fuente | JetBrains Mono (toda la UI) |
 
 **Variables de entorno** (`frontend/.env.local`):
 ```
-VITE_API_URL=http://localhost:3000/api/v1
+VITE_API_URL=http://localhost:3002/api/v1
 ```
 
 El `api-client.ts` usa `baseURL: '/api/v1'` — Vite hace proxy al backend en desarrollo.
@@ -27,7 +27,7 @@ El `api-client.ts` usa `baseURL: '/api/v1'` — Vite hace proxy al backend en de
 
 ## Backend API — Referencia completa
 
-Base: `http://localhost:3000/api/v1`
+Base: `http://localhost:3002/api/v1`
 
 Todas las respuestas vienen envueltas: `{ data: ... }`
 
@@ -223,79 +223,3 @@ Ver [DESIGN.md](DESIGN.md) — paleta, tokens semánticos, tipografía, dark mod
 
 ---
 
-## Git — Branching & Commits
-
-### Estructura de ramas
-
-| Propósito | Prefijo | Ejemplo |
-|-----------|---------|---------|
-| Nueva funcionalidad o spec | `feature/` | `feature/offline-sync` |
-| Corrección de bug | `bug/` | `bug/login-token-refresh` |
-| Preparación de despliegue | `deploy/` | `deploy/v1.0.0-android` |
-
-- `main` — rama de producción; solo recibe merges desde `deploy/`.
-- `development` — rama de integración y pruebas; **todas las ramas `feature/` y `bug/` se desprenden de aquí**.
-- Una vez mergeada una rama a `development`, **eliminar la rama de origen**.
-- Los ajustes de despliegue se implementan en `deploy/<nombre>` y se mergean a `main`.
-
-### Commits
-
-- Crear commits cuando la cantidad de cambios lo amerite (no hacer commits triviales de un solo carácter).
-- Los mensajes de commit deben estar **completamente en inglés** y seguir Conventional Commits:
-
-```
-<type>(<scope>): <short description>
-
-[optional body]
-
-[optional footer]
-```
-
-Tipos válidos: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `style`, `perf`, `ci`.
-
-Ejemplos:
-```
-feat(auth): add JWT persistence in expo-secure-store
-fix(sync): prevent duplicate batch upload on reconnect
-chore(deps): upgrade expo-sqlite to v14
-```
-
----
-
-## Formato de Análisis Técnico
-
-```markdown
-# Análisis Técnico: [Feature]
-
-## Problema
-
-[Descripción del problema a resolver]
-
-## Impacto Arquitectural
-
-- Backend: [cambios en modelos, servicios, API]
-- Frontend: [cambios en componentes, estado, UI]
-- Base de datos: [nuevas tablas, relaciones, índices]
-
-## Propuesta de Solución
-
-[Diseño técnico siguiendo Clean Architecture]
-
-## Plan de Implementación
-
-1. [Paso 1]
-2. [Paso 2]
-   ...
-
-## Prioridades de implementación
-
-1. Estructura base: Expo Router + Zustand + esquema SQLite
-2. Autenticación: login, persistencia de token, headers en requests
-3. Descarga y caché offline de instrumentos
-4. Flujo completo de encuesta (navegación + validación + guardado local)
-5. Sync con backend (upload de surveys pendientes)
-6. GPS y construcción de polígonos
-7. Multimodalidad: voz e imágenes
-
-## AskUserQuestion
-Utiliza la herramienta `AskUserQuestion` para aclarar cualquier duda sobre requisitos, diseño o implementación antes de comenzar a escribir código.

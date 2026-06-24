@@ -96,20 +96,25 @@ src/
 | `id` | `uuid` PK | generado |
 | `name` | `varchar(255)` | requerido |
 | `description` | `text` | nullable |
-| `project` | FK → `projects` | nullable, `onDelete: SET NULL` |
-| `parent` | FK → `activities` | nullable, auto-referencial |
+| `project` | FK → `projects` | nullable, `onDelete: CASCADE` |
+| `parent` | FK → `activities` | nullable, auto-referencial, `onDelete: SET NULL` |
 | `subtasks` | relación | `OneToMany → Activity (self)` |
-| `actionDate` | `timestamptz` | nullable |
-| `dueDate` | `timestamptz` | nullable |
+| `dueDate` | `timestamptz` | nullable — fecha límite (task) o fecha+hora del recordatorio (reminder) |
 | `priority` | `enum` | default `medium` |
 | `status` | `enum` | default `pending` |
 | `energy` | `enum` | default `medium` |
 | `type` | `enum` | default `task` |
-| `device` | `enum` | nullable |
-| `duration` | `numeric` | nullable |
-| `durationUnit` | `enum` | nullable |
-| `location` | `varchar(255)` | nullable |
-| `automatizacion` | `enum` | nullable |
+| `scheduledForToday` | `boolean` | default `false` — aparece en la vista Today |
+| `notionUrl` | `varchar` | nullable — URL de página Notion asociada |
+| `isTemplate` | `boolean` | default `false` — es plantilla de recurrencia |
+| `isRecurring` | `boolean` | default `false` — tiene recurrencia activa |
+| `templateId` | `uuid` FK | nullable — apunta a la plantilla que generó esta instancia |
+| `instances` | relación | `OneToMany → Activity (self)` — instancias generadas por la plantilla |
+| `recurrenceFrequency` | `varchar` | nullable — `daily \| weekly \| biweekly \| monthly \| yearly` |
+| `recurrenceDays` | `integer[]` | nullable — días de la semana (0=Dom … 6=Sáb) |
+| `recurrenceDayOfMonth` | `integer` | nullable — día del mes (1–31) |
+| `recurrenceEndDate` | `timestamptz` | nullable — hasta cuándo generar instancias |
+| `instanceDate` | `date` | nullable — fecha de esta instancia específica |
 | `createdAt` / `updatedAt` | `timestamptz` | auto |
 
 ---
@@ -117,14 +122,12 @@ src/
 ## Enums
 
 ```
-ProjectStatus:   active | inactive | paused | completed
-ActivityStatus:  pending | in_progress | completed | cancelled | on_hold
-ActivityType:    task | event | reminder
-Priority:        high | medium | low
-Energy:          high | medium | low
-Device:          phone | computer | tablet
-DurationUnit:    hours | days
-Automatizacion:  fully_automatable | partially_automatable | not_automatable
+ProjectStatus:        active | inactive | paused | completed
+ActivityStatus:       pending | in_progress | completed | cancelled | on_hold
+ActivityType:         task | reminder
+Priority:             high | medium | low
+Energy:               high | medium | low
+RecurrenceFrequency:  daily | weekly | biweekly | monthly | yearly
 ```
 
 Ubicación: `src/common/enums/`
@@ -159,10 +162,11 @@ Ubicación: `src/common/enums/`
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `GET` | `/activities` | Lista paginada |
-| `GET` | `/activities/today` | `actionDate` o `dueDate` en el día actual |
-| `GET` | `/activities/tomorrow` | `actionDate` o `dueDate` mañana |
-| `GET` | `/activities/this-week` | Semana actual (Lun–Dom) |
+| `GET` | `/activities/today` | `dueDate` en el día actual o `scheduledForToday = true` |
+| `GET` | `/activities/tomorrow` | `dueDate` mañana |
+| `GET` | `/activities/this-week` | Semana actual (Lun–Dom) por `dueDate` |
 | `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
+| `GET` | `/activities/without-project` | Sin proyecto asociado |
 | `GET` | `/activities/project/:projectId` | Por proyecto |
 | `GET` | `/activities/type/:type` | Por tipo |
 | `GET` | `/activities/priority/:priority` | Por prioridad |
@@ -170,13 +174,15 @@ Ubicación: `src/common/enums/`
 | `GET` | `/activities/search/:query` | ILIKE en name, description, project.name |
 | `GET` | `/activities/:id` | Con project, parent y subtasks |
 | `GET` | `/activities/:id/subtasks` | Subtareas de una actividad |
-| `POST` | `/activities` | Crear actividad / subtarea |
+| `GET` | `/activities/:id/instances` | Instancias generadas por una plantilla recurrente |
+| `POST` | `/activities` | Crear actividad / subtarea / plantilla recurrente |
 | `PATCH` | `/activities/:id` | Actualizar |
 | `DELETE` | `/activities/:id` | Eliminar (204) |
+| `DELETE` | `/activities/:id/future-instances` | Cancelar instancias futuras pendientes (204) |
 
 **Paginación** (query params en todos los GET de lista): `page` (default 1) · `limit` (default 20, max 100)
 
-**Orden de resultados** (aplicado en `baseQuery`): `actionDate ASC NULLS LAST` → `dueDate ASC NULLS LAST` → prioridad (`high=1, medium=2, low=3`)
+**Orden de resultados** (aplicado en `baseQuery`): `dueDate ASC NULLS LAST` → prioridad (`high=1, medium=2, low=3`)
 
 ---
 
@@ -186,24 +192,22 @@ Ubicación: `src/common/enums/`
 
 Al crear o actualizar, el servicio limpia campos que no aplican según el tipo:
 
-| Tipo | Campos forzados a `null`/`undefined` |
-|------|--------------------------------------|
-| `reminder` | `dueDate`, `duration`, `durationUnit`, `device`, `location`, `automatizacion`, `parentId` |
-| `event` | `duration`, `durationUnit`, `device`, `location`, `automatizacion`, `parentId` |
-| `task` | `actionDate` y `dueDate` se truncan a medianoche (sin componente horario) |
+| Tipo | Comportamiento |
+|------|----------------|
+| `task` | `dueDate` se trunca a medianoche (sin componente horario) |
+| `reminder` | `dueDate` se usa tal cual como fecha+hora del recordatorio |
 
 ### Lógica de vencimiento (`findOverdue`)
 
-- `task` / `event`: vencida si `dueDate < hoy 00:00`
-- `reminder`: vencida si `actionDate < ahora`
-- En todos los casos: `status != 'completed'`
+- `task`: vencida si `dueDate < hoy 00:00` y `status != 'completed'`
+- `reminder`: vencida si `dueDate < ahora` y `status != 'completed'`
 
-### Semántica de fechas por tipo
+### Semántica de `dueDate` por tipo
 
-| Campo | `task` | `event` | `reminder` |
-|-------|--------|---------|-----------|
-| `actionDate` | Fecha de acción (00:00:00) | Inicio del evento | Fecha y hora del recordatorio |
-| `dueDate` | Fecha límite (00:00:00) | Fin del evento | Ignorado (forzado null) |
+| Tipo | Semántica de `dueDate` |
+|------|------------------------|
+| `task` | Fecha límite (hora truncada a 00:00:00) |
+| `reminder` | Fecha y hora exacta del recordatorio |
 
 ---
 
@@ -235,17 +239,22 @@ El endpoint `/mcp` expone las mismas capacidades que el REST API como tools MCP 
 | `list_activities` | Lista actividades paginadas |
 | `get_activity` | Obtiene actividad por UUID |
 | `create_activity` | Crea actividad o subtarea |
-| `update_activity` | Actualiza actividad |
+| `update_activity` | Actualiza actividad (incluye campos de recurrencia) |
 | `delete_activity` | Elimina actividad |
-| `get_today_activities` | Actividades de hoy |
+| `get_today_activities` | Actividades de hoy (dueDate o scheduledForToday) |
 | `get_tomorrow_activities` | Actividades de mañana |
-| `get_this_week_activities` | Actividades de la semana |
+| `get_this_week_activities` | Actividades de la semana actual |
 | `get_overdue_activities` | Actividades vencidas |
+| `get_activities_without_project` | Actividades sin proyecto asociado |
 | `get_activities_by_project` | Por proyecto |
 | `get_activities_by_type` | Por tipo |
 | `get_activities_by_priority` | Por prioridad |
 | `get_activities_by_status` | Por status |
+| `search_activities` | Búsqueda ILIKE en name, description, project.name |
 | `get_activity_subtasks` | Subtareas de una actividad |
+| `create_recurring_activity` | Crea plantilla de actividad recurrente |
+| `get_activity_instances` | Instancias generadas por una plantilla |
+| `cancel_future_instances` | Cancela instancias futuras pendientes de una plantilla |
 
 ---
 
@@ -285,79 +294,3 @@ El endpoint `/mcp` expone las mismas capacidades que el REST API como tools MCP 
 | `src/common/interceptors/transform.interceptor.ts` | Wrapper de respuestas |
 | `src/common/filters/http-exception.filter.ts` | Formato de errores |
 
-## Git — Branching & Commits
-
-### Estructura de ramas
-
-| Propósito | Prefijo | Ejemplo |
-|-----------|---------|---------|
-| Nueva funcionalidad o spec | `feature/` | `feature/offline-sync` |
-| Corrección de bug | `bug/` | `bug/login-token-refresh` |
-| Preparación de despliegue | `deploy/` | `deploy/v1.0.0-android` |
-
-- `main` — rama de producción; solo recibe merges desde `deploy/`.
-- `development` — rama de integración y pruebas; **todas las ramas `feature/` y `bug/` se desprenden de aquí**.
-- Una vez mergeada una rama a `development`, **eliminar la rama de origen**.
-- Los ajustes de despliegue se implementan en `deploy/<nombre>` y se mergean a `main`.
-
-### Commits
-
-- Crear commits cuando la cantidad de cambios lo amerite (no hacer commits triviales de un solo carácter).
-- Los mensajes de commit deben estar **completamente en inglés** y seguir Conventional Commits:
-
-```
-<type>(<scope>): <short description>
-
-[optional body]
-
-[optional footer]
-```
-
-Tipos válidos: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `style`, `perf`, `ci`.
-
-Ejemplos:
-```
-feat(auth): add JWT persistence in expo-secure-store
-fix(sync): prevent duplicate batch upload on reconnect
-chore(deps): upgrade expo-sqlite to v14
-```
-
----
-
-## Formato de Análisis Técnico
-
-```markdown
-# Análisis Técnico: [Feature]
-
-## Problema
-
-[Descripción del problema a resolver]
-
-## Impacto Arquitectural
-
-- Backend: [cambios en modelos, servicios, API]
-- Frontend: [cambios en componentes, estado, UI]
-- Base de datos: [nuevas tablas, relaciones, índices]
-
-## Propuesta de Solución
-
-[Diseño técnico siguiendo Clean Architecture]
-
-## Plan de Implementación
-
-1. [Paso 1]
-2. [Paso 2]
-   ...
-
-## Prioridades de implementación
-
-1. Estructura base: Expo Router + Zustand + esquema SQLite
-2. Autenticación: login, persistencia de token, headers en requests
-3. Descarga y caché offline de instrumentos
-4. Flujo completo de encuesta (navegación + validación + guardado local)
-5. Sync con backend (upload de surveys pendientes)
-6. GPS y construcción de polígonos
-7. Multimodalidad: voz e imágenes
-
-## AskUserQuestion
-Utiliza la herramienta `AskUserQuestion` para aclarar cualquier duda sobre requisitos, diseño o implementación antes de comenzar a escribir código.
