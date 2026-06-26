@@ -1,0 +1,161 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useBudget, useUpdateBudget, useAddBudgetItem, useDeleteBudgetItem } from '../../hooks/finances/useBudgets';
+import BudgetForm from '../../components/finances/BudgetForm';
+import BudgetItemForm from '../../components/finances/BudgetItemForm';
+import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import type { BudgetItem, CreateBudgetItemDto, UpdateBudgetDto } from '../../types';
+
+const MONTHS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+const COP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+
+export default function BudgetDetailView() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const { data: budget, isLoading, isError } = useBudget(id!);
+  const { mutateAsync: update, isPending: isUpdating } = useUpdateBudget();
+  const { mutateAsync: addItem, isPending: isAddingItem } = useAddBudgetItem();
+  const { mutate: deleteItem, isPending: isDeletingItem } = useDeleteBudgetItem();
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
+
+  async function handleUpdateBudget(dto: UpdateBudgetDto) {
+    await update({ id: id!, dto });
+    setEditModalOpen(false);
+  }
+
+  async function handleAddItem(dto: CreateBudgetItemDto) {
+    await addItem({ budgetId: id!, dto });
+  }
+
+  if (isLoading) {
+    return <p className="text-sm text-gray-400 dark:text-gray-500">Cargando…</p>;
+  }
+
+  if (isError || !budget) {
+    return <p className="text-sm text-red-500 dark:text-red-400">Error al cargar el presupuesto.</p>;
+  }
+
+  const items = budget.items ?? [];
+  const total = items.reduce((sum, item) => sum + Number(item.plannedAmount), 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <button
+            onClick={() => navigate('/finances/budgets')}
+            className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-2 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+            Presupuestos
+          </button>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">{budget.name}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {MONTHS[budget.month - 1]} {budget.year}
+          </p>
+        </div>
+        <button
+          onClick={() => setEditModalOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487z" />
+          </svg>
+          Editar
+        </button>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Ítems del presupuesto</h2>
+          <span className="text-xs text-gray-500 dark:text-gray-400">{items.length} ítem{items.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {items.length === 0 ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500 px-4 py-6 text-center">
+            No hay ítems. Agrega el primero abajo.
+          </p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400">
+                <th className="text-left px-4 py-2 font-medium">Descripción</th>
+                <th className="text-right px-4 py-2 font-medium">Monto planificado</th>
+                <th className="px-4 py-2 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                  <td className="px-4 py-3 text-gray-900 dark:text-white">{item.description}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                    {COP.format(item.plannedAmount)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => setItemToDelete(item)}
+                      className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Eliminar ítem"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-gray-50 dark:bg-gray-700/50 font-semibold">
+                <td className="px-4 py-3 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Total planificado</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-900 dark:text-white">{COP.format(total)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        )}
+
+        <div className="px-4 py-4 border-t border-gray-100 dark:border-gray-700">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Agregar ítem</p>
+          <BudgetItemForm onSubmit={handleAddItem} loading={isAddingItem} />
+        </div>
+      </div>
+
+      {editModalOpen && (
+        <Modal title="Editar presupuesto" onClose={() => setEditModalOpen(false)}>
+          <BudgetForm
+            initial={budget}
+            onSubmit={handleUpdateBudget}
+            onCancel={() => setEditModalOpen(false)}
+            loading={isUpdating}
+          />
+        </Modal>
+      )}
+
+      <ConfirmDialog
+        open={!!itemToDelete}
+        title="Eliminar ítem"
+        message={`¿Eliminar "${itemToDelete?.description}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        onConfirm={() =>
+          deleteItem(
+            { budgetId: id!, itemId: itemToDelete!.id },
+            { onSuccess: () => setItemToDelete(null) },
+          )
+        }
+        onCancel={() => setItemToDelete(null)}
+        loading={isDeletingItem}
+      />
+    </div>
+  );
+}
