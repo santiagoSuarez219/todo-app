@@ -61,6 +61,7 @@ interface Props {
   projects?: Project[];
   parentId?: string;
   hideProject?: boolean;
+  defaultProjectId?: string;
   onSubmit: (dto: CreateActivityDto) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -117,6 +118,7 @@ export default function ActivityForm({
   projects = [],
   parentId,
   hideProject = false,
+  defaultProjectId,
   onSubmit,
   onCancel,
   loading,
@@ -127,7 +129,7 @@ export default function ActivityForm({
       defaultValues: {
         name: initial?.name ?? '',
         description: initial?.description ?? '',
-        projectId: initial?.project?.id ?? null,
+        projectId: initial?.project?.id ?? defaultProjectId ?? null,
         status: initial?.status ?? ActivityStatus.PENDING,
         priority: initial?.priority ?? Priority.MEDIUM,
         energy: initial?.energy ?? Energy.MEDIUM,
