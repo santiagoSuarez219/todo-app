@@ -645,7 +645,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   return (
     <>
       <div
-        className={`bg-white dark:bg-gray-800 rounded-lg border flex flex-col gap-3 p-4 transition-shadow hover:shadow-md ${isOverdue
+        className={`bg-white dark:bg-gray-800 rounded-lg border flex flex-col gap-3 p-3 sm:p-4 transition-shadow hover:shadow-md ${isOverdue
           ? 'border-red-300 dark:border-red-700'
           : 'border-gray-200 dark:border-gray-700'
           }`}
@@ -667,34 +667,30 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               }`}
             >
               <SunIcon />
-              <span>Para hoy</span>
             </button>
             <button
               onClick={handleEditClick}
               title="Editar actividad"
-              className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-700 dark:hover:text-blue-400 px-1.5 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+              className="flex items-center text-xs text-gray-400 dark:text-gray-500 hover:text-blue-700 dark:hover:text-blue-400 px-1.5 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
             >
               <EditIcon />
-              <span>Editar</span>
             </button>
             {activity.isTemplate && (
               <button
                 onClick={() => setCancelInstancesOpen(true)}
                 disabled={isCancelling}
                 title="Cancelar instancias futuras"
-                className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-400 px-1.5 py-1 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors disabled:opacity-50"
+                className="flex items-center text-xs text-gray-400 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-400 px-1.5 py-1 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors disabled:opacity-50"
               >
                 <BanIcon />
-                <span>Cancelar futuras</span>
               </button>
             )}
             <button
               onClick={handleDeleteClick}
               title="Eliminar actividad"
-              className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 px-1.5 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              className="flex items-center text-xs text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 px-1.5 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
               <TrashIcon />
-              <span>Eliminar</span>
             </button>
           </div>
         </div>
