@@ -1,4 +1,4 @@
-# spec-013 — [IN PROGRESS] Sección de finanzas
+# spec-013 — [TESTING] Sección de finanzas
 
 ## Contexto
 
@@ -101,79 +101,79 @@ El módulo sigue exactamente los mismos patrones arquitecturales del proyecto: N
 
 ### Fase 7 — Tipos, servicios y hooks: Gastos e Ingresos (frontend)
 
-- [ ] Editar `frontend/src/types/index.ts` — agregar enums: `ExpenseType`, `IncomeType`; interfaces: `Expense`, `Income`; DTOs: `CreateExpenseDto`, `UpdateExpenseDto`, `CreateIncomeDto`, `UpdateIncomeDto`
-- [ ] Crear `frontend/src/services/finances/expenses.service.ts` — `getExpenses(params)`, `getExpense(id)`, `createExpense(dto)`, `updateExpense(id, dto)`, `deleteExpense(id)`
-- [ ] Crear `frontend/src/services/finances/incomes.service.ts` — funciones análogas
-- [ ] Crear `frontend/src/hooks/finances/useExpenses.ts` — `useExpenses`, `useExpense`, `useCreateExpense`, `useUpdateExpense`, `useDeleteExpense`; mutations invalidan `['expenses']`
-- [ ] Crear `frontend/src/hooks/finances/useIncomes.ts` — mismo patrón, query key `['incomes']`
+- [x] Editar `frontend/src/types/index.ts` — agregar enums: `ExpenseType`, `IncomeType`; interfaces: `Expense`, `Income`; DTOs: `CreateExpenseDto`, `UpdateExpenseDto`, `CreateIncomeDto`, `UpdateIncomeDto`
+- [x] Crear `frontend/src/services/finances/expenses.service.ts` — `getExpenses(params)`, `getExpense(id)`, `createExpense(dto)`, `updateExpense(id, dto)`, `deleteExpense(id)`
+- [x] Crear `frontend/src/services/finances/incomes.service.ts` — funciones análogas
+- [x] Crear `frontend/src/hooks/finances/useExpenses.ts` — `useExpenses`, `useExpense`, `useCreateExpense`, `useUpdateExpense`, `useDeleteExpense`; mutations invalidan `['expenses']`
+- [x] Crear `frontend/src/hooks/finances/useIncomes.ts` — mismo patrón, query key `['incomes']`
 
 ### Fase 8 — Páginas de Gastos e Ingresos (frontend)
 
-- [ ] Crear `frontend/src/components/finances/ExpenseForm.tsx` — React Hook Form + Zod; campos: description, amount, date, type
-- [ ] Crear `frontend/src/components/finances/IncomeForm.tsx` — campos: description, amount, date, type
-- [ ] Crear `frontend/src/components/finances/ExpenseCard.tsx` — muestra description, amount (COP), date, badge de type
-- [ ] Crear `frontend/src/components/finances/IncomeCard.tsx` — misma estructura para ingresos
-- [ ] Crear `frontend/src/pages/finances/ExpensesView.tsx` — lista paginada, botón crear, modal con `ExpenseForm`, `ConfirmDialog` para eliminar
-- [ ] Crear `frontend/src/pages/finances/IncomesView.tsx` — mismo patrón
+- [x] Crear `frontend/src/components/finances/ExpenseForm.tsx` — React Hook Form + Zod; campos: description, amount, date, type
+- [x] Crear `frontend/src/components/finances/IncomeForm.tsx` — campos: description, amount, date, type
+- [x] Crear `frontend/src/components/finances/ExpenseCard.tsx` — muestra description, amount (COP), date, badge de type
+- [x] Crear `frontend/src/components/finances/IncomeCard.tsx` — misma estructura para ingresos
+- [x] Crear `frontend/src/pages/finances/ExpensesView.tsx` — lista paginada, botón crear, modal con `ExpenseForm`, `ConfirmDialog` para eliminar
+- [x] Crear `frontend/src/pages/finances/IncomesView.tsx` — mismo patrón
 
 ### Fase 9 — Tipos, servicios, hooks y página de Compras (frontend)
 
-- [ ] Editar `frontend/src/types/index.ts` — agregar enums: `PurchasePriority`, `PurchaseStore`, `PurchaseStatus`; interfaz: `Purchase`; DTOs: `CreatePurchaseDto`, `UpdatePurchaseDto`
-- [ ] Crear `frontend/src/services/finances/purchases.service.ts` — `getPurchases(params, status?)`, `getPurchase(id)`, `createPurchase(dto)`, `updatePurchase(id, dto)`, `deletePurchase(id)`
-- [ ] Crear `frontend/src/hooks/finances/usePurchases.ts` — hooks análogos, filtro de status en query params, query key `['purchases']`
-- [ ] Crear `frontend/src/components/finances/PurchaseForm.tsx` — campos: description, estimatedPrice (opcional), priority, store, status, url (opcional), notes (opcional)
-- [ ] Crear `frontend/src/components/finances/PurchaseCard.tsx` — description, precio estimado, badges de priority/store/status, link si hay url
-- [ ] Crear `frontend/src/pages/finances/PurchasesView.tsx` — lista tipo wishlist, tabs por status (Todos / Pendiente / Comprado / Descartado), modal con `PurchaseForm`, `ConfirmDialog`
+- [x] Editar `frontend/src/types/index.ts` — agregar enums: `PurchasePriority`, `PurchaseStore`, `PurchaseStatus`; interfaz: `Purchase`; DTOs: `CreatePurchaseDto`, `UpdatePurchaseDto`
+- [x] Crear `frontend/src/services/finances/purchases.service.ts` — `getPurchases(params, status?)`, `getPurchase(id)`, `createPurchase(dto)`, `updatePurchase(id, dto)`, `deletePurchase(id)`
+- [x] Crear `frontend/src/hooks/finances/usePurchases.ts` — hooks análogos, filtro de status en query params, query key `['purchases']`
+- [x] Crear `frontend/src/components/finances/PurchaseForm.tsx` — campos: description, estimatedPrice (opcional), priority, store, status, url (opcional), notes (opcional)
+- [x] Crear `frontend/src/components/finances/PurchaseCard.tsx` — description, precio estimado, badges de priority/store/status, link si hay url
+- [x] Crear `frontend/src/pages/finances/PurchasesView.tsx` — lista tipo wishlist, tabs por status (Todos / Pendiente / Comprado / Descartado), modal con `PurchaseForm`, `ConfirmDialog`
 
 ### Fase 10 — Tipos, servicios, hooks y páginas de Cuentas, Tarjetas y CDTs (frontend)
 
-- [ ] Editar `frontend/src/types/index.ts` — agregar enum: `AccountType`; interfaces: `Account`, `CreditCard`, `Cdt`; DTOs correspondientes
-- [ ] Crear `frontend/src/services/finances/accounts.service.ts` — CRUD completo
-- [ ] Crear `frontend/src/services/finances/credit-cards.service.ts` — CRUD completo
-- [ ] Crear `frontend/src/services/finances/cdts.service.ts` — CRUD + `getActiveCdts()`
-- [ ] Crear `frontend/src/hooks/finances/useAccounts.ts` — query key `['accounts']`
-- [ ] Crear `frontend/src/hooks/finances/useCreditCards.ts` — query key `['credit-cards']`
-- [ ] Crear `frontend/src/hooks/finances/useCdts.ts` — query key `['cdts']`; incluye `useActiveCdts()`
-- [ ] Crear `frontend/src/components/finances/AccountForm.tsx` — campos: name, type, bank, currentBalance, interestRate (opcional)
-- [ ] Crear `frontend/src/components/finances/CreditCardForm.tsx` — campos: name, bank, interestRate, monthlyFee, totalLimit, availableLimit
-- [ ] Crear `frontend/src/components/finances/CdtForm.tsx` — campos: bank, investedAmount, interestRate, startDate, endDate
-- [ ] Crear `frontend/src/components/finances/AccountCard.tsx` — name, badge de type, bank, saldo actual en COP, tasa si aplica
-- [ ] Crear `frontend/src/components/finances/CreditCardCard.tsx` — name, bank, cupo disponible vs total, tasa, cuota de manejo
-- [ ] Crear `frontend/src/components/finances/CdtCard.tsx` — bank, monto, tasa, fechas, badge si vence en < 30 días
-- [ ] Crear `frontend/src/pages/finances/AccountsView.tsx` — grid de tarjetas, botón crear, modal, `ConfirmDialog`
-- [ ] Crear `frontend/src/pages/finances/CreditCardsView.tsx` — mismo patrón
-- [ ] Crear `frontend/src/pages/finances/CdtsView.tsx` — lista separada visualmente en CDTs activos vs vencidos
+- [x] Editar `frontend/src/types/index.ts` — agregar enum: `AccountType`; interfaces: `Account`, `CreditCard`, `Cdt`; DTOs correspondientes
+- [x] Crear `frontend/src/services/finances/accounts.service.ts` — CRUD completo
+- [x] Crear `frontend/src/services/finances/credit-cards.service.ts` — CRUD completo
+- [x] Crear `frontend/src/services/finances/cdts.service.ts` — CRUD + `getActiveCdts()`
+- [x] Crear `frontend/src/hooks/finances/useAccounts.ts` — query key `['accounts']`
+- [x] Crear `frontend/src/hooks/finances/useCreditCards.ts` — query key `['credit-cards']`
+- [x] Crear `frontend/src/hooks/finances/useCdts.ts` — query key `['cdts']`; incluye `useActiveCdts()`
+- [x] Crear `frontend/src/components/finances/AccountForm.tsx` — campos: name, type, bank, currentBalance, interestRate (opcional)
+- [x] Crear `frontend/src/components/finances/CreditCardForm.tsx` — campos: name, bank, interestRate, monthlyFee, totalLimit, availableLimit
+- [x] Crear `frontend/src/components/finances/CdtForm.tsx` — campos: bank, investedAmount, interestRate, startDate, endDate
+- [x] Crear `frontend/src/components/finances/AccountCard.tsx` — name, badge de type, bank, saldo actual en COP, tasa si aplica
+- [x] Crear `frontend/src/components/finances/CreditCardCard.tsx` — name, bank, cupo disponible vs total, tasa, cuota de manejo
+- [x] Crear `frontend/src/components/finances/CdtCard.tsx` — bank, monto, tasa, fechas, badge si vence en < 30 días
+- [x] Crear `frontend/src/pages/finances/AccountsView.tsx` — grid de tarjetas, botón crear, modal, `ConfirmDialog`
+- [x] Crear `frontend/src/pages/finances/CreditCardsView.tsx` — mismo patrón
+- [x] Crear `frontend/src/pages/finances/CdtsView.tsx` — lista separada visualmente en CDTs activos vs vencidos
 
 ### Fase 11 — Tipos, servicios, hooks y páginas de Presupuesto (frontend)
 
-- [ ] Editar `frontend/src/types/index.ts` — agregar interfaces: `BudgetItem`, `Budget`; DTOs: `CreateBudgetItemDto`, `CreateBudgetDto`, `UpdateBudgetDto`
-- [ ] Crear `frontend/src/services/finances/budgets.service.ts` — `getBudgets(params, year?, month?)`, `getBudget(id)`, `createBudget(dto)`, `updateBudget(id, dto)`, `deleteBudget(id)`, `addBudgetItem(budgetId, dto)`, `deleteBudgetItem(budgetId, itemId)`
-- [ ] Crear `frontend/src/hooks/finances/useBudgets.ts` — hooks: `useBudgets`, `useBudget`, `useCreateBudget`, `useUpdateBudget`, `useDeleteBudget`, `useAddBudgetItem`, `useDeleteBudgetItem`; mutations invalidan `['budgets']`
-- [ ] Crear `frontend/src/components/finances/BudgetForm.tsx` — campos: name, month (selector 1–12), year
-- [ ] Crear `frontend/src/components/finances/BudgetItemForm.tsx` — campos: description, plannedAmount; formulario inline
-- [ ] Crear `frontend/src/pages/finances/BudgetsView.tsx` — lista con filtro por año, total planificado, botón crear, modal con `BudgetForm`, `ConfirmDialog`
-- [ ] Crear `frontend/src/pages/finances/BudgetDetailView.tsx` — detalle con nombre, mes/año, tabla de ítems, total planificado, formulario inline para agregar ítem, eliminación de ítem con confirmación
+- [x] Editar `frontend/src/types/index.ts` — agregar interfaces: `BudgetItem`, `Budget`; DTOs: `CreateBudgetItemDto`, `CreateBudgetDto`, `UpdateBudgetDto`
+- [x] Crear `frontend/src/services/finances/budgets.service.ts` — `getBudgets(params, year?, month?)`, `getBudget(id)`, `createBudget(dto)`, `updateBudget(id, dto)`, `deleteBudget(id)`, `addBudgetItem(budgetId, dto)`, `deleteBudgetItem(budgetId, itemId)`
+- [x] Crear `frontend/src/hooks/finances/useBudgets.ts` — hooks: `useBudgets`, `useBudget`, `useCreateBudget`, `useUpdateBudget`, `useDeleteBudget`, `useAddBudgetItem`, `useDeleteBudgetItem`; mutations invalidan `['budgets']`
+- [x] Crear `frontend/src/components/finances/BudgetForm.tsx` — campos: name, month (selector 1–12), year
+- [x] Crear `frontend/src/components/finances/BudgetItemForm.tsx` — campos: description, plannedAmount; formulario inline
+- [x] Crear `frontend/src/pages/finances/BudgetsView.tsx` — lista con filtro por año, total planificado, botón crear, modal con `BudgetForm`, `ConfirmDialog`
+- [x] Crear `frontend/src/pages/finances/BudgetDetailView.tsx` — detalle con nombre, mes/año, tabla de ítems, total planificado, formulario inline para agregar ítem, eliminación de ítem con confirmación
 
 ### Fase 12 — Integración MCP (backend)
 
 Exponer todas las entidades de finanzas como tools MCP siguiendo el patrón del `McpService` existente: un método `register<Entidad>Tools(server)` por entidad, invocado desde `createServer()`.
 
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — inyectar en el constructor: `ExpensesService`, `IncomesService`, `PurchasesService`, `AccountsService`, `CreditCardsService`, `CdtsService`, `BudgetsService`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — agregar llamadas en `createServer()`: `this.registerExpenseTools(server)`, `this.registerIncomeTools(server)`, `this.registerPurchaseTools(server)`, `this.registerAccountTools(server)`, `this.registerCreditCardTools(server)`, `this.registerCdtTools(server)`, `this.registerBudgetTools(server)`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerExpenseTools`: tools `list_expenses`, `get_expense`, `create_expense`, `update_expense`, `delete_expense`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerIncomeTools`: tools `list_incomes`, `get_income`, `create_income`, `update_income`, `delete_income`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerPurchaseTools`: tools `list_purchases` (con filtro opcional `status`), `get_purchase`, `create_purchase`, `update_purchase`, `delete_purchase`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerAccountTools`: tools `list_accounts`, `get_account`, `create_account`, `update_account`, `delete_account`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerCreditCardTools`: tools `list_credit_cards`, `get_credit_card`, `create_credit_card`, `update_credit_card`, `delete_credit_card`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerCdtTools`: tools `list_cdts`, `get_cdt`, `get_active_cdts`, `create_cdt`, `update_cdt`, `delete_cdt`
-- [ ] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerBudgetTools`: tools `list_budgets` (con filtros `year` y `month`), `get_budget` (incluye items), `create_budget`, `update_budget`, `delete_budget`, `add_budget_item`, `delete_budget_item`
-- [ ] Editar `backend/src/mcp/mcp.module.ts` — importar `FinancesModule` para tener acceso a los services de finanzas
+- [x] Editar `backend/src/mcp/mcp.service.ts` — inyectar en el constructor: `ExpensesService`, `IncomesService`, `PurchasesService`, `AccountsService`, `CreditCardsService`, `CdtsService`, `BudgetsService`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — agregar llamadas en `createServer()`: `this.registerExpenseTools(server)`, `this.registerIncomeTools(server)`, `this.registerPurchaseTools(server)`, `this.registerAccountTools(server)`, `this.registerCreditCardTools(server)`, `this.registerCdtTools(server)`, `this.registerBudgetTools(server)`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerExpenseTools`: tools `list_expenses`, `get_expense`, `create_expense`, `update_expense`, `delete_expense`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerIncomeTools`: tools `list_incomes`, `get_income`, `create_income`, `update_income`, `delete_income`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerPurchaseTools`: tools `list_purchases` (con filtro opcional `status`), `get_purchase`, `create_purchase`, `update_purchase`, `delete_purchase`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerAccountTools`: tools `list_accounts`, `get_account`, `create_account`, `update_account`, `delete_account`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerCreditCardTools`: tools `list_credit_cards`, `get_credit_card`, `create_credit_card`, `update_credit_card`, `delete_credit_card`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerCdtTools`: tools `list_cdts`, `get_cdt`, `get_active_cdts`, `create_cdt`, `update_cdt`, `delete_cdt`
+- [x] Editar `backend/src/mcp/mcp.service.ts` — implementar `registerBudgetTools`: tools `list_budgets` (con filtros `year` y `month`), `get_budget` (incluye items), `create_budget`, `update_budget`, `delete_budget`, `add_budget_item`, `delete_budget_item`
+- [x] Editar `backend/src/mcp/mcp.module.ts` — importar `FinancesModule` para tener acceso a los services de finanzas
 
 ### Fase 13 — Integración: rutas y navegación (frontend)
 
-- [ ] Editar `frontend/src/App.tsx` — agregar rutas bajo `/finances/`: `expenses`, `incomes`, `purchases`, `accounts`, `credit-cards`, `cdts`, `budgets`, `budgets/:id`; todas dentro del `<Route element={<MainLayout />}>`; agregar ruta `/finances` → `FinancesDashboard`
-- [ ] Editar `frontend/src/components/layout/Sidebar.tsx` — agregar sección "Finanzas" con enlaces a Gastos, Ingresos, Compras, Cuentas, Tarjetas, CDTs, Presupuestos
-- [ ] Crear `frontend/src/pages/finances/FinancesDashboard.tsx` — página de bienvenida con cards de acceso rápido a cada subsección
+- [x] Editar `frontend/src/App.tsx` — agregar rutas bajo `/finances/`: `expenses`, `incomes`, `purchases`, `accounts`, `credit-cards`, `cdts`, `budgets`, `budgets/:id`; todas dentro del `<Route element={<MainLayout />}>`; agregar ruta `/finances` → `FinancesDashboard`
+- [x] Editar `frontend/src/components/layout/Sidebar.tsx` — agregar sección "Finanzas" con enlaces a Gastos, Ingresos, Compras, Cuentas, Tarjetas, CDTs, Presupuestos
+- [x] Crear `frontend/src/pages/finances/FinancesDashboard.tsx` — página de bienvenida con cards de acceso rápido a cada subsección
 
 ---
 

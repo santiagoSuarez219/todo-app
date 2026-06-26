@@ -65,6 +65,62 @@ function GridIcon() {
   );
 }
 
+function WalletIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18-3a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3" />
+    </svg>
+  );
+}
+
+function CoinIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+    </svg>
+  );
+}
+
+function BankIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" />
+    </svg>
+  );
+}
+
+function CardIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+    </svg>
+  );
+}
+
+function TrendIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+    </svg>
+  );
+}
+
+function ChartIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" />
+    </svg>
+  );
+}
+
 function PlusIcon() {
   return (
     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -172,6 +228,49 @@ export default function Sidebar({ onCreateActivity }: Props) {
               Sin proyectos
             </p>
           )}
+        </div>
+
+        {/* Finances section */}
+        <div className="pt-4">
+          <div className="flex items-center justify-between px-3 mb-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Finanzas
+            </span>
+            <NavLink
+              to="/finances"
+              end
+              className={({ isActive }) =>
+                `p-0.5 rounded transition-colors ${isActive
+                  ? 'text-blue-700 dark:text-blue-400'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`
+              }
+              title="Dashboard de finanzas"
+            >
+              <GridIcon />
+            </NavLink>
+          </div>
+          <NavLink to="/finances/expenses" className={linkCls}>
+            <WalletIcon /> Gastos
+          </NavLink>
+          <NavLink to="/finances/incomes" className={linkCls}>
+            <CoinIcon /> Ingresos
+          </NavLink>
+          <NavLink to="/finances/purchases" className={linkCls}>
+            <CartIcon /> Compras
+          </NavLink>
+          <NavLink to="/finances/accounts" className={linkCls}>
+            <BankIcon /> Cuentas
+          </NavLink>
+          <NavLink to="/finances/credit-cards" className={linkCls}>
+            <CardIcon /> Tarjetas
+          </NavLink>
+          <NavLink to="/finances/cdts" className={linkCls}>
+            <TrendIcon /> CDTs
+          </NavLink>
+          <NavLink to="/finances/budgets" className={linkCls}>
+            <ChartIcon /> Presupuestos
+          </NavLink>
         </div>
       </nav>
 
