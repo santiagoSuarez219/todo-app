@@ -1,4 +1,4 @@
-# Spec 12 — Edición rápida en ActivityCard
+# Spec 12 — [DONE] Edición rápida en ActivityCard
 
 ## Objetivo
 

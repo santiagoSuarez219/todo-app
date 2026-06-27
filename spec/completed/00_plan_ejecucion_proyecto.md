@@ -1,4 +1,4 @@
-# Plan de Ejecucion: Gestor de Actividades Diarias
+# Plan de Ejecucion: [DONE] Gestor de Actividades Diarias
 
 ---
 
