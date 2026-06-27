@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useForm, useWatch, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -29,7 +29,7 @@ const schema = z.object({
   dueDate: z.string().nullish(),
   notionUrl: z.string().url({ message: 'Debe ser una URL válida' }).nullish(),
   // ── Recurrence ──
-  isRecurring: z.boolean().default(false),
+  isRecurring: z.boolean(),
   recurrenceFrequency: z.nativeEnum(RecurrenceFrequency).optional(),
   recurrenceDays: z.array(z.number().min(0).max(6)).optional(),
   recurrenceDayOfMonth: z.coerce.number().min(1).max(31).optional(),
@@ -125,7 +125,7 @@ export default function ActivityForm({
 }: Props) {
   const { register, handleSubmit, setValue, control, formState: { errors } } =
     useForm<FormValues>({
-      resolver: zodResolver(schema),
+      resolver: zodResolver(schema) as Resolver<FormValues>,
       defaultValues: {
         name: initial?.name ?? '',
         description: initial?.description ?? '',

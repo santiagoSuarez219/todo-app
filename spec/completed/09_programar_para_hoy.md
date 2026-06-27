@@ -1,4 +1,4 @@
-# Spec 09 — Programar para Hoy
+# Spec 09 — [DONE] Programar para Hoy
 
 ## Objetivo
 

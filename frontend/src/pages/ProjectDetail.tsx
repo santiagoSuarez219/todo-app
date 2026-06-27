@@ -51,7 +51,6 @@ function isThisWeek(dateStr: string): boolean {
 
 function isOverdue(a: Activity, now: Date): boolean {
   if (a.status === 'completed') return false;
-  if (a.type === 'reminder') return !!a.actionDate && new Date(a.actionDate) < now;
   return !!a.dueDate && new Date(a.dueDate) < now;
 }
 
@@ -121,8 +120,8 @@ export default function ProjectDetail() {
 
   const rootActivities = activities.filter((a) => !a.parent);
 
-  const todayCount  = rootActivities.filter((a) => (a.actionDate && isToday(a.actionDate)) || (a.dueDate && isToday(a.dueDate))).length;
-  const weekCount   = rootActivities.filter((a) => (a.actionDate && isThisWeek(a.actionDate)) || (a.dueDate && isThisWeek(a.dueDate))).length;
+  const todayCount  = rootActivities.filter((a) => a.dueDate && isToday(a.dueDate)).length;
+  const weekCount   = rootActivities.filter((a) => a.dueDate && isThisWeek(a.dueDate)).length;
   const overdueCount = rootActivities.filter((a) => isOverdue(a, now)).length;
 
   const filteredActivities = (() => {
@@ -131,7 +130,7 @@ export default function ProjectDetail() {
       case 'in_progress': return rootActivities.filter((a) => a.status === 'in_progress');
       case 'completed':   return rootActivities.filter((a) => a.status === 'completed');
       case 'overdue':     return rootActivities.filter((a) => isOverdue(a, now));
-      case 'no_date':     return rootActivities.filter((a) => !a.actionDate && !a.dueDate);
+      case 'no_date':     return rootActivities.filter((a) => !a.dueDate);
       default:            return rootActivities.filter((a) => a.status !== 'completed');
     }
   })();
@@ -142,7 +141,7 @@ export default function ProjectDetail() {
       case 'in_progress': return rootActivities.filter((a) => a.status === 'in_progress').length;
       case 'completed':   return rootActivities.filter((a) => a.status === 'completed').length;
       case 'overdue':     return overdueCount;
-      case 'no_date':     return rootActivities.filter((a) => !a.actionDate && !a.dueDate).length;
+      case 'no_date':     return rootActivities.filter((a) => !a.dueDate).length;
       default:            return 0;
     }
   }

@@ -1,4 +1,4 @@
-# Spec 10 — Enlace a Notion en actividades
+# Spec 10 — [DONE] Enlace a Notion en actividades
 
 ## Objetivo
 

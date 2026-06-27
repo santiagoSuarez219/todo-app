@@ -25,13 +25,6 @@ function CalendarIcon() {
   );
 }
 
-function ClockIcon() {
-  return (
-    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
-    </svg>
-  );
-}
 
 function FolderIcon() {
   return (
