@@ -1,7 +1,6 @@
-# CLAUDE.md — Frontend
+# CLAUDE.md
 
-> Referencia técnica del frontend. Leer antes de modificar cualquier archivo de la SPA.
-> Para decisiones de UI, leer `DESIGN.md` antes de escribir código.
+Referencia técnica del frontend del proyecto ToDo. Actualizar cuando cambien rutas, tipos, hooks o convenciones.
 
 ---
 
@@ -13,41 +12,61 @@
 | Routing | React Router 7 |
 | Estado servidor | TanStack React Query v5 (`staleTime: 1min`, `retry: 1`) |
 | Formularios | React Hook Form 7 + Zod |
-| HTTP | Axios — proxy a `http://localhost:3000` en desarrollo |
+| HTTP | Axios — baseURL: `/api/v1` (proxy a `http://localhost:3002`) |
 | Estilos | Tailwind CSS 4 vía `@tailwindcss/vite` |
 | Fuente | JetBrains Mono (toda la UI) |
 
-### Comandos
-
-```bash
-# Instalar dependencias
-npm install
-
-# Desarrollo
-npm run dev
-
-# Build
-npm run build
-
-# Preview del build
-npm run preview
+**Variables de entorno** (`frontend/.env.local`):
 ```
-
----
-
-## Variables de entorno
-
-Archivo real: `.env.local` (nunca commitear).
-
-```env
-VITE_API_URL=http://localhost:3000/api/v1
+VITE_API_URL=http://localhost:3002/api/v1
 ```
 
 El `api-client.ts` usa `baseURL: '/api/v1'` — Vite hace proxy al backend en desarrollo.
 
 ---
 
-## Rutas del frontend
+## Backend API — Referencia completa
+
+Base: `http://localhost:3002/api/v1`
+
+Todas las respuestas vienen envueltas: `{ data: ... }`
+
+### Projects — `/projects`
+
+| Método | Ruta | Descripción | Params |
+|--------|------|-------------|--------|
+| `GET` | `/projects` | Listar proyectos | `?status=` (opcional) |
+| `GET` | `/projects/:id` | Obtener proyecto | UUID |
+| `POST` | `/projects` | Crear proyecto | body: `CreateProjectDto` |
+| `PATCH` | `/projects/:id` | Actualizar proyecto | UUID + body |
+| `DELETE` | `/projects/:id` | Eliminar proyecto (204) | UUID |
+
+### Activities — `/activities`
+
+| Método | Ruta | Descripción | Params |
+|--------|------|-------------|--------|
+| `GET` | `/activities` | Listar (paginado) | `?page=&limit=` |
+| `GET` | `/activities/today` | Actividades de hoy (por `actionDate`) | paginación |
+| `GET` | `/activities/tomorrow` | Actividades de mañana | paginación |
+| `GET` | `/activities/this-week` | Actividades semana actual (Lun–Dom) | paginación |
+| `GET` | `/activities/overdue` | Vencidas (`dueDate < hoy`, status ≠ completed) | paginación |
+| `GET` | `/activities/without-project` | Sin proyecto asociado (`project = null`) | paginación |
+| `GET` | `/activities/project/:projectId` | Por proyecto (UUID) | paginación |
+| `GET` | `/activities/type/:type` | Por tipo (`task` \| `event` \| `reminder`) | paginación |
+| `GET` | `/activities/priority/:priority` | Por prioridad (`high` \| `medium` \| `low`) | paginación |
+| `GET` | `/activities/status/:status` | Por status | paginación |
+| `GET` | `/activities/search/:query` | Búsqueda por nombre/descripción/proyecto | paginación |
+| `GET` | `/activities/:id` | Obtener actividad (incluye project, parent, subtasks) | UUID |
+| `GET` | `/activities/:id/subtasks` | Subtareas de una actividad | UUID + paginación |
+| `POST` | `/activities` | Crear actividad | body: `CreateActivityDto` |
+| `PATCH` | `/activities/:id` | Actualizar actividad | UUID + body |
+| `DELETE` | `/activities/:id` | Eliminar actividad (204) | UUID |
+
+**Paginación** — query params: `page` (default 1) · `limit` (default 20)
+
+---
+
+## Rutas del Frontend
 
 | Ruta | Componente | Descripción |
 |------|-----------|-------------|
@@ -62,7 +81,7 @@ Todas las rutas están dentro de `<MainLayout>` (sidebar + navbar).
 
 ---
 
-## Arquitectura de capas
+## Arquitectura de Capas
 
 ```
 Pages
@@ -73,15 +92,14 @@ Pages
 ```
 
 **Reglas:**
-- `src/services/` — funciones async puras, sin React, sin hooks.
-- `src/hooks/` — envuelven servicios con `useQuery` / `useMutation`.
-- Las mutations invalidan query keys relevantes en `onSuccess`.
-- Tipos en `src/types/index.ts` — única fuente de verdad.
-- Nunca llamar servicios directamente desde páginas; siempre usar hooks.
+- `src/services/` — funciones async puras, sin React, sin hooks
+- `src/hooks/` — envuelven servicios con `useQuery` / `useMutation`
+- Las mutations invalidan query keys relevantes en `onSuccess`
+- Tipos en `src/types/index.ts` — única fuente de verdad
 
 ---
 
-## Query keys
+## Query Keys
 
 | Key | Hook | Descripción |
 |-----|------|-------------|
@@ -100,9 +118,9 @@ Las mutations invalidan `['activities']` o `['projects']` completo.
 
 ---
 
-## Tipos e interfaces (`src/types/index.ts`)
+## Tipos e Interfaces (`src/types/index.ts`)
 
-### Enums
+### Enums (as const)
 
 ```ts
 ProjectStatus:   'active' | 'inactive' | 'paused' | 'completed'
@@ -150,17 +168,15 @@ type UpdateActivityDto = Partial<CreateActivityDto>
 
 ---
 
-## Componentes existentes
+## Componentes Existentes
 
 ### Layout
-
 - `components/layout/MainLayout.tsx` — wrapper con sidebar y navbar
 - `components/layout/Sidebar.tsx` — navegación lateral
 - `components/layout/Navbar.tsx` — barra superior
 
 ### Compartidos
-
-- `ActivityCard.tsx` — tarjeta de actividad con quick-edit inline (nombre, prioridad, proyecto)
+- `ActivityCard.tsx` — tarjeta de actividad
 - `ActivityForm.tsx` — formulario crear/editar actividad (React Hook Form + Zod)
 - `ProjectForm.tsx` — formulario crear/editar proyecto
 - `ConfirmDialog.tsx` — modal de confirmación destructiva
@@ -173,30 +189,25 @@ type UpdateActivityDto = Partial<CreateActivityDto>
 
 ---
 
-## Sistema de diseño
+## Sistema de Diseño
 
-Ver `DESIGN.md` — paleta primitiva, tokens semánticos, tipografía, dark mode y clases de componentes UI.
-
-Resumen rápido:
-- Fuente: **JetBrains Mono** para todo el proyecto.
-- Dark mode: clase `dark` en `<html>`, persistida en `localStorage` con clave `'color-theme'`.
-- Tailwind v4: `@custom-variant dark (&:where(.dark, .dark *))` en `index.css`.
+Ver [DESIGN.md](DESIGN.md) — paleta, tokens semánticos, tipografía, dark mode y clases de componentes UI.
 
 ---
 
 ## Convenciones
 
-- Nuevos hooks en `src/hooks/`, nuevos servicios en `src/services/`.
-- Tipos nuevos van en `src/types/index.ts`.
-- Los formularios usan React Hook Form + Zod (`resolver: zodResolver(schema)`).
-- Fechas se manejan como strings ISO 8601 (`YYYY-MM-DD` o datetime completo).
-- IDs son UUIDs — usar `string` en frontend.
-- Respuestas del backend: extraer `.data.data` (doble wrap por `TransformInterceptor`).
-- No usar `any`; documentar excepciones con `// TODO: type this`.
+- Nunca llamar servicios directamente desde páginas — siempre usar hooks
+- Nuevos hooks en `src/hooks/`, nuevos servicios en `src/services/`
+- Tipos nuevos van en `src/types/index.ts`
+- Los formularios usan React Hook Form + Zod (`resolver: zodResolver(schema)`)
+- Fechas se manejan como strings ISO 8601 (`YYYY-MM-DD` o datetime completo)
+- IDs son UUIDs — usar `ParseUUIDPipe` en backend, `string` en frontend
+- Respuestas del backend siempre extraer `.data.data` (doble wrap por `TransformInterceptor`)
 
 ---
 
-## Archivos clave
+## Archivos Clave
 
 | Archivo | Rol |
 |---------|-----|
@@ -209,3 +220,6 @@ Resumen rápido:
 | `src/hooks/useActivities.ts` | React Query hooks — actividades |
 | `src/hooks/useProjects.ts` | React Query hooks — proyectos |
 | `src/index.css` | Tokens de diseño Tailwind v4 + dark mode |
+
+---
+

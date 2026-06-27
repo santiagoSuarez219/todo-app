@@ -44,7 +44,7 @@ export default function TodayView() {
       {byDate.length > 0 && (
         <section>
           <SectionHeader title="Programadas por fecha" />
-          <div className="grid gap-3 sm:grid-cols-1">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {byDate.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}
@@ -58,7 +58,7 @@ export default function TodayView() {
             <hr className="border-gray-200 dark:border-gray-700 mb-6" />
           )}
           <SectionHeader title="Agregadas para hoy" />
-          <div className="grid gap-3 sm:grid-cols-1">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {bySchedule.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}

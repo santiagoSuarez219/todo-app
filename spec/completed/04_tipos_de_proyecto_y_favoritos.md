@@ -1,4 +1,4 @@
-# Plan de Implementacion: Tipos de Proyecto y Campo Favorito
+# Plan de Implementacion: [DONE] Tipos de Proyecto y Campo Favorito
 
 ---
 

@@ -14,7 +14,7 @@ export default function WeekView() {
       {isError && <p className="text-sm text-red-500">Error al cargar actividades.</p>}
       {!isLoading && visible.length === 0 && <EmptyState message="No tienes actividades esta semana." />}
 
-      <div className="grid gap-3 sm:grid-cols-1">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((activity) => (
           <ActivityCard key={activity.id} activity={activity} />
         ))}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useForm, useWatch, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -61,6 +61,7 @@ interface Props {
   projects?: Project[];
   parentId?: string;
   hideProject?: boolean;
+  defaultProjectId?: string;
   onSubmit: (dto: CreateActivityDto) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -117,18 +118,18 @@ export default function ActivityForm({
   projects = [],
   parentId,
   hideProject = false,
+  defaultProjectId,
   onSubmit,
   onCancel,
   loading,
 }: Props) {
   const { register, handleSubmit, setValue, control, formState: { errors } } =
     useForm<FormValues>({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      resolver: zodResolver(schema) as any,
+      resolver: zodResolver(schema) as Resolver<FormValues>,
       defaultValues: {
         name: initial?.name ?? '',
         description: initial?.description ?? '',
-        projectId: initial?.project?.id ?? null,
+        projectId: initial?.project?.id ?? defaultProjectId ?? null,
         status: initial?.status ?? ActivityStatus.PENDING,
         priority: initial?.priority ?? Priority.MEDIUM,
         energy: initial?.energy ?? Energy.MEDIUM,

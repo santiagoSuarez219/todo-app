@@ -1,6 +1,6 @@
 # CLAUDE.md — Backend
 
-> Referencia técnica del backend. Leer antes de modificar cualquier archivo del servidor.
+Referencia técnica del backend del proyecto ToDo. Actualizar cuando cambien endpoints, entidades, lógica de negocio o convenciones.
 
 ---
 
@@ -19,36 +19,9 @@
 **Prefijo global:** `/api/v1` (excepto `/mcp`)
 **Swagger UI:** `http://localhost:3000/api/v1/docs`
 
-### Comandos
-
-```bash
-# Instalar dependencias
-npm install
-
-# Desarrollo
-npm run start:dev
-
-# Build
-npm run build
-
-# Producción
-npm run start:prod
-
-# Tests
-npm run test
-
-# Correr migraciones
-npx typeorm migration:run -d src/data-source.ts
-
-# Generar migración
-npx typeorm migration:generate src/migrations/<Nombre> -d src/data-source.ts
-```
-
 ---
 
-## Variables de entorno
-
-Archivo real: `.env` en la raíz del proyecto (nunca commitear).
+## Variables de Entorno (`.env`)
 
 ```env
 DB_HOST=localhost
@@ -62,24 +35,7 @@ FRONTEND_URL=http://localhost:5173
 
 ---
 
-## Base de datos
-
-- `synchronize: false` — nunca se sincronizan esquemas automáticamente.
-- Toda modificación de esquema requiere una migración explícita.
-- Nunca ejecutar migraciones en entornos distintos al local sin confirmación.
-
-### Migraciones existentes
-
-```
-src/migrations/
-├── 1776080084318-InitialSchema.ts
-├── 1776475116575-AddDescriptionToActivities.ts
-└── 1776800000000-AddAutomatizacionToActivities.ts
-```
-
----
-
-## Estructura de módulos
+## Estructura de Módulos
 
 ```
 src/
@@ -102,8 +58,8 @@ src/
 │   └── activities.controller.ts   Endpoints REST
 │
 ├── mcp/
-│   ├── mcp.service.ts             Define tools MCP
-│   └── mcp.controller.ts          Endpoint /mcp (JSON-RPC)
+│   ├── mcp.service.ts             Define tools MCP (proyecta sobre services)
+│   └── mcp.controller.ts          Endpoint /mcp (JSON-RPC + SSE)
 │
 ├── common/
 │   ├── dto/pagination.dto.ts      page (min 1) · limit (min 1, max 100, default 20)
@@ -111,7 +67,10 @@ src/
 │   ├── filters/http-exception.filter.ts
 │   └── interceptors/transform.interceptor.ts
 │
-└── migrations/
+└── migrations/                    Migraciones explícitas (synchronize: false)
+    ├── 1776080084318-InitialSchema.ts
+    ├── 1776475116575-AddDescriptionToActivities.ts
+    └── 1776800000000-AddAutomatizacionToActivities.ts
 ```
 
 ---
@@ -137,34 +96,41 @@ src/
 | `id` | `uuid` PK | generado |
 | `name` | `varchar(255)` | requerido |
 | `description` | `text` | nullable |
-| `project` | FK → `projects` | nullable, `onDelete: SET NULL` |
-| `parent` | FK → `activities` | nullable, auto-referencial |
+| `project` | FK → `projects` | nullable, `onDelete: CASCADE` |
+| `parent` | FK → `activities` | nullable, auto-referencial, `onDelete: SET NULL` |
 | `subtasks` | relación | `OneToMany → Activity (self)` |
-| `actionDate` | `timestamptz` | nullable |
-| `dueDate` | `timestamptz` | nullable |
+| `dueDate` | `timestamptz` | nullable — fecha límite (task) o fecha+hora del recordatorio (reminder) |
 | `priority` | `enum` | default `medium` |
 | `status` | `enum` | default `pending` |
 | `energy` | `enum` | default `medium` |
 | `type` | `enum` | default `task` |
-| `device` | `enum` | nullable |
-| `duration` | `numeric` | nullable |
-| `durationUnit` | `enum` | nullable |
-| `location` | `varchar(255)` | nullable |
-| `automatizacion` | `enum` | nullable |
+| `scheduledForToday` | `boolean` | default `false` — aparece en la vista Today |
+| `notionUrl` | `varchar` | nullable — URL de página Notion asociada |
+| `isTemplate` | `boolean` | default `false` — es plantilla de recurrencia |
+| `isRecurring` | `boolean` | default `false` — tiene recurrencia activa |
+| `templateId` | `uuid` FK | nullable — apunta a la plantilla que generó esta instancia |
+| `instances` | relación | `OneToMany → Activity (self)` — instancias generadas por la plantilla |
+| `recurrenceFrequency` | `varchar` | nullable — `daily \| weekly \| biweekly \| monthly \| yearly` |
+| `recurrenceDays` | `integer[]` | nullable — días de la semana (0=Dom … 6=Sáb) |
+| `recurrenceDayOfMonth` | `integer` | nullable — día del mes (1–31) |
+| `recurrenceEndDate` | `timestamptz` | nullable — hasta cuándo generar instancias |
+| `instanceDate` | `date` | nullable — fecha de esta instancia específica |
 | `createdAt` / `updatedAt` | `timestamptz` | auto |
 
-### Enums (`src/common/enums/`)
+---
+
+## Enums
 
 ```
-ProjectStatus:   active | inactive | paused | completed
-ActivityStatus:  pending | in_progress | completed | cancelled | on_hold
-ActivityType:    task | event | reminder
-Priority:        high | medium | low
-Energy:          high | medium | low
-Device:          phone | computer | tablet
-DurationUnit:    hours | days
-Automatizacion:  fully_automatable | partially_automatable | not_automatable
+ProjectStatus:        active | inactive | paused | completed
+ActivityStatus:       pending | in_progress | completed | cancelled | on_hold
+ActivityType:         task | reminder
+Priority:             high | medium | low
+Energy:               high | medium | low
+RecurrenceFrequency:  daily | weekly | biweekly | monthly | yearly
 ```
+
+Ubicación: `src/common/enums/`
 
 ---
 
@@ -172,33 +138,35 @@ Automatizacion:  fully_automatable | partially_automatable | not_automatable
 
 ### Formato de respuesta
 
+**Éxito:**
 ```json
-// Éxito
 { "statusCode": 200, "message": "success", "data": <payload> }
-
-// Error
+```
+**Error:**
+```json
 { "statusCode": 404, "message": "...", "data": null, "path": "...", "timestamp": "..." }
 ```
 
 ### Projects — `/api/v1/projects`
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET` | `/projects` | Lista proyectos (`?status=` opcional) |
-| `GET` | `/projects/:id` | Obtiene proyecto por UUID |
-| `POST` | `/projects` | Crea proyecto (201) |
-| `PATCH` | `/projects/:id` | Actualiza proyecto |
-| `DELETE` | `/projects/:id` | Elimina proyecto (204) |
+| Método | Ruta | Body / Params | Respuesta |
+|--------|------|---------------|-----------|
+| `GET` | `/projects` | `?status=` (opcional) | `Project[]` |
+| `GET` | `/projects/:id` | UUID | `Project` |
+| `POST` | `/projects` | `CreateProjectDto` | `Project` 201 |
+| `PATCH` | `/projects/:id` | UUID + `UpdateProjectDto` | `Project` |
+| `DELETE` | `/projects/:id` | UUID | 204 |
 
 ### Activities — `/api/v1/activities`
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `GET` | `/activities` | Lista paginada |
-| `GET` | `/activities/today` | `actionDate` o `dueDate` en el día actual |
-| `GET` | `/activities/tomorrow` | `actionDate` o `dueDate` mañana |
-| `GET` | `/activities/this-week` | Semana actual (Lun–Dom) |
-| `GET` | `/activities/overdue` | Vencidas y no completadas |
+| `GET` | `/activities/today` | `dueDate` en el día actual o `scheduledForToday = true` |
+| `GET` | `/activities/tomorrow` | `dueDate` mañana |
+| `GET` | `/activities/this-week` | Semana actual (Lun–Dom) por `dueDate` |
+| `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
+| `GET` | `/activities/without-project` | Sin proyecto asociado |
 | `GET` | `/activities/project/:projectId` | Por proyecto |
 | `GET` | `/activities/type/:type` | Por tipo |
 | `GET` | `/activities/priority/:priority` | Por prioridad |
@@ -206,58 +174,60 @@ Automatizacion:  fully_automatable | partially_automatable | not_automatable
 | `GET` | `/activities/search/:query` | ILIKE en name, description, project.name |
 | `GET` | `/activities/:id` | Con project, parent y subtasks |
 | `GET` | `/activities/:id/subtasks` | Subtareas de una actividad |
-| `POST` | `/activities` | Crear actividad / subtarea (201) |
+| `GET` | `/activities/:id/instances` | Instancias generadas por una plantilla recurrente |
+| `POST` | `/activities` | Crear actividad / subtarea / plantilla recurrente |
 | `PATCH` | `/activities/:id` | Actualizar |
 | `DELETE` | `/activities/:id` | Eliminar (204) |
+| `DELETE` | `/activities/:id/future-instances` | Cancelar instancias futuras pendientes (204) |
 
-**Paginación** (todos los GET de lista): `page` (default 1) · `limit` (default 20, max 100)
+**Paginación** (query params en todos los GET de lista): `page` (default 1) · `limit` (default 20, max 100)
 
-**Orden de resultados** (en `baseQuery`): `actionDate ASC NULLS LAST` → `dueDate ASC NULLS LAST` → prioridad (`high=1, medium=2, low=3`)
+**Orden de resultados** (aplicado en `baseQuery`): `dueDate ASC NULLS LAST` → prioridad (`high=1, medium=2, low=3`)
 
 ---
 
-## Lógica de negocio importante
+## Lógica de Negocio Importante
 
 ### Sanitización por tipo (`sanitizeByType`)
 
 Al crear o actualizar, el servicio limpia campos que no aplican según el tipo:
 
-| Tipo | Campos forzados a `null` |
-|------|--------------------------|
-| `reminder` | `dueDate`, `duration`, `durationUnit`, `device`, `location`, `automatizacion`, `parentId` |
-| `event` | `duration`, `durationUnit`, `device`, `location`, `automatizacion`, `parentId` |
-| `task` | `actionDate` y `dueDate` se truncan a medianoche (sin componente horario) |
+| Tipo | Comportamiento |
+|------|----------------|
+| `task` | `dueDate` se trunca a medianoche (sin componente horario) |
+| `reminder` | `dueDate` se usa tal cual como fecha+hora del recordatorio |
 
 ### Lógica de vencimiento (`findOverdue`)
 
-- `task` / `event`: vencida si `dueDate < hoy 00:00`
-- `reminder`: vencida si `actionDate < ahora`
-- En todos los casos: `status != 'completed'`
+- `task`: vencida si `dueDate < hoy 00:00` y `status != 'completed'`
+- `reminder`: vencida si `dueDate < ahora` y `status != 'completed'`
 
-### Semántica de fechas por tipo
+### Semántica de `dueDate` por tipo
 
-| Campo | `task` | `event` | `reminder` |
-|-------|--------|---------|-----------|
-| `actionDate` | Fecha de acción (00:00:00) | Inicio del evento | Fecha y hora del recordatorio |
-| `dueDate` | Fecha límite (00:00:00) | Fin del evento | Ignorado (forzado null) |
+| Tipo | Semántica de `dueDate` |
+|------|------------------------|
+| `task` | Fecha límite (hora truncada a 00:00:00) |
+| `reminder` | Fecha y hora exacta del recordatorio |
 
 ---
 
-## Infraestructura global (`main.ts`)
+## Infraestructura Global (`main.ts`)
 
 | Mecanismo | Comportamiento |
 |-----------|---------------|
 | `ValidationPipe` | `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true` |
-| `TransformInterceptor` | Envuelve respuestas en `{ statusCode, message, data }` |
+| `TransformInterceptor` | Envuelve todas las respuestas en `{ statusCode, message, data }` |
 | `HttpExceptionFilter` | Normaliza errores en `{ statusCode, message, data: null, path, timestamp }` |
-| CORS | Origen: `FRONTEND_URL` env var |
-| Swagger | `/api/v1/docs` |
+| CORS | Origen: `FRONTEND_URL` env var (default `http://localhost:5173`) |
+| Swagger | Disponible en `/api/v1/docs` |
 
 ---
 
 ## Servidor MCP (`/mcp`)
 
-Endpoint stateless que expone las mismas capacidades del REST API como tools MCP para agentes de IA.
+El endpoint `/mcp` expone las mismas capacidades que el REST API como tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo (stateless).
+
+**Tools disponibles:**
 
 | Tool | Descripción |
 |------|-------------|
@@ -269,33 +239,47 @@ Endpoint stateless que expone las mismas capacidades del REST API como tools MCP
 | `list_activities` | Lista actividades paginadas |
 | `get_activity` | Obtiene actividad por UUID |
 | `create_activity` | Crea actividad o subtarea |
-| `update_activity` | Actualiza actividad |
+| `update_activity` | Actualiza actividad (incluye campos de recurrencia) |
 | `delete_activity` | Elimina actividad |
-| `get_today_activities` | Actividades de hoy |
+| `get_today_activities` | Actividades de hoy (dueDate o scheduledForToday) |
 | `get_tomorrow_activities` | Actividades de mañana |
-| `get_this_week_activities` | Actividades de la semana |
+| `get_this_week_activities` | Actividades de la semana actual |
 | `get_overdue_activities` | Actividades vencidas |
+| `get_activities_without_project` | Actividades sin proyecto asociado |
 | `get_activities_by_project` | Por proyecto |
 | `get_activities_by_type` | Por tipo |
 | `get_activities_by_priority` | Por prioridad |
 | `get_activities_by_status` | Por status |
+| `search_activities` | Búsqueda ILIKE en name, description, project.name |
 | `get_activity_subtasks` | Subtareas de una actividad |
+| `create_recurring_activity` | Crea plantilla de actividad recurrente |
+| `get_activity_instances` | Instancias generadas por una plantilla |
+| `cancel_future_instances` | Cancela instancias futuras pendientes de una plantilla |
+
+---
+
+## Base de Datos
+
+- **Motor:** PostgreSQL 16 en Docker (`docker-compose.yml`, puerto externo `5433`)
+- **`synchronize: false`** — nunca se sincronizan esquemas automáticamente
+- **Migraciones:** `npx typeorm migration:run -d src/data-source.ts`
+- **Generar migración:** `npx typeorm migration:generate src/migrations/<Nombre> -d src/data-source.ts`
 
 ---
 
 ## Convenciones
 
-- Los servicios lanzan `NotFoundException` cuando no encuentran una entidad por ID.
-- Nunca usar `synchronize: true` — siempre migraciones explícitas.
-- Los enums viven en `src/common/enums/` — uno por archivo.
-- Los DTOs usan `@IsOptional()` + decoradores de validación estrictos.
-- `UpdateActivityDto` y `UpdateProjectDto` son `PartialType` de sus Create.
-- `baseQuery()` siempre hace `leftJoinAndSelect` de `project`, `parent` y `subtasks`.
-- La lógica de negocio va en el servicio, nunca en el controlador.
+- Los servicios lanzan `NotFoundException` cuando no encuentran una entidad por ID
+- Nunca usar `synchronize: true` — siempre migraciones explícitas
+- Los enums viven en `src/common/enums/` — uno por archivo
+- Los DTOs usan `@IsOptional()` + decoradores de validación estrictos
+- `UpdateActivityDto` y `UpdateProjectDto` son `PartialType` de sus Create
+- El `baseQuery()` siempre hace `leftJoinAndSelect` de `project`, `parent` y `subtasks` para devolver entidades completas
+- La lógica de negocio va en el servicio, nunca en el controlador
 
 ---
 
-## Archivos clave
+## Archivos Clave
 
 | Archivo | Rol |
 |---------|-----|
@@ -309,3 +293,4 @@ Endpoint stateless que expone las mismas capacidades del REST API como tools MCP
 | `src/mcp/mcp.service.ts` | Definición de tools MCP |
 | `src/common/interceptors/transform.interceptor.ts` | Wrapper de respuestas |
 | `src/common/filters/http-exception.filter.ts` | Formato de errores |
+

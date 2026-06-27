@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useProject } from '../hooks/useProjects';
-import { useActivitiesByProject, useCreateActivity } from '../hooks/useActivities';
+import { useActivitiesByProject, useCreateActivity, useDeleteActivity } from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
 import StatusBadge from '../components/StatusBadge';
 import ActivityCard from '../components/ActivityCard';
 import ActivityForm from '../components/ActivityForm';
+import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import type { Activity, CreateActivityDto } from '../types';
@@ -104,6 +105,8 @@ function StatCard({
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const [createOpen, setCreateOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   const { data: project, isLoading: projectLoading } = useProject(id!);
@@ -111,6 +114,7 @@ export default function ProjectDetail() {
   const { data: activities = [], isLoading: activitiesLoading } = useActivitiesByProject(id!, { limit: 100 });
 
   const createActivity = useCreateActivity();
+  const deleteActivity = useDeleteActivity();
 
   const now = new Date();
 
@@ -142,9 +146,21 @@ export default function ProjectDetail() {
     }
   }
 
+  const completedActivities = rootActivities.filter((a) => a.status === 'completed');
+
   async function handleCreate(dto: CreateActivityDto) {
-    await createActivity.mutateAsync({ ...dto, projectId: id });
+    await createActivity.mutateAsync(dto);
     setCreateOpen(false);
+  }
+
+  async function handleClearCompleted() {
+    setClearing(true);
+    try {
+      await Promise.all(completedActivities.map((a) => deleteActivity.mutateAsync(a.id)));
+    } finally {
+      setClearing(false);
+      setClearOpen(false);
+    }
   }
 
   if (projectLoading) return <p className="text-sm text-gray-400 dark:text-gray-500">Cargando…</p>;
@@ -172,12 +188,22 @@ export default function ProjectDetail() {
             )}
           </div>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="shrink-0 px-4 py-2 text-sm font-medium rounded-lg bg-blue-700 dark:bg-blue-600 text-white hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
-        >
-          + Actividad
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {completedActivities.length > 0 && (
+            <button
+              onClick={() => setClearOpen(true)}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              Limpiar completadas ({completedActivities.length})
+            </button>
+          )}
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-700 dark:bg-blue-600 text-white hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
+          >
+            + Actividad
+          </button>
+        </div>
       </div>
 
       {/* ── Stat cards ── */}
@@ -238,7 +264,7 @@ export default function ProjectDetail() {
 
         {/* Activity list */}
         {activitiesLoading && (
-          <div className="grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-28 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
             ))}
@@ -250,7 +276,7 @@ export default function ProjectDetail() {
         )}
 
         {!activitiesLoading && filteredActivities.length > 0 && (
-          <div className="grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filteredActivities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}
@@ -263,12 +289,24 @@ export default function ProjectDetail() {
         <Modal title="Nueva actividad" onClose={() => setCreateOpen(false)}>
           <ActivityForm
             projects={allProjects ?? []}
+            defaultProjectId={project?.id}
             onSubmit={handleCreate}
             onCancel={() => setCreateOpen(false)}
             loading={createActivity.isPending}
           />
         </Modal>
       )}
+
+      {/* ── Clear completed dialog ── */}
+      <ConfirmDialog
+        open={clearOpen}
+        title="Limpiar actividades completadas"
+        message={`¿Eliminar las ${completedActivities.length} actividades completadas de este proyecto? Esta acción no se puede deshacer.`}
+        confirmLabel="Limpiar"
+        onConfirm={handleClearCompleted}
+        onCancel={() => setClearOpen(false)}
+        loading={clearing}
+      />
     </div>
   );
 }
