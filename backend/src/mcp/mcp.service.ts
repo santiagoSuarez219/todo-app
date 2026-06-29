@@ -1250,10 +1250,32 @@ export class McpService {
         budgetId: z.string().uuid().describe('Budget UUID'),
         description: z.string().min(1).max(255).describe('Item description'),
         plannedAmount: z.number().positive().describe('Planned amount in COP'),
+        type: z
+          .enum(['basico', 'lujo', 'ahorro', 'pago_deuda'])
+          .describe('Expense type: basico, lujo, ahorro or pago_deuda'),
       },
       async ({ budgetId, ...dto }) => {
         try {
           return ok(await this.budgetsService.addItem(budgetId, dto as any));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'update_budget_item',
+      'Update description, amount or type of an existing budget item',
+      {
+        budgetId: z.string().uuid().describe('Budget UUID'),
+        itemId: z.string().uuid().describe('Budget item UUID'),
+        description: z.string().min(1).max(255).optional(),
+        plannedAmount: z.number().positive().optional(),
+        type: z.enum(['basico', 'lujo', 'ahorro', 'pago_deuda']).optional(),
+      },
+      async ({ budgetId, itemId, ...dto }) => {
+        try {
+          return ok(await this.budgetsService.updateItem(budgetId, itemId, dto as any));
         } catch (e) {
           return err(e);
         }
@@ -1271,6 +1293,22 @@ export class McpService {
         try {
           await this.budgetsService.removeItem(budgetId, itemId);
           return ok({ message: `Budget item ${itemId} deleted successfully` });
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'get_monthly_expense_summary',
+      'Get consolidated monthly expense summary combining fixed budget items and variable expenses for a given month. Returns budgetTotal, expensesTotal, combinedTotal and the budgetId if a budget exists for that month.',
+      {
+        year: z.number().int().min(2000).max(2100).describe('Year (e.g. 2026)'),
+        month: z.number().int().min(1).max(12).describe('Month (1–12)'),
+      },
+      async ({ year, month }) => {
+        try {
+          return ok(await this.budgetsService.getMonthlySummary(year, month));
         } catch (e) {
           return err(e);
         }
