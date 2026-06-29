@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { ProjectsModule } from './projects/projects.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { McpModule } from './mcp/mcp.module';
+import { FinancesModule } from './finances/finances.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { McpModule } from './mcp/mcp.module';
     ProjectsModule,
     ActivitiesModule,
     McpModule,
+    FinancesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
