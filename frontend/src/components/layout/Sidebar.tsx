@@ -167,7 +167,7 @@ export default function Sidebar({ onCreateActivity }: Props) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5">
+      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto scrollbar-none">
         <NavLink to="/" end className={linkCls}>
           <HomeIcon /> Tareas
         </NavLink>

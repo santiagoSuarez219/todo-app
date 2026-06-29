@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -18,16 +17,15 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
+import { BudgetsQueryDto } from './dto/budgets-query.dto';
 import { Budget } from './entities/budget.entity';
 import { BudgetItem } from './entities/budget-item.entity';
-import { PaginationDto } from '../common/dto/pagination.dto';
 
 @ApiTags('finances / budgets')
 @Controller('finances/budgets')
@@ -43,14 +41,9 @@ export class BudgetsController {
 
   @Get()
   @ApiOperation({ summary: 'List budgets, optionally filtered by year and/or month' })
-  @ApiQuery({ name: 'year', required: false, type: Number })
-  @ApiQuery({ name: 'month', required: false, type: Number })
   @ApiOkResponse({ type: [Budget] })
-  findAll(
-    @Query() pagination: PaginationDto,
-    @Query('year', new ParseIntPipe({ optional: true })) year?: number,
-    @Query('month', new ParseIntPipe({ optional: true })) month?: number,
-  ): Promise<Budget[]> {
+  findAll(@Query() query: BudgetsQueryDto): Promise<Budget[]> {
+    const { year, month, ...pagination } = query;
     return this.budgetsService.findAll(pagination, year, month);
   }
 

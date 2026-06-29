@@ -17,15 +17,13 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { PurchasesService } from './purchases.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
+import { PurchasesQueryDto } from './dto/purchases-query.dto';
 import { Purchase } from './entities/purchase.entity';
-import { PaginationDto } from '../common/dto/pagination.dto';
-import { PurchaseStatus } from '../common/enums/purchase-status.enum';
 
 @ApiTags('finances / purchases')
 @Controller('finances/purchases')
@@ -41,12 +39,9 @@ export class PurchasesController {
 
   @Get()
   @ApiOperation({ summary: 'List purchases, optionally filtered by status' })
-  @ApiQuery({ name: 'status', enum: PurchaseStatus, required: false })
   @ApiOkResponse({ type: [Purchase] })
-  findAll(
-    @Query() pagination: PaginationDto,
-    @Query('status') status?: PurchaseStatus,
-  ): Promise<Purchase[]> {
+  findAll(@Query() query: PurchasesQueryDto): Promise<Purchase[]> {
+    const { status, ...pagination } = query;
     return this.purchasesService.findAll(pagination, status);
   }
 
