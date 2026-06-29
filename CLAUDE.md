@@ -258,6 +258,33 @@ src/
 - Tipos centralizados en `frontend/src/types/index.ts`.
 - API client en `frontend/src/lib/api-client.ts` (interceptor extrae mensaje de error).
 
+### Formularios con Zod v4 + React Hook Form
+
+El proyecto usa **Zod v4** (`^4.x`) con **@hookform/resolvers v5**. La API cambió respecto a v3:
+
+- `invalid_type_error` y `required_error` **ya no existen** — eliminados del API de Zod v4.
+- Los campos con `z.coerce` tienen `z.input` = `unknown` y `z.output` = el tipo final.
+  Esto rompe `useForm<FormValues>` porque el resolver ve un input distinto al output.
+
+**Patrón obligatorio para cualquier formulario con campos `z.coerce`:**
+
+```ts
+const schema = z.object({
+  amount: z.coerce.number().positive('Debe ser mayor a 0'),  // sin invalid_type_error
+  type: z.nativeEnum(MyEnum),                                // sin required_error
+});
+
+type FormValues = z.output<typeof schema>;  // usar z.output, no z.infer
+
+const { register, handleSubmit } = useForm<z.input<typeof schema>, unknown, FormValues>({
+  resolver: zodResolver(schema),
+  // ...
+});
+```
+
+- El tercer genérico (`FormValues`) es el tipo que recibe el callback de `handleSubmit`.
+- Para JSX en componentes sin lógica: usar `ReactElement` de `'react'`, no el namespace global `JSX.Element`.
+
 ---
 
 ## Testing
