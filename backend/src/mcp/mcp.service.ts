@@ -15,7 +15,9 @@ import { AccountsService } from '../finances/accounts.service';
 import { CreditCardsService } from '../finances/credit-cards.service';
 import { CdtsService } from '../finances/cdts.service';
 import { BudgetsService } from '../finances/budgets.service';
+import { DebtsService } from '../finances/debts.service';
 import { PurchaseStatus } from '../common/enums/purchase-status.enum';
+import { DebtStatus } from '../common/enums/debt-status.enum';
 
 // ─── Shared schemas ──────────────────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ export class McpService {
     private readonly creditCardsService: CreditCardsService,
     private readonly cdtsService: CdtsService,
     private readonly budgetsService: BudgetsService,
+    private readonly debtsService: DebtsService,
   ) {}
 
   /**
@@ -74,6 +77,7 @@ export class McpService {
     this.registerCreditCardTools(server);
     this.registerCdtTools(server);
     this.registerBudgetTools(server);
+    this.registerDebtTools(server);
     return server;
   }
 
@@ -1309,6 +1313,66 @@ export class McpService {
       async ({ year, month }) => {
         try {
           return ok(await this.budgetsService.getMonthlySummary(year, month));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+  }
+
+  // ─── Debts ────────────────────────────────────────────────────────────────
+
+  private registerDebtTools(server: McpServer): void {
+    server.tool(
+      'list_debts',
+      'Lista las deudas registradas. Cada ítem incluye remainingValue (valor pendiente de pago). Usa status para filtrar por activa o pagada.',
+      {
+        status: z
+          .enum(['activa', 'pagada'])
+          .optional()
+          .describe('Filtrar por estado: activa o pagada'),
+      },
+      async ({ status }) => {
+        try {
+          return ok(await this.debtsService.findAll(status as DebtStatus | undefined));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'create_debt',
+      'Crea una nueva deuda a cuotas. productValue es el valor total del producto; installmentValue es el valor de cada cuota mensual; totalInstallments es el número de cuotas; initialPayment es la cuota inicial opcional.',
+      {
+        description: z.string().min(1).max(255).describe('Descripción de la deuda (ej. "Nevera Samsung")'),
+        productValue: z.number().positive().describe('Valor total del producto en COP'),
+        installmentValue: z.number().positive().describe('Valor de cada cuota en COP'),
+        totalInstallments: z.number().int().min(1).describe('Número total de cuotas'),
+        initialPayment: z
+          .number()
+          .positive()
+          .optional()
+          .describe('Cuota inicial en COP (opcional)'),
+      },
+      async (dto) => {
+        try {
+          return ok(await this.debtsService.create(dto as any));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'pay_debt_installment',
+      'Registra el pago de una cuota de una deuda: crea automáticamente un gasto de tipo pago_deuda por el valor de la cuota, incrementa las cuotas pagadas y, si se completaron todas, cambia el estado a pagada.',
+      {
+        debtId: z.string().uuid().describe('UUID de la deuda'),
+      },
+      async ({ debtId }) => {
+        try {
+          return ok(await this.debtsService.payInstallment(debtId));
         } catch (e) {
           return err(e);
         }
