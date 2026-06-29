@@ -46,8 +46,8 @@ Este spec resuelve las tres fricciones de manera cohesiva.
 
 ### Fase 2 — Consolidado mensual (backend)
 
-- [ ] Crear `backend/src/finances/dto/monthly-summary-query.dto.ts` — `year: number` y `month: number`, ambos requeridos.
-- [ ] Crear interfaz de respuesta `MonthlySummary` en `budgets.service.ts`:
+- [x] Crear `backend/src/finances/dto/monthly-summary-query.dto.ts` — `year: number` y `month: number`, ambos requeridos.
+- [x] Crear interfaz de respuesta `MonthlySummary` en `budgets.service.ts`:
   ```ts
   interface MonthlySummary {
     year: number;
@@ -58,8 +58,8 @@ Este spec resuelve las tres fricciones de manera cohesiva.
     budgetId: string | null;   // id del presupuesto si existe, null si no
   }
   ```
-- [ ] Agregar endpoint `GET /finances/monthly-summary` en `BudgetsController`, delegando a `BudgetsService`.
-- [ ] Implementar `getMonthlySummary(year, month)` en `BudgetsService` — consulta `budget_items` (a través del presupuesto del mes) y `expenses` filtrando por año/mes sobre `date`.
+- [x] Agregar endpoint `GET /finances/monthly-summary` en `BudgetsController`, delegando a `BudgetsService`.
+- [x] Implementar `getMonthlySummary(year, month)` en `BudgetsService` — consulta `budget_items` (a través del presupuesto del mes) y `expenses` filtrando por año/mes sobre `date`.
 
 ### Fase 3 — Edición inline (frontend)
 
