@@ -96,25 +96,39 @@ export class BudgetsService {
 
     if (!budget) throw new NotFoundException(`Budget ${id} not found`);
 
-    const totalIncome = await this.incomesRepository
-      .createQueryBuilder('income')
-      .select('COALESCE(SUM(income.amount), 0)', 'total')
-      .where('EXTRACT(month FROM income.date) = :month', { month: budget.month })
-      .andWhere('EXTRACT(year FROM income.date) = :year', { year: budget.year })
-      .getRawOne()
-      .then((r) => Number(r.total));
+    const [totalIncome, expenses] = await Promise.all([
+      this.incomesRepository
+        .createQueryBuilder('income')
+        .select('COALESCE(SUM(income.amount), 0)', 'total')
+        .where('EXTRACT(month FROM income.date) = :month', { month: budget.month })
+        .andWhere('EXTRACT(year FROM income.date) = :year', { year: budget.year })
+        .getRawOne()
+        .then((r) => Number(r.total)),
+      this.expensesRepository
+        .createQueryBuilder('expense')
+        .where('EXTRACT(month FROM expense.date) = :month', { month: budget.month })
+        .andWhere('EXTRACT(year FROM expense.date) = :year', { year: budget.year })
+        .getMany(),
+    ]);
 
-    const typeSummary = this.computeTypeSummary(budget.items ?? [], totalIncome);
+    const typeSummary = this.computeTypeSummary(budget.items ?? [], expenses, totalIncome);
 
     return { ...budget, totalIncome, typeSummary };
   }
 
-  private computeTypeSummary(items: BudgetItem[], totalIncome: number): BudgetTypeSummary[] {
+  private computeTypeSummary(
+    items: BudgetItem[],
+    expenses: Expense[],
+    totalIncome: number,
+  ): BudgetTypeSummary[] {
     const totals = new Map<ExpenseType, number>();
 
     for (const item of items) {
-      const prev = totals.get(item.type) ?? 0;
-      totals.set(item.type, prev + Number(item.plannedAmount));
+      totals.set(item.type, (totals.get(item.type) ?? 0) + Number(item.plannedAmount));
+    }
+
+    for (const expense of expenses) {
+      totals.set(expense.type, (totals.get(expense.type) ?? 0) + Number(expense.amount));
     }
 
     return Array.from(totals.entries()).map(([type, total]) => ({
