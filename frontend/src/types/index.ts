@@ -365,6 +365,43 @@ export interface MonthlySummary {
   budgetId: string | null;
 }
 
+// ─── Finances — Debts ────────────────────────────────────────────────────────
+
+export const DebtStatus = {
+  ACTIVE: 'activa',
+  PAID: 'pagada',
+} as const;
+export type DebtStatus = (typeof DebtStatus)[keyof typeof DebtStatus];
+
+export interface Debt {
+  id: string;
+  description: string;
+  productValue: number;
+  installmentValue: number;
+  totalInstallments: number;
+  initialPayment: number | null;
+  paidInstallments: number;
+  status: DebtStatus;
+  remainingValue: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDebtDto {
+  description: string;
+  productValue: number;
+  installmentValue: number;
+  totalInstallments: number;
+  initialPayment?: number;
+}
+
+export type UpdateDebtDto = Partial<CreateDebtDto>;
+
+export interface PayInstallmentResult {
+  debt: Debt;
+  expenseId: string;
+}
+
 // ─── Pagination ──────────────────────────────────────────────────────────────
 
 export interface PaginatedResponse<T> {
