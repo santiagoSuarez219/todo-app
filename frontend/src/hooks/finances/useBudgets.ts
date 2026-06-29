@@ -6,9 +6,10 @@ import {
   updateBudget,
   deleteBudget,
   addBudgetItem,
+  updateBudgetItem,
   deleteBudgetItem,
 } from '../../services/finances/budgets.service';
-import type { CreateBudgetDto, UpdateBudgetDto, CreateBudgetItemDto, PaginationParams } from '../../types';
+import type { CreateBudgetDto, UpdateBudgetDto, CreateBudgetItemDto, UpdateBudgetItemDto, PaginationParams } from '../../types';
 
 export function useBudgets(params?: PaginationParams, year?: number, month?: number) {
   return useQuery({
@@ -54,6 +55,15 @@ export function useAddBudgetItem() {
   return useMutation({
     mutationFn: ({ budgetId, dto }: { budgetId: string; dto: CreateBudgetItemDto }) =>
       addBudgetItem(budgetId, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+  });
+}
+
+export function useUpdateBudgetItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ budgetId, itemId, dto }: { budgetId: string; itemId: string; dto: UpdateBudgetItemDto }) =>
+      updateBudgetItem(budgetId, itemId, dto),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
   });
 }

@@ -63,10 +63,10 @@ Este spec resuelve las tres fricciones de manera cohesiva.
 
 ### Fase 3 — Edición inline (frontend)
 
-- [ ] Agregar `UpdateBudgetItemDto` en `frontend/src/types/index.ts` — `Partial<Pick<BudgetItem, 'description' | 'plannedAmount' | 'type'>>`.
-- [ ] Agregar función `updateBudgetItem(budgetId, itemId, dto)` en `frontend/src/services/finances/budgets.service.ts`.
-- [ ] Agregar hook `useUpdateBudgetItem()` en `frontend/src/hooks/finances/useBudgets.ts` — invalida `['budgets']` en `onSuccess`.
-- [ ] Modificar `BudgetDetailView` para soportar edición inline por fila:
+- [x] Agregar `UpdateBudgetItemDto` en `frontend/src/types/index.ts` — `Partial<Pick<BudgetItem, 'description' | 'plannedAmount' | 'type'>>`.
+- [x] Agregar función `updateBudgetItem(budgetId, itemId, dto)` en `frontend/src/services/finances/budgets.service.ts`.
+- [x] Agregar hook `useUpdateBudgetItem()` en `frontend/src/hooks/finances/useBudgets.ts` — invalida `['budgets']` en `onSuccess`.
+- [x] Modificar `BudgetDetailView` para soportar edición inline por fila:
   - Botón de lápiz en cada fila que activa el modo edición de esa fila.
   - En modo edición: `description` como `<input text>`, `plannedAmount` como `<input number>`, `type` como `<select>` con los valores de `ExpenseType`.
   - Botones de guardar (✓) y cancelar (✗) inline, sin modal.

@@ -5,6 +5,7 @@ import type {
   CreateBudgetDto,
   UpdateBudgetDto,
   CreateBudgetItemDto,
+  UpdateBudgetItemDto,
   PaginationParams,
 } from '../../types';
 
@@ -40,6 +41,11 @@ export async function deleteBudget(id: string): Promise<void> {
 
 export async function addBudgetItem(budgetId: string, dto: CreateBudgetItemDto): Promise<BudgetItem> {
   const { data } = await apiClient.post<{ data: BudgetItem }>(`/finances/budgets/${budgetId}/items`, dto);
+  return data.data;
+}
+
+export async function updateBudgetItem(budgetId: string, itemId: string, dto: UpdateBudgetItemDto): Promise<BudgetItem> {
+  const { data } = await apiClient.patch<{ data: BudgetItem }>(`/finances/budgets/${budgetId}/items/${itemId}`, dto);
   return data.data;
 }
 

@@ -354,6 +354,8 @@ export interface UpdateBudgetDto {
   year?: number;
 }
 
+export type UpdateBudgetItemDto = Partial<Pick<BudgetItem, 'description' | 'plannedAmount' | 'type'>>;
+
 // ─── Pagination ──────────────────────────────────────────────────────────────
 
 export interface PaginatedResponse<T> {

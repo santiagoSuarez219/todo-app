@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBudget, useUpdateBudget, useAddBudgetItem, useDeleteBudgetItem } from '../../hooks/finances/useBudgets';
+import { useBudget, useUpdateBudget, useAddBudgetItem, useUpdateBudgetItem, useDeleteBudgetItem } from '../../hooks/finances/useBudgets';
 import BudgetForm from '../../components/finances/BudgetForm';
 import BudgetItemForm from '../../components/finances/BudgetItemForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { ExpenseType } from '../../types';
-import type { BudgetItem, CreateBudgetItemDto, UpdateBudgetDto } from '../../types';
+import type { BudgetItem, CreateBudgetItemDto, UpdateBudgetDto, UpdateBudgetItemDto } from '../../types';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -29,6 +29,12 @@ const TYPE_COLORS: Record<ExpenseType, string> = {
   pago_deuda: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
 };
 
+interface EditState {
+  description: string;
+  plannedAmount: string;
+  type: ExpenseType;
+}
+
 export default function BudgetDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -36,10 +42,38 @@ export default function BudgetDetailView() {
   const { data: budget, isLoading, isError } = useBudget(id!);
   const { mutateAsync: update, isPending: isUpdating } = useUpdateBudget();
   const { mutateAsync: addItem, isPending: isAddingItem } = useAddBudgetItem();
+  const { mutateAsync: updateItem, isPending: isUpdatingItem } = useUpdateBudgetItem();
   const { mutate: deleteItem, isPending: isDeletingItem } = useDeleteBudgetItem();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editState, setEditState] = useState<EditState>({ description: '', plannedAmount: '', type: ExpenseType.basico });
+
+  function startEditing(item: BudgetItem) {
+    setEditingItemId(item.id);
+    setEditState({
+      description: item.description,
+      plannedAmount: String(item.plannedAmount),
+      type: item.type,
+    });
+  }
+
+  function cancelEditing() {
+    setEditingItemId(null);
+  }
+
+  async function saveEditing(item: BudgetItem) {
+    const dto: UpdateBudgetItemDto = {};
+    if (editState.description !== item.description) dto.description = editState.description;
+    if (Number(editState.plannedAmount) !== Number(item.plannedAmount)) dto.plannedAmount = Number(editState.plannedAmount);
+    if (editState.type !== item.type) dto.type = editState.type;
+
+    if (Object.keys(dto).length > 0) {
+      await updateItem({ budgetId: id!, itemId: item.id, dto });
+    }
+    setEditingItemId(null);
+  }
 
   async function handleUpdateBudget(dto: UpdateBudgetDto) {
     await update({ id: id!, dto });
@@ -153,34 +187,115 @@ export default function BudgetDetailView() {
                 <th className="text-left px-4 py-2 font-medium">Descripción</th>
                 <th className="text-left px-4 py-2 font-medium">Tipo</th>
                 <th className="text-right px-4 py-2 font-medium">Monto planificado</th>
-                <th className="px-4 py-2 w-10" />
+                <th className="px-4 py-2 w-20" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                  <td className="px-4 py-3 text-gray-900 dark:text-white">{item.description}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[item.type]}`}>
-                      {TYPE_LABELS[item.type]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
-                    {COP.format(item.plannedAmount)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setItemToDelete(item)}
-                      className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      title="Eliminar ítem"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {items.map((item) => {
+                const isEditing = editingItemId === item.id;
+                const isSaving = isUpdatingItem && isEditing;
+
+                if (isEditing) {
+                  return (
+                    <tr key={item.id} className="bg-blue-50 dark:bg-blue-900/10">
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={editState.description}
+                          onChange={(e) => setEditState((s) => ({ ...s, description: e.target.value }))}
+                          className="w-full text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isSaving}
+                          autoFocus
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <select
+                          value={editState.type}
+                          onChange={(e) => setEditState((s) => ({ ...s, type: e.target.value as ExpenseType }))}
+                          className="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isSaving}
+                        >
+                          {Object.values(ExpenseType).map((t) => (
+                            <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          value={editState.plannedAmount}
+                          onChange={(e) => setEditState((s) => ({ ...s, plannedAmount: e.target.value }))}
+                          className="w-full text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-right text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isSaving}
+                          min={0}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => saveEditing(item)}
+                            disabled={isSaving || !editState.description.trim() || Number(editState.plannedAmount) <= 0}
+                            className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-40 transition-colors"
+                            title="Guardar"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            disabled={isSaving}
+                            className="p-1.5 rounded text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                            title="Cancelar"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+                    <td className="px-4 py-3 text-gray-900 dark:text-white">{item.description}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[item.type]}`}>
+                        {TYPE_LABELS[item.type]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
+                      {COP.format(item.plannedAmount)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => startEditing(item)}
+                          disabled={!!editingItemId}
+                          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30 transition-colors"
+                          title="Editar ítem"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => setItemToDelete(item)}
+                          disabled={!!editingItemId}
+                          className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 transition-colors"
+                          title="Eliminar ítem"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="bg-gray-50 dark:bg-gray-700/50 font-semibold">
