@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBudget, useUpdateBudget, useAddBudgetItem, useUpdateBudgetItem, useDeleteBudgetItem } from '../../hooks/finances/useBudgets';
+import { useBudget, useUpdateBudget, useAddBudgetItem, useUpdateBudgetItem, useDeleteBudgetItem, useMonthlyExpenseSummary } from '../../hooks/finances/useBudgets';
 import BudgetForm from '../../components/finances/BudgetForm';
 import BudgetItemForm from '../../components/finances/BudgetItemForm';
 import Modal from '../../components/Modal';
@@ -44,6 +44,7 @@ export default function BudgetDetailView() {
   const { mutateAsync: addItem, isPending: isAddingItem } = useAddBudgetItem();
   const { mutateAsync: updateItem, isPending: isUpdatingItem } = useUpdateBudgetItem();
   const { mutate: deleteItem, isPending: isDeletingItem } = useDeleteBudgetItem();
+  const { data: monthlySummary } = useMonthlyExpenseSummary(budget?.year ?? 0, budget?.month ?? 0);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
@@ -161,6 +162,51 @@ export default function BudgetDetailView() {
                 {totalIncome > 0 && (
                   <span className="tabular-nums text-gray-500 dark:text-gray-400 w-14 text-right">
                     {totalIncome > 0 ? (Math.round((total / totalIncome) * 10000) / 100).toFixed(1) : 0}%
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gastos del mes */}
+      {monthlySummary && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Gastos del mes</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Presupuesto fijo + gastos variables</p>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="px-4 py-3 flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Presupuesto (fijos)</span>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="tabular-nums text-gray-700 dark:text-gray-300">{COP.format(monthlySummary.budgetTotal)}</span>
+                {totalIncome > 0 && (
+                  <span className="tabular-nums text-gray-400 dark:text-gray-500 w-14 text-right">
+                    {(Math.round((monthlySummary.budgetTotal / totalIncome) * 10000) / 100).toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="px-4 py-3 flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Gastos variables</span>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="tabular-nums text-gray-700 dark:text-gray-300">{COP.format(monthlySummary.expensesTotal)}</span>
+                {totalIncome > 0 && (
+                  <span className="tabular-nums text-gray-400 dark:text-gray-500 w-14 text-right">
+                    {(Math.round((monthlySummary.expensesTotal / totalIncome) * 10000) / 100).toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="px-4 py-3 flex items-center justify-between gap-3 bg-gray-50 dark:bg-gray-700/50">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total del mes</span>
+              <div className="flex items-center gap-4 text-sm font-semibold">
+                <span className="tabular-nums text-gray-900 dark:text-white">{COP.format(monthlySummary.combinedTotal)}</span>
+                {totalIncome > 0 && (
+                  <span className="tabular-nums text-gray-500 dark:text-gray-400 w-14 text-right">
+                    {(Math.round((monthlySummary.combinedTotal / totalIncome) * 10000) / 100).toFixed(1)}%
                   </span>
                 )}
               </div>

@@ -6,6 +6,7 @@ import type {
   UpdateBudgetDto,
   CreateBudgetItemDto,
   UpdateBudgetItemDto,
+  MonthlySummary,
   PaginationParams,
 } from '../../types';
 
@@ -46,6 +47,13 @@ export async function addBudgetItem(budgetId: string, dto: CreateBudgetItemDto):
 
 export async function updateBudgetItem(budgetId: string, itemId: string, dto: UpdateBudgetItemDto): Promise<BudgetItem> {
   const { data } = await apiClient.patch<{ data: BudgetItem }>(`/finances/budgets/${budgetId}/items/${itemId}`, dto);
+  return data.data;
+}
+
+export async function getMonthlyExpenseSummary(year: number, month: number): Promise<MonthlySummary> {
+  const { data } = await apiClient.get<{ data: MonthlySummary }>('/finances/budgets/monthly-summary', {
+    params: { year, month },
+  });
   return data.data;
 }
 

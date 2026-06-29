@@ -1,4 +1,4 @@
-# spec-015 — [IN PROGRESS] Mejoras al presupuesto y consolidación de gastos mensuales
+# spec-015 — [TESTING] Mejoras al presupuesto y consolidación de gastos mensuales
 
 ## Contexto
 
@@ -75,10 +75,10 @@ Este spec resuelve las tres fricciones de manera cohesiva.
 
 ### Fase 4 — Consolidado mensual (frontend)
 
-- [ ] Agregar tipo `MonthlySummary` en `frontend/src/types/index.ts`.
-- [ ] Agregar función `getMonthlyExpenseSummary(year, month)` en `frontend/src/services/finances/budgets.service.ts`.
-- [ ] Agregar hook `useMonthlyExpenseSummary(year, month)` en `frontend/src/hooks/finances/useBudgets.ts`.
-- [ ] Agregar sección "Gastos del mes" en `BudgetDetailView` debajo del resumen por tipo:
+- [x] Agregar tipo `MonthlySummary` en `frontend/src/types/index.ts`.
+- [x] Agregar función `getMonthlyExpenseSummary(year, month)` en `frontend/src/services/finances/budgets.service.ts`.
+- [x] Agregar hook `useMonthlyExpenseSummary(year, month)` en `frontend/src/hooks/finances/useBudgets.ts`.
+- [x] Agregar sección "Gastos del mes" en `BudgetDetailView` debajo del resumen por tipo:
   - Fila "Presupuesto (fijos)" → `budgetTotal` en COP
   - Fila "Gastos variables" → `expensesTotal` en COP
   - Fila total resaltada → `combinedTotal` en COP

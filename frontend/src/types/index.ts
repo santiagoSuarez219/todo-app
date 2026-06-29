@@ -356,6 +356,15 @@ export interface UpdateBudgetDto {
 
 export type UpdateBudgetItemDto = Partial<Pick<BudgetItem, 'description' | 'plannedAmount' | 'type'>>;
 
+export interface MonthlySummary {
+  year: number;
+  month: number;
+  budgetTotal: number;
+  expensesTotal: number;
+  combinedTotal: number;
+  budgetId: string | null;
+}
+
 // ─── Pagination ──────────────────────────────────────────────────────────────
 
 export interface PaginatedResponse<T> {

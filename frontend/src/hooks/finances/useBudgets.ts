@@ -8,6 +8,7 @@ import {
   addBudgetItem,
   updateBudgetItem,
   deleteBudgetItem,
+  getMonthlyExpenseSummary,
 } from '../../services/finances/budgets.service';
 import type { CreateBudgetDto, UpdateBudgetDto, CreateBudgetItemDto, UpdateBudgetItemDto, PaginationParams } from '../../types';
 
@@ -56,6 +57,14 @@ export function useAddBudgetItem() {
     mutationFn: ({ budgetId, dto }: { budgetId: string; dto: CreateBudgetItemDto }) =>
       addBudgetItem(budgetId, dto),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+  });
+}
+
+export function useMonthlyExpenseSummary(year: number, month: number) {
+  return useQuery({
+    queryKey: ['budgets', 'monthly-summary', year, month],
+    queryFn: () => getMonthlyExpenseSummary(year, month),
+    enabled: !!year && !!month,
   });
 }
 
