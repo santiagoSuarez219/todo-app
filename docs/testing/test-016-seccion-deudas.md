@@ -16,7 +16,7 @@
 1. Verificar que aparece una tarjeta "Deudas" con descripción "Seguimiento de deudas y cuotas".
 2. Hacer clic en la tarjeta.
 **Resultado esperado:** Navega a `/finances/debts` y se muestra la vista de deudas con el header "Deudas" y el botón "Nueva deuda".
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -27,7 +27,7 @@
 2. Completar: descripción "Nevera Samsung", valor producto "2500000", valor cuota "208333", número de cuotas "12". Dejar cuota inicial vacía.
 3. Hacer clic en "Guardar".
 **Resultado esperado:** El modal se cierra y aparece una card con la deuda. Muestra "0 / 12 cuotas", badge "Activa" y el botón "Pagar cuota".
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -38,7 +38,7 @@
 2. Completar: descripción "Televisor LG", valor producto "1800000", valor cuota "150000", número de cuotas "10", cuota inicial "300000".
 3. Hacer clic en "Guardar".
 **Resultado esperado:** La card muestra el campo "Inicial: $300.000" además de los demás datos.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -47,7 +47,7 @@
 **Pasos:**
 1. Hacer clic en "Guardar" sin completar ningún campo.
 **Resultado esperado:** Aparecen mensajes de error en los campos requeridos (descripción, valor producto, valor cuota, número de cuotas). No se cierra el modal.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -57,7 +57,7 @@
 1. Hacer clic en "Pagar cuota" en la card de "Nevera Samsung".
 2. Esperar la respuesta.
 **Resultado esperado:** El contador cambia a "1 / 12 cuotas" y la barra de progreso avanza. El botón "Pagar cuota" sigue visible.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -66,7 +66,7 @@
 **Pasos:**
 1. Hacer clic en "Pagar cuota".
 **Resultado esperado:** El badge cambia de "Activa" a "Pagada", la barra llega al 100% en verde y el botón "Pagar cuota" desaparece.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -77,7 +77,7 @@
 2. Volver a `/finances/debts` y pagar una cuota de "Nevera Samsung".
 3. Ir a `/finances/expenses`.
 **Resultado esperado:** Aparece un nuevo gasto con descripción "Cuota: Nevera Samsung", monto igual al valor de la cuota, tipo `pago_deuda` y fecha de hoy.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -86,7 +86,7 @@
 **Pasos:**
 1. Hacer clic en el tab "Activas".
 **Resultado esperado:** Solo se muestran deudas con badge "Activa". Las deudas pagadas no aparecen.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -95,7 +95,7 @@
 **Pasos:**
 1. Hacer clic en el tab "Pagadas".
 **Resultado esperado:** Solo se muestran deudas con badge "Pagada". Las deudas activas no aparecen.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -106,7 +106,7 @@
 2. Cambiar la descripción a "Nevera Samsung 2024".
 3. Hacer clic en "Guardar".
 **Resultado esperado:** El modal se cierra y la card muestra el nuevo nombre "Nevera Samsung 2024".
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -116,7 +116,7 @@
 1. Hacer clic en el ícono de papelera de cualquier deuda.
 2. Confirmar en el diálogo de confirmación.
 **Resultado esperado:** La deuda desaparece de la lista.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -125,4 +125,4 @@
 **Pasos:**
 1. Navegar a `/finances/debts`.
 **Resultado esperado:** Se muestra el mensaje "No hay deudas registradas." sin errores.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado

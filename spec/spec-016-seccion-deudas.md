@@ -1,4 +1,4 @@
-# spec-016 — [TESTING] Sección de deudas
+# spec-016 — [DONE] Sección de deudas
 
 ## Contexto
 
