@@ -154,7 +154,7 @@ El módulo de finanzas carece de un tracker de deudas a cuotas. El usuario neces
 
 ### Fase 5 — Frontend: vista y rutas
 
-- [ ] Crear `frontend/src/pages/finances/DebtsView.tsx`:
+- [x] Crear `frontend/src/pages/finances/DebtsView.tsx`:
   - Header con título "Deudas" y botón "Nueva deuda" que abre un modal con formulario.
   - Tabs o selector de filtro: "Todas" / "Activas" / "Pagadas".
   - Lista de deudas en tarjetas o tabla con las columnas/campos:
@@ -171,10 +171,10 @@ El módulo de finanzas carece de un tracker de deudas a cuotas. El usuario neces
   - Modal de creación/edición usando `React Hook Form + Zod`:
     - Campos: `description` (texto), `productValue` (número), `installmentValue` (número), `totalInstallments` (entero ≥ 1), `initialPayment` (número, opcional).
   - Estado vacío con `EmptyState` cuando no hay deudas.
-- [ ] Agregar importación y ruta en `App.tsx`:
+- [x] Agregar importación y ruta en `App.tsx`:
   - `import DebtsView from './pages/finances/DebtsView';`
   - `<Route path="finances/debts" element={<DebtsView />} />`
-- [ ] Agregar entrada "Deudas" en el array `SECTIONS` de `FinancesDashboard.tsx`:
+- [x] Agregar entrada "Deudas" en el array `SECTIONS` de `FinancesDashboard.tsx`:
   - `label: 'Deudas'`, `description: 'Seguimiento de deudas y cuotas'`, `path: '/finances/debts'`.
   - Ícono SVG de billete con flecha o cadena (HeroIcons — `BanknotesIcon` o similar).
 

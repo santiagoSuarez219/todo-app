@@ -16,6 +16,7 @@ import CreditCardsView from './pages/finances/CreditCardsView';
 import CdtsView from './pages/finances/CdtsView';
 import BudgetsView from './pages/finances/BudgetsView';
 import BudgetDetailView from './pages/finances/BudgetDetailView';
+import DebtsView from './pages/finances/DebtsView';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="finances/cdts" element={<CdtsView />} />
         <Route path="finances/budgets" element={<BudgetsView />} />
         <Route path="finances/budgets/:id" element={<BudgetDetailView />} />
+        <Route path="finances/debts" element={<DebtsView />} />
       </Route>
     </Routes>
   );
