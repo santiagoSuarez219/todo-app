@@ -1,4 +1,4 @@
-# spec-016 — [IN PROGRESS] Sección de deudas
+# spec-016 — [TESTING] Sección de deudas
 
 ## Contexto
 
