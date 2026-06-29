@@ -310,8 +310,15 @@ export interface BudgetItem {
   id: string;
   description: string;
   plannedAmount: number;
+  type: ExpenseType;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BudgetTypeSummary {
+  type: ExpenseType;
+  total: number;
+  percentage: number;
 }
 
 export interface Budget {
@@ -320,6 +327,8 @@ export interface Budget {
   month: number;
   year: number;
   items: BudgetItem[];
+  typeSummary?: BudgetTypeSummary[];
+  totalIncome?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -329,6 +338,7 @@ export interface Budget {
 export interface CreateBudgetItemDto {
   description: string;
   plannedAmount: number;
+  type: ExpenseType;
 }
 
 export interface CreateBudgetDto {

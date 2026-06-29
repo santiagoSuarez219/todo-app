@@ -1,11 +1,20 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { ExpenseType } from '../../types';
 import type { CreateBudgetItemDto } from '../../types';
+
+const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
+  basico: 'Básico',
+  lujo: 'Lujo',
+  ahorro: 'Ahorro',
+  pago_deuda: 'Pago deuda',
+};
 
 const schema = z.object({
   description: z.string().min(1, 'La descripción es requerida').max(255),
   plannedAmount: z.coerce.number({ invalid_type_error: 'Ingresa un monto válido' }).positive('Debe ser mayor a 0'),
+  type: z.enum(['basico', 'lujo', 'ahorro', 'pago_deuda'] as const, { required_error: 'Selecciona un tipo' }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -21,7 +30,7 @@ interface Props {
 export default function BudgetItemForm({ onSubmit, loading }: Props) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { description: '', plannedAmount: undefined },
+    defaultValues: { description: '', plannedAmount: undefined, type: 'basico' },
   });
 
   async function handleAdd(values: FormValues) {
@@ -30,8 +39,8 @@ export default function BudgetItemForm({ onSubmit, loading }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit(handleAdd)} className="flex items-start gap-2">
-      <div className="flex-1 min-w-0">
+    <form onSubmit={handleSubmit(handleAdd)} className="flex items-start gap-2 flex-wrap">
+      <div className="flex-1 min-w-0" style={{ minWidth: '160px' }}>
         <input
           {...register('description')}
           className={`${inputCls} w-full`}
@@ -52,6 +61,16 @@ export default function BudgetItemForm({ onSubmit, loading }: Props) {
         />
         {errors.plannedAmount && (
           <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.plannedAmount.message}</p>
+        )}
+      </div>
+      <div className="w-36 shrink-0">
+        <select {...register('type')} className={`${inputCls} w-full`}>
+          {Object.entries(EXPENSE_TYPE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+        {errors.type && (
+          <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.type.message}</p>
         )}
       </div>
       <button

@@ -1,4 +1,4 @@
-# spec-013 — [TESTING] Sección de finanzas
+# spec-013 — [DONE] Sección de finanzas
 
 ## Contexto
 

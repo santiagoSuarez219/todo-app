@@ -3,10 +3,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Budget } from './entities/budget.entity';
 import { BudgetItem } from './entities/budget-item.entity';
+import { Income } from './entities/income.entity';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { ExpenseType } from '../common/enums/expense-type.enum';
+
+export interface BudgetTypeSummary {
+  type: ExpenseType;
+  total: number;
+  percentage: number;
+}
+
+export interface BudgetDetail extends Budget {
+  typeSummary: BudgetTypeSummary[];
+  totalIncome: number;
+}
 
 @Injectable()
 export class BudgetsService {
@@ -15,6 +28,8 @@ export class BudgetsService {
     private readonly budgetsRepository: Repository<Budget>,
     @InjectRepository(BudgetItem)
     private readonly budgetItemsRepository: Repository<BudgetItem>,
+    @InjectRepository(Income)
+    private readonly incomesRepository: Repository<Income>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -59,7 +74,7 @@ export class BudgetsService {
     return qb.getMany();
   }
 
-  async findOne(id: string): Promise<Budget> {
+  async findOne(id: string): Promise<BudgetDetail> {
     const budget = await this.budgetsRepository
       .createQueryBuilder('budget')
       .leftJoinAndSelect('budget.items', 'items')
@@ -67,7 +82,33 @@ export class BudgetsService {
       .getOne();
 
     if (!budget) throw new NotFoundException(`Budget ${id} not found`);
-    return budget;
+
+    const totalIncome = await this.incomesRepository
+      .createQueryBuilder('income')
+      .select('COALESCE(SUM(income.amount), 0)', 'total')
+      .where('EXTRACT(month FROM income.date) = :month', { month: budget.month })
+      .andWhere('EXTRACT(year FROM income.date) = :year', { year: budget.year })
+      .getRawOne()
+      .then((r) => Number(r.total));
+
+    const typeSummary = this.computeTypeSummary(budget.items ?? [], totalIncome);
+
+    return { ...budget, totalIncome, typeSummary };
+  }
+
+  private computeTypeSummary(items: BudgetItem[], totalIncome: number): BudgetTypeSummary[] {
+    const totals = new Map<ExpenseType, number>();
+
+    for (const item of items) {
+      const prev = totals.get(item.type) ?? 0;
+      totals.set(item.type, prev + Number(item.plannedAmount));
+    }
+
+    return Array.from(totals.entries()).map(([type, total]) => ({
+      type,
+      total,
+      percentage: totalIncome > 0 ? Math.round((total / totalIncome) * 10000) / 100 : 0,
+    }));
   }
 
   async update(id: string, dto: UpdateBudgetDto): Promise<Budget> {

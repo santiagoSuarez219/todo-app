@@ -5,6 +5,7 @@ import BudgetForm from '../../components/finances/BudgetForm';
 import BudgetItemForm from '../../components/finances/BudgetItemForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import { ExpenseType } from '../../types';
 import type { BudgetItem, CreateBudgetItemDto, UpdateBudgetDto } from '../../types';
 
 const MONTHS = [
@@ -13,6 +14,20 @@ const MONTHS = [
 ];
 
 const COP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+
+const TYPE_LABELS: Record<ExpenseType, string> = {
+  basico: 'Básico',
+  lujo: 'Lujo',
+  ahorro: 'Ahorro',
+  pago_deuda: 'Pago deuda',
+};
+
+const TYPE_COLORS: Record<ExpenseType, string> = {
+  basico: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  lujo: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+  ahorro: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+  pago_deuda: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+};
 
 export default function BudgetDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -45,9 +60,12 @@ export default function BudgetDetailView() {
 
   const items = budget.items ?? [];
   const total = items.reduce((sum, item) => sum + Number(item.plannedAmount), 0);
+  const totalIncome = budget.totalIncome ?? 0;
+  const typeSummary = budget.typeSummary ?? [];
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <button
@@ -75,6 +93,49 @@ export default function BudgetDetailView() {
         </button>
       </div>
 
+      {/* Resumen por tipo */}
+      {typeSummary.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Resumen por tipo</h2>
+            {totalIncome > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Ingresos del mes: <span className="font-medium text-gray-700 dark:text-gray-300">{COP.format(totalIncome)}</span>
+              </p>
+            )}
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {typeSummary.map((s) => (
+              <div key={s.type} className="px-4 py-3 flex items-center justify-between gap-3">
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[s.type as ExpenseType]}`}>
+                  {TYPE_LABELS[s.type as ExpenseType]}
+                </span>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="tabular-nums text-gray-700 dark:text-gray-300">{COP.format(s.total)}</span>
+                  {totalIncome > 0 && (
+                    <span className="tabular-nums text-gray-400 dark:text-gray-500 w-14 text-right">
+                      {s.percentage.toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div className="px-4 py-3 flex items-center justify-between gap-3 bg-gray-50 dark:bg-gray-700/50">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total planificado</span>
+              <div className="flex items-center gap-4 text-sm font-semibold">
+                <span className="tabular-nums text-gray-900 dark:text-white">{COP.format(total)}</span>
+                {totalIncome > 0 && (
+                  <span className="tabular-nums text-gray-500 dark:text-gray-400 w-14 text-right">
+                    {totalIncome > 0 ? (Math.round((total / totalIncome) * 10000) / 100).toFixed(1) : 0}%
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ítems */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Ítems del presupuesto</h2>
@@ -90,6 +151,7 @@ export default function BudgetDetailView() {
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400">
                 <th className="text-left px-4 py-2 font-medium">Descripción</th>
+                <th className="text-left px-4 py-2 font-medium">Tipo</th>
                 <th className="text-right px-4 py-2 font-medium">Monto planificado</th>
                 <th className="px-4 py-2 w-10" />
               </tr>
@@ -98,6 +160,11 @@ export default function BudgetDetailView() {
               {items.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                   <td className="px-4 py-3 text-gray-900 dark:text-white">{item.description}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[item.type]}`}>
+                      {TYPE_LABELS[item.type]}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
                     {COP.format(item.plannedAmount)}
                   </td>
@@ -117,7 +184,7 @@ export default function BudgetDetailView() {
             </tbody>
             <tfoot>
               <tr className="bg-gray-50 dark:bg-gray-700/50 font-semibold">
-                <td className="px-4 py-3 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Total planificado</td>
+                <td className="px-4 py-3 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400" colSpan={2}>Total planificado</td>
                 <td className="px-4 py-3 text-right tabular-nums text-gray-900 dark:text-white">{COP.format(total)}</td>
                 <td />
               </tr>
