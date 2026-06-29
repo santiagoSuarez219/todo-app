@@ -7,11 +7,11 @@ const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(255),
   type: z.nativeEnum(AccountType),
   bank: z.string().min(1, 'El banco es requerido').max(255),
-  currentBalance: z.coerce.number({ invalid_type_error: 'Ingresa un saldo válido' }),
+  currentBalance: z.coerce.number(),
   interestRate: z.coerce.number().min(0).max(1).nullish(),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const TYPE_LABELS: Record<AccountType, string> = {
   corriente: 'Corriente',
@@ -32,7 +32,7 @@ interface Props {
 }
 
 export default function AccountForm({ initial, onSubmit, onCancel, loading }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: initial?.name ?? '',

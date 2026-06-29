@@ -14,7 +14,7 @@ const schema = z.object({
   year: z.coerce.number().min(2020),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const inputCls =
   'w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-colors';
@@ -30,7 +30,7 @@ interface Props {
 
 export default function BudgetForm({ initial, onSubmit, onCancel, loading }: Props) {
   const currentYear = new Date().getFullYear();
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: initial?.name ?? '',

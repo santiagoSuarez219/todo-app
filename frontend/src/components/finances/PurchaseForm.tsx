@@ -19,7 +19,7 @@ const schema = z.object({
   notes: z.string().max(5000).nullish(),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const PRIORITY_LABELS: Record<PurchasePriority, string> = {
   alta: 'Alta',
@@ -53,7 +53,7 @@ interface Props {
 }
 
 export default function PurchaseForm({ initial, onSubmit, onCancel, loading }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       description: initial?.description ?? '',

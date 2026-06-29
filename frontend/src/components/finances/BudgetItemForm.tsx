@@ -13,11 +13,11 @@ const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
 
 const schema = z.object({
   description: z.string().min(1, 'La descripción es requerida').max(255),
-  plannedAmount: z.coerce.number({ invalid_type_error: 'Ingresa un monto válido' }).positive('Debe ser mayor a 0'),
-  type: z.enum(['basico', 'lujo', 'ahorro', 'pago_deuda'] as const, { required_error: 'Selecciona un tipo' }),
+  plannedAmount: z.coerce.number().positive('Debe ser mayor a 0'),
+  type: z.enum(['basico', 'lujo', 'ahorro', 'pago_deuda'] as const),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const inputCls =
   'border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-colors';
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export default function BudgetItemForm({ onSubmit, loading }: Props) {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { description: '', plannedAmount: undefined, type: 'basico' },
   });

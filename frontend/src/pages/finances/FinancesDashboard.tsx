@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
+import type { ReactElement } from 'react';
 
 interface Section {
   label: string;
   description: string;
   path: string;
-  icon: () => JSX.Element;
+  icon: () => ReactElement;
 }
 
 function ExpenseIcon() {

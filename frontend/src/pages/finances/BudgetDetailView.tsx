@@ -49,7 +49,7 @@ export default function BudgetDetailView() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editState, setEditState] = useState<EditState>({ description: '', plannedAmount: '', type: ExpenseType.basico });
+  const [editState, setEditState] = useState<EditState>({ description: '', plannedAmount: '', type: ExpenseType.BASICO });
 
   function startEditing(item: BudgetItem) {
     setEditingItemId(item.id);

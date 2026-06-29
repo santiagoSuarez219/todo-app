@@ -6,13 +6,13 @@ import type { CreateCreditCardDto, CreditCard } from '../../types';
 const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(255),
   bank: z.string().min(1, 'El banco es requerido').max(255),
-  interestRate: z.coerce.number({ invalid_type_error: 'Ingresa una tasa válida' }).min(0).max(1),
-  monthlyFee: z.coerce.number({ invalid_type_error: 'Ingresa una cuota válida' }).min(0),
-  totalLimit: z.coerce.number({ invalid_type_error: 'Ingresa un cupo válido' }).positive('El cupo debe ser mayor a 0'),
-  availableLimit: z.coerce.number({ invalid_type_error: 'Ingresa un cupo disponible válido' }).min(0),
+  interestRate: z.coerce.number().min(0).max(1),
+  monthlyFee: z.coerce.number().min(0),
+  totalLimit: z.coerce.number().positive('El cupo debe ser mayor a 0'),
+  availableLimit: z.coerce.number().min(0),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const inputCls =
   'w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-colors';
@@ -27,7 +27,7 @@ interface Props {
 }
 
 export default function CreditCardForm({ initial, onSubmit, onCancel, loading }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: initial?.name ?? '',

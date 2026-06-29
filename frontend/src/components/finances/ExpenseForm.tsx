@@ -5,12 +5,12 @@ import { ExpenseType, type CreateExpenseDto, type Expense } from '../../types';
 
 const schema = z.object({
   description: z.string().min(1, 'La descripción es requerida').max(255),
-  amount: z.coerce.number({ invalid_type_error: 'Ingresa un monto válido' }).positive('El monto debe ser mayor a 0'),
+  amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
   date: z.string().min(1, 'La fecha es requerida'),
-  type: z.nativeEnum(ExpenseType, { required_error: 'El tipo es requerido' }),
+  type: z.nativeEnum(ExpenseType),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const TYPE_LABELS: Record<ExpenseType, string> = {
   basico: 'Básico',
@@ -32,7 +32,7 @@ interface Props {
 }
 
 export default function ExpenseForm({ initial, onSubmit, onCancel, loading }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       description: initial?.description ?? '',

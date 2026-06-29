@@ -5,8 +5,8 @@ import type { CreateCdtDto, Cdt } from '../../types';
 
 const schema = z.object({
   bank: z.string().min(1, 'El banco es requerido').max(255),
-  investedAmount: z.coerce.number({ invalid_type_error: 'Ingresa un monto válido' }).positive('El monto debe ser mayor a 0'),
-  interestRate: z.coerce.number({ invalid_type_error: 'Ingresa una tasa válida' }).min(0).max(1),
+  investedAmount: z.coerce.number().positive('El monto debe ser mayor a 0'),
+  interestRate: z.coerce.number().min(0).max(1),
   startDate: z.string().min(1, 'La fecha de inicio es requerida'),
   endDate: z.string().min(1, 'La fecha de vencimiento es requerida'),
 }).refine((d) => d.endDate > d.startDate, {
@@ -14,7 +14,7 @@ const schema = z.object({
   path: ['endDate'],
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const inputCls =
   'w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-colors';
@@ -29,7 +29,7 @@ interface Props {
 }
 
 export default function CdtForm({ initial, onSubmit, onCancel, loading }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       bank: initial?.bank ?? '',
