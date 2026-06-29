@@ -7,6 +7,7 @@ import { Income } from './entities/income.entity';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
+import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ExpenseType } from '../common/enums/expense-type.enum';
 
@@ -125,6 +126,15 @@ export class BudgetsService {
   async addItem(budgetId: string, dto: CreateBudgetItemDto): Promise<BudgetItem> {
     const budget = await this.findOne(budgetId);
     const item = this.budgetItemsRepository.create({ ...dto, budget });
+    return this.budgetItemsRepository.save(item);
+  }
+
+  async updateItem(budgetId: string, itemId: string, dto: UpdateBudgetItemDto): Promise<BudgetItem> {
+    const item = await this.budgetItemsRepository.findOne({
+      where: { id: itemId, budget: { id: budgetId } },
+    });
+    if (!item) throw new NotFoundException(`BudgetItem ${itemId} not found in budget ${budgetId}`);
+    Object.assign(item, dto);
     return this.budgetItemsRepository.save(item);
   }
 
