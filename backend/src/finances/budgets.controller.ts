@@ -50,6 +50,13 @@ export class BudgetsController {
     return this.budgetsService.findAll(pagination, year, month);
   }
 
+  @Get('monthly-summary')
+  @ApiOperation({ summary: 'Get consolidated monthly expense summary (budget + variable expenses)' })
+  @ApiOkResponse()
+  getMonthlySummary(@Query() query: MonthlySummaryQueryDto): Promise<MonthlySummary> {
+    return this.budgetsService.getMonthlySummary(query.year, query.month);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a budget by ID (includes items)' })
   @ApiOkResponse({ type: Budget })
@@ -76,13 +83,6 @@ export class BudgetsController {
   @ApiNotFoundResponse()
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.budgetsService.remove(id);
-  }
-
-  @Get('monthly-summary')
-  @ApiOperation({ summary: 'Get consolidated monthly expense summary (budget + variable expenses)' })
-  @ApiOkResponse()
-  getMonthlySummary(@Query() query: MonthlySummaryQueryDto): Promise<MonthlySummary> {
-    return this.budgetsService.getMonthlySummary(query.year, query.month);
   }
 
   @Post(':id/items')
