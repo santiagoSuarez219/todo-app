@@ -4,9 +4,11 @@ import { DataSource, Repository } from 'typeorm';
 import { Budget } from './entities/budget.entity';
 import { BudgetItem } from './entities/budget-item.entity';
 import { Income } from './entities/income.entity';
+import { Expense } from './entities/expense.entity';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
+import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ExpenseType } from '../common/enums/expense-type.enum';
 
@@ -21,6 +23,15 @@ export interface BudgetDetail extends Budget {
   totalIncome: number;
 }
 
+export interface MonthlySummary {
+  year: number;
+  month: number;
+  budgetTotal: number;
+  expensesTotal: number;
+  combinedTotal: number;
+  budgetId: string | null;
+}
+
 @Injectable()
 export class BudgetsService {
   constructor(
@@ -30,6 +41,8 @@ export class BudgetsService {
     private readonly budgetItemsRepository: Repository<BudgetItem>,
     @InjectRepository(Income)
     private readonly incomesRepository: Repository<Income>,
+    @InjectRepository(Expense)
+    private readonly expensesRepository: Repository<Expense>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -83,25 +96,39 @@ export class BudgetsService {
 
     if (!budget) throw new NotFoundException(`Budget ${id} not found`);
 
-    const totalIncome = await this.incomesRepository
-      .createQueryBuilder('income')
-      .select('COALESCE(SUM(income.amount), 0)', 'total')
-      .where('EXTRACT(month FROM income.date) = :month', { month: budget.month })
-      .andWhere('EXTRACT(year FROM income.date) = :year', { year: budget.year })
-      .getRawOne()
-      .then((r) => Number(r.total));
+    const [totalIncome, expenses] = await Promise.all([
+      this.incomesRepository
+        .createQueryBuilder('income')
+        .select('COALESCE(SUM(income.amount), 0)', 'total')
+        .where('EXTRACT(month FROM income.date) = :month', { month: budget.month })
+        .andWhere('EXTRACT(year FROM income.date) = :year', { year: budget.year })
+        .getRawOne()
+        .then((r) => Number(r.total)),
+      this.expensesRepository
+        .createQueryBuilder('expense')
+        .where('EXTRACT(month FROM expense.date) = :month', { month: budget.month })
+        .andWhere('EXTRACT(year FROM expense.date) = :year', { year: budget.year })
+        .getMany(),
+    ]);
 
-    const typeSummary = this.computeTypeSummary(budget.items ?? [], totalIncome);
+    const typeSummary = this.computeTypeSummary(budget.items ?? [], expenses, totalIncome);
 
     return { ...budget, totalIncome, typeSummary };
   }
 
-  private computeTypeSummary(items: BudgetItem[], totalIncome: number): BudgetTypeSummary[] {
+  private computeTypeSummary(
+    items: BudgetItem[],
+    expenses: Expense[],
+    totalIncome: number,
+  ): BudgetTypeSummary[] {
     const totals = new Map<ExpenseType, number>();
 
     for (const item of items) {
-      const prev = totals.get(item.type) ?? 0;
-      totals.set(item.type, prev + Number(item.plannedAmount));
+      totals.set(item.type, (totals.get(item.type) ?? 0) + Number(item.plannedAmount));
+    }
+
+    for (const expense of expenses) {
+      totals.set(expense.type, (totals.get(expense.type) ?? 0) + Number(expense.amount));
     }
 
     return Array.from(totals.entries()).map(([type, total]) => ({
@@ -126,6 +153,45 @@ export class BudgetsService {
     const budget = await this.findOne(budgetId);
     const item = this.budgetItemsRepository.create({ ...dto, budget });
     return this.budgetItemsRepository.save(item);
+  }
+
+  async updateItem(budgetId: string, itemId: string, dto: UpdateBudgetItemDto): Promise<BudgetItem> {
+    const item = await this.budgetItemsRepository.findOne({
+      where: { id: itemId, budget: { id: budgetId } },
+    });
+    if (!item) throw new NotFoundException(`BudgetItem ${itemId} not found in budget ${budgetId}`);
+    Object.assign(item, dto);
+    return this.budgetItemsRepository.save(item);
+  }
+
+  async getMonthlySummary(year: number, month: number): Promise<MonthlySummary> {
+    const budget = await this.budgetsRepository
+      .createQueryBuilder('budget')
+      .leftJoinAndSelect('budget.items', 'items')
+      .where('budget.year = :year', { year })
+      .andWhere('budget.month = :month', { month })
+      .getOne();
+
+    const budgetTotal = budget
+      ? (budget.items ?? []).reduce((sum, item) => sum + Number(item.plannedAmount), 0)
+      : 0;
+
+    const expensesTotal = await this.expensesRepository
+      .createQueryBuilder('expense')
+      .select('COALESCE(SUM(expense.amount), 0)', 'total')
+      .where('EXTRACT(month FROM expense.date) = :month', { month })
+      .andWhere('EXTRACT(year FROM expense.date) = :year', { year })
+      .getRawOne()
+      .then((r) => Number(r.total));
+
+    return {
+      year,
+      month,
+      budgetTotal,
+      expensesTotal,
+      combinedTotal: budgetTotal + expensesTotal,
+      budgetId: budget?.id ?? null,
+    };
   }
 
   async removeItem(budgetId: string, itemId: string): Promise<void> {

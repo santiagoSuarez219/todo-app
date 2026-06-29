@@ -6,9 +6,11 @@ import {
   updateBudget,
   deleteBudget,
   addBudgetItem,
+  updateBudgetItem,
   deleteBudgetItem,
+  getMonthlyExpenseSummary,
 } from '../../services/finances/budgets.service';
-import type { CreateBudgetDto, UpdateBudgetDto, CreateBudgetItemDto, PaginationParams } from '../../types';
+import type { CreateBudgetDto, UpdateBudgetDto, CreateBudgetItemDto, UpdateBudgetItemDto, PaginationParams } from '../../types';
 
 export function useBudgets(params?: PaginationParams, year?: number, month?: number) {
   return useQuery({
@@ -54,6 +56,23 @@ export function useAddBudgetItem() {
   return useMutation({
     mutationFn: ({ budgetId, dto }: { budgetId: string; dto: CreateBudgetItemDto }) =>
       addBudgetItem(budgetId, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+  });
+}
+
+export function useMonthlyExpenseSummary(year: number, month: number) {
+  return useQuery({
+    queryKey: ['budgets', 'monthly-summary', year, month],
+    queryFn: () => getMonthlyExpenseSummary(year, month),
+    enabled: !!year && !!month,
+  });
+}
+
+export function useUpdateBudgetItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ budgetId, itemId, dto }: { budgetId: string; itemId: string; dto: UpdateBudgetItemDto }) =>
+      updateBudgetItem(budgetId, itemId, dto),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
   });
 }

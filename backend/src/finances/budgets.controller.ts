@@ -23,6 +23,9 @@ import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
+import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
+import { MonthlySummaryQueryDto } from './dto/monthly-summary-query.dto';
+import { MonthlySummary } from './budgets.service';
 import { BudgetsQueryDto } from './dto/budgets-query.dto';
 import { Budget } from './entities/budget.entity';
 import { BudgetItem } from './entities/budget-item.entity';
@@ -45,6 +48,13 @@ export class BudgetsController {
   findAll(@Query() query: BudgetsQueryDto): Promise<Budget[]> {
     const { year, month, ...pagination } = query;
     return this.budgetsService.findAll(pagination, year, month);
+  }
+
+  @Get('monthly-summary')
+  @ApiOperation({ summary: 'Get consolidated monthly expense summary (budget + variable expenses)' })
+  @ApiOkResponse()
+  getMonthlySummary(@Query() query: MonthlySummaryQueryDto): Promise<MonthlySummary> {
+    return this.budgetsService.getMonthlySummary(query.year, query.month);
   }
 
   @Get(':id')
@@ -84,6 +94,18 @@ export class BudgetsController {
     @Body() dto: CreateBudgetItemDto,
   ): Promise<BudgetItem> {
     return this.budgetsService.addItem(id, dto);
+  }
+
+  @Patch(':budgetId/items/:itemId')
+  @ApiOperation({ summary: 'Update an item in a budget' })
+  @ApiOkResponse({ type: BudgetItem })
+  @ApiNotFoundResponse()
+  updateItem(
+    @Param('budgetId', ParseUUIDPipe) budgetId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Body() dto: UpdateBudgetItemDto,
+  ): Promise<BudgetItem> {
+    return this.budgetsService.updateItem(budgetId, itemId, dto);
   }
 
   @Delete(':budgetId/items/:itemId')
