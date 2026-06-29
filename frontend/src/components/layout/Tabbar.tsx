@@ -32,11 +32,10 @@ function PlusIcon() {
   );
 }
 
-function WeekIcon() {
+function BacklogIcon() {
   return (
     <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 14h.01M12 14h.01M15 14h.01" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h7.5M8.25 12h7.5m-7.5 5.25h7.5M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
     </svg>
   );
 }
@@ -111,9 +110,9 @@ export default function Tabbar({ onCreateActivity }: Props) {
         </button>
       </div>
 
-      <NavLink to="/activities/this-week" className={tabCls}>
-        <WeekIcon />
-        <span>Semana</span>
+      <NavLink to="/activities/backlog" className={tabCls}>
+        <BacklogIcon />
+        <span>Backlog</span>
       </NavLink>
 
       <NavLink

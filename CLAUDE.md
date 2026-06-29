@@ -258,8 +258,6 @@ src/
 - Tipos centralizados en `frontend/src/types/index.ts`.
 - API client en `frontend/src/lib/api-client.ts` (interceptor extrae mensaje de error).
 
----
-
 ## Testing
 
 - Framework backend: Jest (`*.spec.ts`).
