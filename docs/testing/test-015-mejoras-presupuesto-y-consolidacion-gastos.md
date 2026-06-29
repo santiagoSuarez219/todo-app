@@ -9,7 +9,7 @@
 2. Pasar el cursor sobre cualquier fila de la tabla de ítems.
 3. Hacer clic en el ícono de lápiz que aparece al hacer hover.
 **Resultado esperado:** La fila se convierte en campos editables (input de texto para descripción, input numérico para monto, select para tipo). Aparecen los botones de guardar (✓) y cancelar (✗).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -19,7 +19,7 @@
 1. Modificar la descripción, el monto y/o el tipo del ítem.
 2. Hacer clic en el botón de guardar (✓).
 **Resultado esperado:** La fila vuelve al modo lectura mostrando los valores actualizados. El resumen por tipo y el total planificado se actualizan si el monto o tipo cambiaron.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -29,7 +29,7 @@
 1. Modificar uno o más campos.
 2. Hacer clic en el botón de cancelar (✗).
 **Resultado esperado:** La fila vuelve al modo lectura con los valores originales sin cambios.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -39,7 +39,7 @@
 1. Activar el modo edición en una fila.
 2. Intentar hacer clic en el lápiz o en el ícono de eliminar de otra fila.
 **Resultado esperado:** Los botones de las demás filas están deshabilitados (opacidad reducida) y no responden al clic mientras hay una fila en edición.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -49,7 +49,7 @@
 1. Borrar completamente el contenido del campo descripción.
 2. Intentar hacer clic en el botón de guardar (✓).
 **Resultado esperado:** El botón de guardar está deshabilitado y no dispara ninguna petición.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -59,7 +59,7 @@
 1. Cambiar el monto a 0 o a un valor negativo.
 2. Intentar hacer clic en el botón de guardar (✓).
 **Resultado esperado:** El botón de guardar está deshabilitado y no dispara ninguna petición.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -69,7 +69,7 @@
 1. Ir a la vista de detalle del presupuesto.
 2. Observar la sección "Resumen por tipo".
 **Resultado esperado:** Cada tipo muestra su total en COP y su porcentaje calculado sobre el total de ingresos del mes. La fila "Total planificado" también muestra su porcentaje.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -79,7 +79,7 @@
 1. Ir a la vista de detalle del presupuesto.
 2. Observar la sección "Resumen por tipo".
 **Resultado esperado:** La sección muestra solo los totales por tipo en COP, sin columna de porcentaje.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -89,7 +89,7 @@
 1. Ir a la vista de detalle del presupuesto.
 2. Observar la sección "Gastos del mes".
 **Resultado esperado:** Se muestran tres filas: "Presupuesto (fijos)" con la suma de ítems, "Gastos variables" con la suma de gastos del mes, y "Total del mes" con la suma de ambos. Si hay ingresos, también se muestra el porcentaje de cada fila.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -99,7 +99,7 @@
 1. Ir a la vista de detalle del presupuesto.
 2. Observar la sección "Gastos del mes".
 **Resultado esperado:** La sección se muestra igualmente. "Gastos variables" aparece en $0 y "Total del mes" es igual al total del presupuesto.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -109,7 +109,7 @@
 1. Ir a la vista de detalle del presupuesto.
 2. Verificar los valores en la sección "Gastos del mes".
 **Resultado esperado:** "Presupuesto (fijos)" = $1.000.000, "Gastos variables" = $500.000, "Total del mes" = $1.500.000.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -120,4 +120,4 @@
 2. Guardar el cambio.
 3. Observar la sección "Gastos del mes".
 **Resultado esperado:** El valor de "Presupuesto (fijos)" y el "Total del mes" se actualizan para reflejar el nuevo monto del ítem.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado

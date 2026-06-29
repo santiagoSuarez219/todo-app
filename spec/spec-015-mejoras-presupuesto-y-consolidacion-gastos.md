@@ -1,4 +1,4 @@
-# spec-015 — [TESTING] Mejoras al presupuesto y consolidación de gastos mensuales
+# spec-015 — [DONE] Mejoras al presupuesto y consolidación de gastos mensuales
 
 ## Contexto
 
