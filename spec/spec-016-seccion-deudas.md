@@ -104,7 +104,7 @@ El módulo de finanzas carece de un tracker de deudas a cuotas. El usuario neces
 
 ### Fase 4 — Frontend: tipos, servicio y hooks
 
-- [ ] Agregar en `frontend/src/types/index.ts`:
+- [x] Agregar en `frontend/src/types/index.ts`:
   ```ts
   export type DebtStatus = 'activa' | 'pagada';
 
@@ -137,14 +137,14 @@ El módulo de finanzas carece de un tracker de deudas a cuotas. El usuario neces
     expenseId: string;
   }
   ```
-- [ ] Crear `frontend/src/services/finances/debts.service.ts`:
+- [x] Crear `frontend/src/services/finances/debts.service.ts`:
   - `getDebts(status?: DebtStatus): Promise<Debt[]>`
   - `getDebt(id: string): Promise<Debt>`
   - `createDebt(dto: CreateDebtDto): Promise<Debt>`
   - `updateDebt(id: string, dto: UpdateDebtDto): Promise<Debt>`
   - `deleteDebt(id: string): Promise<void>`
   - `payInstallment(id: string): Promise<PayInstallmentResult>`
-- [ ] Crear `frontend/src/hooks/finances/useDebts.ts`:
+- [x] Crear `frontend/src/hooks/finances/useDebts.ts`:
   - `useDebts(status?: DebtStatus)` — query key `['debts', status ?? 'all']`, `staleTime: 1min`.
   - `useDebt(id: string)` — query key `['debts', id]`.
   - `useCreateDebt()` — invalida `['debts']` en `onSuccess`.
