@@ -95,11 +95,12 @@ El módulo de finanzas carece de un tracker de deudas a cuotas. El usuario neces
 
 ### Fase 3 — MCP tools (backend)
 
-- [ ] Inyectar `DebtsService` en el constructor de `McpService` y registrar en `mcp.module.ts`.
-- [ ] Agregar método `registerDebtTools(server: McpServer)` en `mcp.service.ts` y llamarlo en `createServer()`:
+- [x] Inyectar `DebtsService` en el constructor de `McpService` y registrar en `mcp.module.ts`.
+- [x] Agregar método `registerDebtTools(server: McpServer)` en `mcp.service.ts` y llamarlo en `createServer()`:
   - **`list_debts`**: parámetro opcional `status: 'activa' | 'pagada'`. Devuelve lista de deudas con `remainingValue` calculado. Descripción: `"Lista las deudas registradas. Usa status para filtrar por activa o pagada."`.
   - **`create_debt`**: parámetros `description`, `productValue`, `installmentValue`, `totalInstallments`, `initialPayment?`. Descripción: `"Crea una nueva deuda a cuotas."`.
   - **`pay_debt_installment`**: parámetro `debtId: string`. Llama a `payInstallment`. Devuelve la deuda actualizada y el id del gasto creado. Descripción: `"Registra el pago de una cuota de una deuda: crea el gasto en finanzas e incrementa las cuotas pagadas."`.
+  - ✅ Implementado.
 
 ### Fase 4 — Frontend: tipos, servicio y hooks
 
