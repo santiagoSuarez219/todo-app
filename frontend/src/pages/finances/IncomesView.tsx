@@ -20,7 +20,7 @@ export default function IncomesView() {
   const [filterYear, setFilterYear] = useState<number>(currentYear);
   const [filterMonth, setFilterMonth] = useState<number>(currentMonth);
 
-  const { data: incomes = [], isLoading, isError } = useIncomes(undefined, filterYear, filterMonth);
+  const { data: incomes = [], isLoading, isError } = useIncomes({ limit: 100 }, filterYear, filterMonth);
   const { mutateAsync: create, isPending: isCreating } = useCreateIncome();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateIncome();
   const { mutate: remove, isPending: isDeleting } = useDeleteIncome();

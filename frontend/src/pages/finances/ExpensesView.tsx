@@ -20,7 +20,7 @@ export default function ExpensesView() {
   const [filterYear, setFilterYear] = useState<number>(currentYear);
   const [filterMonth, setFilterMonth] = useState<number>(currentMonth);
 
-  const { data: expenses = [], isLoading, isError } = useExpenses(undefined, filterYear, filterMonth);
+  const { data: expenses = [], isLoading, isError } = useExpenses({ limit: 100 }, filterYear, filterMonth);
   const { mutateAsync: create, isPending: isCreating } = useCreateExpense();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateExpense();
   const { mutate: remove, isPending: isDeleting } = useDeleteExpense();
