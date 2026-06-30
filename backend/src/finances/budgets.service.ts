@@ -76,6 +76,7 @@ export class BudgetsService {
   ): Promise<Budget[]> {
     const qb = this.budgetsRepository
       .createQueryBuilder('budget')
+      .leftJoinAndSelect('budget.items', 'items')
       .orderBy('budget.year', 'DESC')
       .addOrderBy('budget.month', 'DESC')
       .skip((page - 1) * limit)

@@ -8,10 +8,10 @@ import {
 } from '../../services/finances/incomes.service';
 import type { CreateIncomeDto, UpdateIncomeDto, PaginationParams } from '../../types';
 
-export function useIncomes(params?: PaginationParams) {
+export function useIncomes(params?: PaginationParams, year?: number, month?: number) {
   return useQuery({
-    queryKey: ['incomes', params],
-    queryFn: () => getIncomes(params),
+    queryKey: ['incomes', params, year, month],
+    queryFn: () => getIncomes(params, year, month),
   });
 }
 

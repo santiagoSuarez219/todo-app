@@ -8,10 +8,10 @@ import {
 } from '../../services/finances/expenses.service';
 import type { CreateExpenseDto, UpdateExpenseDto, PaginationParams } from '../../types';
 
-export function useExpenses(params?: PaginationParams) {
+export function useExpenses(params?: PaginationParams, year?: number, month?: number) {
   return useQuery({
-    queryKey: ['expenses', params],
-    queryFn: () => getExpenses(params),
+    queryKey: ['expenses', params, year, month],
+    queryFn: () => getExpenses(params, year, month),
   });
 }
 

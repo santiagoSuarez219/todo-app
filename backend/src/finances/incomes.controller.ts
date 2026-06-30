@@ -23,7 +23,7 @@ import { IncomesService } from './incomes.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
 import { Income } from './entities/income.entity';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { IncomesQueryDto } from './dto/incomes-query.dto';
 
 @ApiTags('finances / incomes')
 @Controller('finances/incomes')
@@ -38,10 +38,10 @@ export class IncomesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List incomes (paginated, ordered by date DESC)' })
+  @ApiOperation({ summary: 'List incomes (paginated, filtered by year/month, ordered by date DESC)' })
   @ApiOkResponse({ type: [Income] })
-  findAll(@Query() pagination: PaginationDto): Promise<Income[]> {
-    return this.incomesService.findAll(pagination);
+  findAll(@Query() query: IncomesQueryDto): Promise<Income[]> {
+    return this.incomesService.findAll(query);
   }
 
   @Get(':id')

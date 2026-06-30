@@ -1,8 +1,14 @@
 import apiClient from '../../lib/api-client';
 import type { Expense, CreateExpenseDto, UpdateExpenseDto, PaginationParams } from '../../types';
 
-export async function getExpenses(params?: PaginationParams): Promise<Expense[]> {
-  const { data } = await apiClient.get<{ data: Expense[] }>('/finances/expenses', { params });
+export async function getExpenses(
+  params?: PaginationParams,
+  year?: number,
+  month?: number,
+): Promise<Expense[]> {
+  const { data } = await apiClient.get<{ data: Expense[] }>('/finances/expenses', {
+    params: { ...params, ...(year ? { year } : {}), ...(month ? { month } : {}) },
+  });
   return data.data;
 }
 

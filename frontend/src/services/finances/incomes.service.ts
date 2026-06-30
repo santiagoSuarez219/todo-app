@@ -1,8 +1,14 @@
 import apiClient from '../../lib/api-client';
 import type { Income, CreateIncomeDto, UpdateIncomeDto, PaginationParams } from '../../types';
 
-export async function getIncomes(params?: PaginationParams): Promise<Income[]> {
-  const { data } = await apiClient.get<{ data: Income[] }>('/finances/incomes', { params });
+export async function getIncomes(
+  params?: PaginationParams,
+  year?: number,
+  month?: number,
+): Promise<Income[]> {
+  const { data } = await apiClient.get<{ data: Income[] }>('/finances/incomes', {
+    params: { ...params, ...(year ? { year } : {}), ...(month ? { month } : {}) },
+  });
   return data.data;
 }
 

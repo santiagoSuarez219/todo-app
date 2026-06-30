@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Expense } from './entities/expense.entity';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { ExpensesQueryDto } from './dto/expenses-query.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -18,12 +18,18 @@ export class ExpensesService {
     return this.expensesRepository.save(expense);
   }
 
-  findAll({ page = 1, limit = 20 }: PaginationDto): Promise<Expense[]> {
-    return this.expensesRepository.find({
-      order: { date: 'DESC', createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+  findAll({ page = 1, limit = 20, year, month }: ExpensesQueryDto): Promise<Expense[]> {
+    const qb = this.expensesRepository
+      .createQueryBuilder('expense')
+      .orderBy('expense.date', 'DESC')
+      .addOrderBy('expense.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (year) qb.andWhere('EXTRACT(year FROM expense.date) = :year', { year });
+    if (month) qb.andWhere('EXTRACT(month FROM expense.date) = :month', { month });
+
+    return qb.getMany();
   }
 
   async findOne(id: string): Promise<Expense> {
