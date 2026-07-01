@@ -1,4 +1,4 @@
-# spec-018 — [IN PROGRESS] Asociar tarjeta a gastos y desglose por tarjeta en el resumen de presupuesto
+# spec-018 — [TESTING] Asociar tarjeta a gastos y desglose por tarjeta en el resumen de presupuesto
 
 ## Contexto
 
