@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { ExpenseType } from '../../common/enums/expense-type.enum';
+import { CreditCard } from './credit-card.entity';
 
 @Entity('expenses')
 export class Expense {
@@ -23,6 +26,10 @@ export class Expense {
 
   @Column({ type: 'enum', enum: ExpenseType })
   type: ExpenseType;
+
+  @ManyToOne(() => CreditCard, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'creditCardId' })
+  creditCard: CreditCard | null;
 
   @CreateDateColumn()
   createdAt: Date;

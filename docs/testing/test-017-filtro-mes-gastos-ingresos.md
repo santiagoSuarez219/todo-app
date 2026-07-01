@@ -7,7 +7,7 @@
 **Pasos:**
 1. Navegar a `/finances/budgets`.
 **Resultado esperado:** Cada card muestra el número real de ítems y el total en COP (no "0 ítems / $0").
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -16,7 +16,7 @@
 **Pasos:**
 1. Navegar a `/finances/expenses`.
 **Resultado esperado:** Solo se ven los gastos del mes y año actual. Los de otros meses no aparecen.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -26,7 +26,7 @@
 1. Navegar a `/finances/expenses`.
 2. Cambiar el selector de mes a otro mes con registros.
 **Resultado esperado:** La lista se actualiza mostrando solo los gastos del mes seleccionado.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -36,7 +36,7 @@
 1. Navegar a `/finances/expenses`.
 2. Cambiar el selector de año.
 **Resultado esperado:** La lista muestra solo los gastos del año y mes seleccionados.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -46,7 +46,7 @@
 1. Navegar a `/finances/expenses`.
 2. Seleccionar un mes sin registros.
 **Resultado esperado:** Se muestra el mensaje de estado vacío con el nombre del mes y año seleccionados.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -55,7 +55,7 @@
 **Pasos:**
 1. Navegar a `/finances/incomes`.
 **Resultado esperado:** Solo se ven los ingresos del mes y año actual.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -65,7 +65,7 @@
 1. Navegar a `/finances/incomes`.
 2. Cambiar el selector de mes a otro mes con registros.
 **Resultado esperado:** La lista se actualiza mostrando solo los ingresos del mes seleccionado.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -75,4 +75,4 @@
 1. Navegar a `/finances/incomes`.
 2. Seleccionar un mes sin registros.
 **Resultado esperado:** Se muestra el mensaje de estado vacío con el nombre del mes y año seleccionados.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado

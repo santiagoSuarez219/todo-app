@@ -2,12 +2,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ExpenseType, type CreateExpenseDto, type Expense } from '../../types';
+import { useCreditCards } from '../../hooks/finances/useCreditCards';
 
 const schema = z.object({
   description: z.string().min(1, 'La descripción es requerida').max(255),
   amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
   date: z.string().min(1, 'La fecha es requerida'),
   type: z.nativeEnum(ExpenseType),
+  creditCardId: z.union([z.literal(''), z.string().uuid()]).optional(),
 });
 
 type FormValues = z.output<typeof schema>;
@@ -32,6 +34,8 @@ interface Props {
 }
 
 export default function ExpenseForm({ initial, onSubmit, onCancel, loading }: Props) {
+  const { data: creditCards = [] } = useCreditCards();
+
   const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -39,11 +43,20 @@ export default function ExpenseForm({ initial, onSubmit, onCancel, loading }: Pr
       amount: initial?.amount ?? undefined,
       date: initial?.date ?? new Date().toISOString().slice(0, 10),
       type: initial?.type ?? ExpenseType.BASICO,
+      creditCardId: initial?.creditCard?.id ?? '',
     },
   });
 
+  const handleFormSubmit = async (values: FormValues) => {
+    const dto: CreateExpenseDto = {
+      ...values,
+      creditCardId: values.creditCardId || null,
+    };
+    await onSubmit(dto);
+  };
+
   return (
-    <form onSubmit={handleSubmit((values) => onSubmit(values))} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div>
         <label className={labelCls}>Descripción *</label>
         <input {...register('description')} className={inputCls} placeholder="Ej: Mercado, Netflix..." />
@@ -78,6 +91,17 @@ export default function ExpenseForm({ initial, onSubmit, onCancel, loading }: Pr
           ))}
         </select>
         {errors.type && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.type.message}</p>}
+      </div>
+
+      <div>
+        <label className={labelCls}>Tarjeta (opcional)</label>
+        <select {...register('creditCardId')} className={inputCls}>
+          <option value="">Sin tarjeta</option>
+          {creditCards.map((card) => (
+            <option key={card.id} value={card.id}>{card.name} ({card.bank})</option>
+          ))}
+        </select>
+        {errors.creditCardId && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.creditCardId.message}</p>}
       </div>
 
       <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">

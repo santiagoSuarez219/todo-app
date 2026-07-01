@@ -182,6 +182,7 @@ export interface Expense {
   amount: number;
   date: string;
   type: ExpenseType;
+  creditCard: CreditCard | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -293,6 +294,7 @@ export interface CreateExpenseDto {
   amount: number;
   date: string;
   type: ExpenseType;
+  creditCardId?: string | null;
 }
 
 export type UpdateExpenseDto = Partial<CreateExpenseDto>;
@@ -356,6 +358,12 @@ export interface UpdateBudgetDto {
 
 export type UpdateBudgetItemDto = Partial<Pick<BudgetItem, 'description' | 'plannedAmount' | 'type'>>;
 
+export interface CardTotal {
+  creditCardId: string;
+  name: string;
+  total: number;
+}
+
 export interface MonthlySummary {
   year: number;
   month: number;
@@ -363,6 +371,7 @@ export interface MonthlySummary {
   expensesTotal: number;
   combinedTotal: number;
   budgetId: string | null;
+  cardTotals: CardTotal[];
 }
 
 // ─── Finances — Debts ────────────────────────────────────────────────────────

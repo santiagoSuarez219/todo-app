@@ -23,6 +23,12 @@ export interface BudgetDetail extends Budget {
   totalIncome: number;
 }
 
+export interface CardTotal {
+  creditCardId: string;
+  name: string;
+  total: number;
+}
+
 export interface MonthlySummary {
   year: number;
   month: number;
@@ -30,6 +36,7 @@ export interface MonthlySummary {
   expensesTotal: number;
   combinedTotal: number;
   budgetId: string | null;
+  cardTotals: CardTotal[];
 }
 
 @Injectable()
@@ -177,13 +184,34 @@ export class BudgetsService {
       ? (budget.items ?? []).reduce((sum, item) => sum + Number(item.plannedAmount), 0)
       : 0;
 
-    const expensesTotal = await this.expensesRepository
-      .createQueryBuilder('expense')
-      .select('COALESCE(SUM(expense.amount), 0)', 'total')
-      .where('EXTRACT(month FROM expense.date) = :month', { month })
-      .andWhere('EXTRACT(year FROM expense.date) = :year', { year })
-      .getRawOne()
-      .then((r) => Number(r.total));
+    const [expensesTotal, cardTotalsRaw] = await Promise.all([
+      this.expensesRepository
+        .createQueryBuilder('expense')
+        .select('COALESCE(SUM(expense.amount), 0)', 'total')
+        .where('EXTRACT(month FROM expense.date) = :month', { month })
+        .andWhere('EXTRACT(year FROM expense.date) = :year', { year })
+        .getRawOne()
+        .then((r) => Number(r.total)),
+      this.expensesRepository
+        .createQueryBuilder('expense')
+        .leftJoinAndSelect('expense.creditCard', 'creditCard')
+        .select('expense.creditCardId', 'creditCardId')
+        .addSelect('creditCard.name', 'name')
+        .addSelect('SUM(expense.amount)', 'total')
+        .where('EXTRACT(month FROM expense.date) = :month', { month })
+        .andWhere('EXTRACT(year FROM expense.date) = :year', { year })
+        .andWhere('expense.creditCardId IS NOT NULL')
+        .groupBy('expense.creditCardId')
+        .addGroupBy('creditCard.name')
+        .orderBy('total', 'DESC')
+        .getRawMany(),
+    ]);
+
+    const cardTotals: CardTotal[] = cardTotalsRaw.map((row) => ({
+      creditCardId: row.creditCardId,
+      name: row.name,
+      total: Number(row.total),
+    }));
 
     return {
       year,
@@ -192,6 +220,7 @@ export class BudgetsService {
       expensesTotal,
       combinedTotal: budgetTotal + expensesTotal,
       budgetId: budget?.id ?? null,
+      cardTotals,
     };
   }
 

@@ -13,7 +13,7 @@ Antes de cualquier tarea, Claude debe ejecutar estos pasos en orden:
 2. Leer `DESIGN.md` si la tarea involucra UI.
 3. Listar los specs activos (`[IN PROGRESS]` o `[TESTING]`) en `spec/`.
 4. Confirmar el repositorio activo y la rama actual con `git status`.
-5. Si hay contexto previo relevante (spec en curso, decisión de arquitectura,
+5. Si hay contexto previo relevante (spec en curso, decisión Ade arquitectura,
    deuda técnica pendiente), pedirlo al usuario antes de proceder.
 
 ---

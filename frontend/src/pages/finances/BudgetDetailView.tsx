@@ -215,6 +215,31 @@ export default function BudgetDetailView() {
         </div>
       )}
 
+      {/* Total por tarjeta */}
+      {monthlySummary && monthlySummary.cardTotals.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Total por tarjeta</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Gastos pagados con tarjeta</p>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {monthlySummary.cardTotals.map((card) => (
+              <div key={card.creditCardId} className="px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-600 dark:text-gray-400">{card.name}</span>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="tabular-nums text-gray-700 dark:text-gray-300">{COP.format(card.total)}</span>
+                  {totalIncome > 0 && (
+                    <span className="tabular-nums text-gray-400 dark:text-gray-500 w-14 text-right">
+                      {(Math.round((card.total / totalIncome) * 10000) / 100).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Ítems */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
