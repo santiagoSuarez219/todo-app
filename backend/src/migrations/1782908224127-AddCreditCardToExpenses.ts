@@ -1,6 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class AddCreditCardToExpenses1782907880 implements MigrationInterface {
+export class AddCreditCardToExpenses1782908224127 implements MigrationInterface {
+    name = 'AddCreditCardToExpenses1782908224127';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "expenses" ADD "creditCardId" uuid`);
