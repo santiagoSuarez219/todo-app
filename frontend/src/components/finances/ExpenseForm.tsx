@@ -50,7 +50,7 @@ export default function ExpenseForm({ initial, onSubmit, onCancel, loading }: Pr
   const handleFormSubmit = async (values: FormValues) => {
     const dto: CreateExpenseDto = {
       ...values,
-      creditCardId: values.creditCardId && values.creditCardId !== '' ? values.creditCardId : undefined,
+      creditCardId: values.creditCardId || null,
     };
     await onSubmit(dto);
   };
