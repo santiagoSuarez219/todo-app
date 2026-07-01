@@ -8,7 +8,7 @@
 1. Navegar a `/finances/expenses`.
 2. Crear un nuevo gasto con descripción "Mercado", monto 100.000, fecha hoy, tipo "Básico", sin tarjeta (dejar vacío).
 **Resultado esperado:** El gasto se crea correctamente. En la lista, el badge de tarjeta NO aparece (solo tipo y monto).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -18,7 +18,7 @@
 1. Navegar a `/finances/expenses`.
 2. Crear un nuevo gasto con descripción "Netflix", monto 50.000, fecha hoy, tipo "Lujo", seleccionar una tarjeta del dropdown.
 **Resultado esperado:** El gasto se crea correctamente. En la lista, aparece el badge con el nombre de la tarjeta junto al badge del tipo.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -29,7 +29,7 @@
 2. Se abre el formulario. Seleccionar una tarjeta del dropdown "Tarjeta (opcional)".
 3. Guardar.
 **Resultado esperado:** El gasto se actualiza. El badge de tarjeta ahora aparece en la card del gasto.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -40,7 +40,7 @@
 2. En el dropdown "Tarjeta (opcional)", seleccionar "Sin tarjeta".
 3. Guardar.
 **Resultado esperado:** El gasto se actualiza. El badge de tarjeta desaparece de la card.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -57,7 +57,7 @@
 - Se listan las tarjetas usadas en el mes con el total de gastos en cada una.
 - Los totales son correctos (suma de todos los gastos con esa tarjeta en el mes).
 - Si hay ingresos del mes, se muestra el porcentaje de cada total de tarjeta respecto al ingreso.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -67,7 +67,7 @@
 1. Abrir el presupuesto.
 2. Desplazarse hacia abajo para ver si existe la sección "Total por tarjeta".
 **Resultado esperado:** La sección "Total por tarjeta" NO aparece (se oculta cuando no hay datos).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -80,7 +80,7 @@
 4. Actualizar la página (F5).
 5. Desplazarse hasta "Total por tarjeta" y verificar que el total se actualizó.
 **Resultado esperado:** El nuevo gasto aparece en el desglose por tarjeta con el total correcto.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -91,7 +91,7 @@
 2. Verificar que se ve un select o filtro de "Tarjeta" (opcional: si está implementado en esta fase).
 3. Seleccionar una tarjeta.
 **Resultado esperado:** La lista se filtra mostrando solo los gastos de esa tarjeta.
-**Estado:** ⬜ Pendiente
+**Estado:** ➖ N/A — spec-018 excluye explícitamente esta UI ("No incluye: vista o filtro dedicado de gastos por tarjeta fuera del resumen de presupuesto"). Solo existe el filtro `creditCardId` a nivel de API (`GET /finances/expenses`), sin `<select>` en `ExpensesView`. Si se quiere, es un spec aparte.
 
 ---
 
@@ -106,4 +106,4 @@
 - Los gastos no se eliminas.
 - Los gastos quedan sin tarjeta asociada (`creditCard = null` en la BD).
 - La sección de total por tarjeta no lista la tarjeta eliminada.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
