@@ -78,7 +78,7 @@ export default function ExpensesView() {
     if (editState.date !== expense.date) dto.date = editState.date;
     if (editState.type !== expense.type) dto.type = editState.type;
     if ((editState.creditCardId || undefined) !== (expense.creditCard?.id || undefined)) {
-      dto.creditCardId = editState.creditCardId || undefined;
+      dto.creditCardId = editState.creditCardId || null;
     }
 
     if (Object.keys(dto).length > 0) {
