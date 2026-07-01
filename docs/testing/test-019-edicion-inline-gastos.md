@@ -14,7 +14,7 @@
 - El gasto se actualiza y la card vuelve a modo lectura con la nueva descripción.
 - No abre modal.
 - PATCH al backend incluye solo `description` (diffing).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -28,7 +28,7 @@
 **Resultado esperado:** 
 - La card vuelve a modo lectura con los datos originales (sin cambios).
 - Los cambios no se persistieron.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -39,7 +39,7 @@
 2. Borrar completamente la descripción (dejar en blanco).
 3. Intentar hacer clic en el botón ✓.
 **Resultado esperado:** El botón ✓ está deshabilitado (`opacity-40`) y no responde al clic.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -50,7 +50,7 @@
 2. Cambiar el monto a "0" o a un número negativo.
 3. Intentar hacer clic en el botón ✓.
 **Resultado esperado:** El botón ✓ está deshabilitado.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -68,7 +68,7 @@
 - El gasto se actualiza con todos los cambios.
 - La card vuelve a modo lectura y muestra todos los campos actualizados.
 - El badge de tarjeta ahora aparece.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -81,7 +81,7 @@
 **Resultado esperado:** 
 - El gasto se actualiza.
 - La card vuelve a modo lectura sin el badge de tarjeta.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -94,7 +94,7 @@
 - El botón "Editar" del gasto #2 está deshabilitado (`opacity-30`).
 - No es posible abrir edición en otra card mientras la #1 está en edición.
 - El botón "Eliminar" de #2 también está deshabilitado.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -106,7 +106,7 @@
 3. Escribir algo en la descripción nuevamente.
 4. El botón ✓ vuelve a estar habilitado.
 **Resultado esperado:** El botón ✓ responde dinámicamente al cambiar campos sin esperar a un submit.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -119,7 +119,7 @@
 - Se abre un modal con el título "Nuevo gasto".
 - Contiene `ExpenseForm` (igual que antes).
 - Es independiente de la edición inline.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -133,7 +133,7 @@
 5. Cambiar viewport a desktop (>640px).
 6. Los 4 campos ahora se apilan en 4 columnas (`sm:grid-cols-4`).
 **Resultado esperado:** El layout se adapta responsivamente sin overflow horizontal.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -147,4 +147,4 @@
 - La lista se actualiza con gastos del nuevo mes.
 - La edición inline se cancela automáticamente.
 - Todas las cards vuelven a modo lectura.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado

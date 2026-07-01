@@ -1,4 +1,4 @@
-# spec-019 — [TESTING] Edición inline de gastos
+# spec-019 — [DONE] Edición inline de gastos
 
 ## Contexto
 
