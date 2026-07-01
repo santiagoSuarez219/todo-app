@@ -113,6 +113,14 @@ function TrendIcon() {
   );
 }
 
+function DebtIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V7.914a2 2 0 0 0-.586-1.414l-3.914-3.914A2 2 0 0 0 11.086 2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z" />
+    </svg>
+  );
+}
+
 function ChartIcon() {
   return (
     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -267,6 +275,9 @@ export default function Sidebar({ onCreateActivity }: Props) {
           </NavLink>
           <NavLink to="/finances/cdts" className={linkCls}>
             <TrendIcon /> CDTs
+          </NavLink>
+          <NavLink to="/finances/debts" className={linkCls}>
+            <DebtIcon /> Deudas
           </NavLink>
           <NavLink to="/finances/budgets" className={linkCls}>
             <ChartIcon /> Presupuestos

@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from '../../hooks/finances/useExpenses';
+import { useCreditCards } from '../../hooks/finances/useCreditCards';
 import ExpenseCard from '../../components/finances/ExpenseCard';
 import ExpenseForm from '../../components/finances/ExpenseForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
-import type { Expense, CreateExpenseDto } from '../../types';
+import type { Expense, CreateExpenseDto, ExpenseType, UpdateExpenseDto } from '../../types';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
+
+interface EditState {
+  description: string;
+  amount: string;
+  date: string;
+  type: ExpenseType;
+  creditCardId: string;
+}
 
 export default function ExpensesView() {
   const now = new Date();
@@ -21,37 +30,65 @@ export default function ExpensesView() {
   const [filterMonth, setFilterMonth] = useState<number>(currentMonth);
 
   const { data: expenses = [], isLoading, isError } = useExpenses({ limit: 100 }, filterYear, filterMonth);
+  const { data: creditCards = [] } = useCreditCards();
   const { mutateAsync: create, isPending: isCreating } = useCreateExpense();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateExpense();
   const { mutate: remove, isPending: isDeleting } = useDeleteExpense();
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Expense | null>(null);
   const [toDelete, setToDelete] = useState<Expense | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editState, setEditState] = useState<EditState>({
+    description: '',
+    amount: '',
+    date: '',
+    type: 'basico' as ExpenseType,
+    creditCardId: '',
+  });
 
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 1 + i);
 
   function openCreate() {
-    setEditing(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(expense: Expense) {
-    setEditing(expense);
     setModalOpen(true);
   }
 
   function closeModal() {
     setModalOpen(false);
-    setEditing(null);
+  }
+
+  function startEditing(expense: Expense) {
+    setEditingExpenseId(expense.id);
+    setEditState({
+      description: expense.description,
+      amount: String(expense.amount),
+      date: expense.date,
+      type: expense.type,
+      creditCardId: expense.creditCard?.id ?? '',
+    });
+  }
+
+  function cancelEditing() {
+    setEditingExpenseId(null);
+  }
+
+  async function saveEditing(expense: Expense) {
+    const dto: UpdateExpenseDto = {};
+    if (editState.description !== expense.description) dto.description = editState.description;
+    if (Number(editState.amount) !== Number(expense.amount)) dto.amount = Number(editState.amount);
+    if (editState.date !== expense.date) dto.date = editState.date;
+    if (editState.type !== expense.type) dto.type = editState.type;
+    if ((editState.creditCardId || undefined) !== (expense.creditCard?.id || undefined)) {
+      dto.creditCardId = editState.creditCardId || null;
+    }
+
+    if (Object.keys(dto).length > 0) {
+      await update({ id: expense.id, dto });
+    }
+    setEditingExpenseId(null);
   }
 
   async function handleSubmit(dto: CreateExpenseDto) {
-    if (editing) {
-      await update({ id: editing.id, dto });
-    } else {
-      await create(dto);
-    }
+    await create(dto);
     closeModal();
   }
 
@@ -102,19 +139,26 @@ export default function ExpensesView() {
           <ExpenseCard
             key={expense.id}
             expense={expense}
-            onEdit={openEdit}
+            isEditing={editingExpenseId === expense.id}
+            editDisabled={editingExpenseId !== null && editingExpenseId !== expense.id}
+            creditCards={creditCards}
+            editState={editingExpenseId === expense.id ? editState : { description: '', amount: '', date: '', type: 'basico', creditCardId: '' }}
+            onEditStateChange={(patch) => setEditState((s) => ({ ...s, ...patch }))}
+            onStartEdit={startEditing}
+            onSaveEdit={saveEditing}
+            onCancelEdit={cancelEditing}
             onDelete={setToDelete}
+            isSaving={isUpdating && editingExpenseId === expense.id}
           />
         ))}
       </div>
 
       {modalOpen && (
-        <Modal title={editing ? 'Editar gasto' : 'Nuevo gasto'} onClose={closeModal}>
+        <Modal title="Nuevo gasto" onClose={closeModal}>
           <ExpenseForm
-            initial={editing ?? undefined}
             onSubmit={handleSubmit}
             onCancel={closeModal}
-            loading={isCreating || isUpdating}
+            loading={isCreating}
           />
         </Modal>
       )}
