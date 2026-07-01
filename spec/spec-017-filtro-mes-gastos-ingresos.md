@@ -1,4 +1,4 @@
-# spec-017 — [TESTING] Filtro por mes en gastos e ingresos
+# spec-017 — [DONE] Filtro por mes en gastos e ingresos
 
 ## Contexto
 

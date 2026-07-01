@@ -9,7 +9,7 @@ const schema = z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
   date: z.string().min(1, 'La fecha es requerida'),
   type: z.nativeEnum(ExpenseType),
-  creditCardId: z.string().uuid().optional().or(z.literal('')),
+  creditCardId: z.union([z.literal(''), z.string().uuid()]).optional(),
 });
 
 type FormValues = z.output<typeof schema>;
