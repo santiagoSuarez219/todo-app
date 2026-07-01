@@ -61,6 +61,11 @@ export default function ExpenseCard({ expense, onEdit, onDelete }: Props) {
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TYPE_COLORS[expense.type]}`}>
           {TYPE_LABELS[expense.type]}
         </span>
+        {expense.creditCard && (
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+            {expense.creditCard.name}
+          </span>
+        )}
         <span className="text-sm font-semibold text-red-600 dark:text-red-400 tabular-nums">
           {COP.format(expense.amount)}
         </span>

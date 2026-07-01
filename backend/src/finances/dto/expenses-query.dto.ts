@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class ExpensesQueryDto extends PaginationDto {
@@ -19,4 +19,9 @@ export class ExpensesQueryDto extends PaginationDto {
   @Max(12)
   @IsOptional()
   month?: number;
+
+  @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  @IsOptional()
+  creditCardId?: string;
 }
