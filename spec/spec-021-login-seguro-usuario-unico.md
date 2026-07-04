@@ -1,4 +1,4 @@
-# spec-021 — [IN PROGRESS] Login seguro de usuario único
+# spec-021 — [TESTING] Login seguro de usuario único
 
 > Estado inicial: sin marcar (aún no implementado). Según el `CLAUDE.md` raíz,
 > el estado `[IN PROGRESS]` se coloca en el título al iniciar la Fase 1. Al
@@ -274,12 +274,12 @@ cualquier agente que consuma el MCP y debe documentarse.
 
 ### Fase 7 — Pruebas
 
-- [ ] Crear `docs/testing/test-021-login-seguro-usuario-unico.md` con casos manuales
+- [x] Crear `docs/testing/test-021-login-seguro-usuario-unico.md` con casos manuales
       de UI (incluyendo casos `TC-MCP-NNN` para el acceso autenticado al MCP).
-- [ ] Cambiar el estado del spec a `[TESTING]`.
-- [ ] El usuario ejecuta los casos manuales; Claude los marca conforme pasan.
-- [ ] Invocar `@tester` para las pruebas e2e definidas abajo.
-- [ ] Al aprobar todo, marcar el spec como `[DONE]`.
+- [x] Cambiar el estado del spec a `[TESTING]`.
+- ⏳ El usuario ejecuta los casos manuales; Claude los marca conforme pasan.
+- ⏳ Invocar `@tester` para las pruebas e2e definidas abajo.
+- ⏳ Al aprobar todo, marcar el spec como `[DONE]`.
 
 ## Criterios de aceptación
 
