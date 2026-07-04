@@ -30,6 +30,7 @@ import { AuthGuard } from './common/guards/auth.guard';
         DB_USER: Joi.string().required(),
         DB_PASSWORD: Joi.string().required(),
         AUTH_EMAIL: Joi.string().email().required(),
+        AUTH_PASSWORD: Joi.string().required(),
         AUTH_PASSWORD_HASH: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRES_IN: Joi.string().default('30d'),

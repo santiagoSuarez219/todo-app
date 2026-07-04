@@ -24,7 +24,8 @@ por HTTP/SSE y que no pueden autenticarse mediante cookie de sesión.
 - Módulo de autenticación en el backend (`auth/`) con tres endpoints:
   `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`.
 - Usuario único definido por `.env` (`AUTH_EMAIL`, `AUTH_PASSWORD_HASH` con hash
-  bcrypt, `JWT_SECRET`, `JWT_EXPIRES_IN`).
+  bcrypt usado para el login, `AUTH_PASSWORD` en texto plano solo como referencia/
+  recuperación para el usuario, `JWT_SECRET`, `JWT_EXPIRES_IN`).
 - Sesión mediante **JWT firmado entregado en cookie `httpOnly`**
   (`SameSite` + `Secure` en producción); el frontend nunca lee el token por JavaScript.
 - **Guard global de NestJS** que protege todos los endpoints bajo `/api/v1`
@@ -51,7 +52,7 @@ por HTTP/SSE y que no pueden autenticarse mediante cookie de sesión.
 
 | Decisión | Valor elegido |
 |----------|---------------|
-| Almacenamiento de contraseña | Hash **bcrypt** en `AUTH_PASSWORD_HASH` (nunca en claro) |
+| Almacenamiento de contraseña | Hash **bcrypt** en `AUTH_PASSWORD_HASH`, usado siempre para verificar el login. Adicionalmente, `AUTH_PASSWORD` (texto plano) vive en `.env` **solo como referencia/recuperación** para el usuario único — el spec no incluye flujo de recuperación de contraseña. Ambas variables viven exclusivamente en `.env` (nunca en la base de datos ni en disco versionado); actualizado tras revisión post-implementación (2026-07-04). |
 | Librería de hash | **`bcryptjs`** (JS puro, sin compilación nativa → evita fallos de build en Docker/Railway) |
 | Mecanismo de sesión | **JWT firmado en cookie `httpOnly`** + `SameSite` + `Secure` (prod) |
 | Alcance de protección | Guard global: REST `/api/v1` **y** `/mcp` |
@@ -203,11 +204,12 @@ cualquier agente que consuma el MCP y debe documentarse.
 - [x] Configurar `ThrottlerModule` (global o específico) y aplicar el límite al
       endpoint `POST /auth/login` (p.ej. 5–10 intentos/min → `429` al superar).
 - [x] Ampliar el `validationSchema` de Joi en `backend/src/app.module.ts` con:
-      `AUTH_EMAIL` (req.), `AUTH_PASSWORD_HASH` (req.), `JWT_SECRET` (req.),
-      `JWT_EXPIRES_IN` (default `30d`), `MCP_API_KEY` (req.).
+      `AUTH_EMAIL` (req.), `AUTH_PASSWORD` (req.), `AUTH_PASSWORD_HASH` (req.),
+      `JWT_SECRET` (req.), `JWT_EXPIRES_IN` (default `30d`), `MCP_API_KEY` (req.).
 - [x] Documentar un procedimiento (script `node` de un solo uso, **no commiteado con
       valores reales**) para generar el hash bcrypt de la contraseña y poblar
-      `AUTH_PASSWORD_HASH`.
+      `AUTH_PASSWORD_HASH`, imprimiendo también `AUTH_PASSWORD` en texto plano para
+      referencia/recuperación del usuario (decisión post-implementación, 2026-07-04).
 - [x] Añadir las nuevas variables (sin valores reales) a la tabla de `.env` en
       `backend/CLAUDE.md` y en el `CLAUDE.md` raíz. Corregir de paso el puerto de dev
       a 3000 en la documentación desactualizada.
@@ -297,8 +299,10 @@ cualquier agente que consuma el MCP y debe documentarse.
 - Al recibir `401` en cualquier llamada, el frontend redirige a `/login` sin bucle.
 - El endpoint `/mcp` responde correctamente **solo** con
   `Authorization: Bearer <MCP_API_KEY>` válido; sin él o con token inválido, `401`.
-- Las credenciales de contraseña nunca se almacenan ni transmiten en claro en disco
-  (solo el hash bcrypt vive en `.env`).
+- La contraseña nunca se transmite en claro por red ni se compara en claro durante
+  el login (siempre vía `bcrypt.compare` contra `AUTH_PASSWORD_HASH`). El valor en
+  claro (`AUTH_PASSWORD`) solo existe en `.env` como referencia/recuperación para
+  el usuario único, nunca en la base de datos ni en ningún archivo versionado.
 - El endpoint de login limita intentos repetidos y responde `429` al superar el
   umbral (throttler).
 - Los system prompts de `docs/mcps/` y el `README.md` reflejan el requisito de API key.

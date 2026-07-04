@@ -21,8 +21,10 @@ bcryptjs.hash(password, saltRounds, (err, hash) => {
     console.error('Error generating hash:', err);
     process.exit(1);
   }
-  console.log('\nBcrypt hash generated:');
-  console.log(hash);
-  console.log('\nSet AUTH_PASSWORD_HASH to the value above in your .env file');
-  console.log('⚠️  Do NOT commit this script or the hash to git\n');
+  console.log('\nSet the following in your .env file:');
+  console.log(`AUTH_PASSWORD=${password}`);
+  console.log(`AUTH_PASSWORD_HASH=${hash}`);
+  console.log('\n⚠️  AUTH_PASSWORD (plain text) is kept only for your own recovery reference —');
+  console.log('    the login endpoint always verifies against AUTH_PASSWORD_HASH via bcrypt.compare().');
+  console.log('⚠️  Do NOT commit this script output or .env to git\n');
 });

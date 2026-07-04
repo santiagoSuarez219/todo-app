@@ -156,7 +156,8 @@ cd frontend && npm run lint
 | `NODE_ENV` | `.env` | `development \| production \| test` |
 | `FRONTEND_URL` | `.env` | URL del frontend para CORS |
 | `AUTH_EMAIL` | `.env` | Email del usuario único (spec-021) |
-| `AUTH_PASSWORD_HASH` | `.env` | Hash bcrypt de la contraseña (spec-021) — generar con `backend/scripts/generate-bcrypt-hash.js` |
+| `AUTH_PASSWORD` | `.env` | Contraseña en texto plano (spec-021) — solo de referencia/recuperación, el login nunca la compara directamente |
+| `AUTH_PASSWORD_HASH` | `.env` | Hash bcrypt de la contraseña (spec-021) — usado por el login vía `bcrypt.compare()`; generar ambos con `backend/scripts/generate-bcrypt-hash.js` |
 | `JWT_SECRET` | `.env` | Secret para firmar JWT (spec-021) — mín. 32 caracteres |
 | `JWT_EXPIRES_IN` | `.env` | Expiración del JWT (spec-021) — ej. `30d`, default `30d` |
 | `MCP_API_KEY` | `.env` | Token estático para autenticar `/mcp` (spec-021) |

@@ -99,6 +99,7 @@ PORT=3000
 
 # Authentication (spec-021)
 AUTH_EMAIL=user@example.com
+AUTH_PASSWORD=<contraseña en texto plano — solo para tu propia referencia/recuperación>
 AUTH_PASSWORD_HASH=<bcrypt_hash_generated_via_backend/scripts/generate-bcrypt-hash.js>
 JWT_SECRET=<your_jwt_secret_key_min_32_chars>
 JWT_EXPIRES_IN=30d
@@ -109,8 +110,17 @@ MCP_API_KEY=<your_mcp_static_api_key>
 ```bash
 node backend/scripts/generate-bcrypt-hash.js "your-password"
 ```
-⚠️ Guardar el hash resultante en `AUTH_PASSWORD_HASH` en `.env` y `.env.docker`.
-**Nunca commitear valores reales** de `AUTH_PASSWORD_HASH`, `JWT_SECRET` ni `MCP_API_KEY`.
+El script imprime tanto `AUTH_PASSWORD` (texto plano) como `AUTH_PASSWORD_HASH` (bcrypt)
+para copiar ambos a `.env` / `.env.docker`.
+
+⚠️ **`AUTH_PASSWORD` es solo de referencia** (para que el usuario pueda recordar/recuperar
+su contraseña, ya que el spec-021 no incluye flujo de recuperación). El login **nunca**
+compara contra `AUTH_PASSWORD` — `auth.service.ts` siempre valida con
+`bcrypt.compare(password, AUTH_PASSWORD_HASH)`. Si editas una, actualiza la otra
+manualmente para que no queden desincronizadas.
+
+**Nunca commitear valores reales** de `AUTH_PASSWORD`, `AUTH_PASSWORD_HASH`, `JWT_SECRET`
+ni `MCP_API_KEY`.
 
 ---
 
