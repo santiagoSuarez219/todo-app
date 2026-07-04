@@ -85,14 +85,32 @@ específicas de este repo.
 ## Variables de Entorno (`.env`)
 
 ```env
+# Database
 DB_HOST=localhost
 DB_PORT=5433
 DB_NAME=todo_db
 DB_USER=todo_user
 DB_PASSWORD=todo_password
+
+# Environment
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+PORT=3000
+
+# Authentication (spec-021)
+AUTH_EMAIL=user@example.com
+AUTH_PASSWORD_HASH=<bcrypt_hash_generated_via_backend/scripts/generate-bcrypt-hash.js>
+JWT_SECRET=<your_jwt_secret_key_min_32_chars>
+JWT_EXPIRES_IN=30d
+MCP_API_KEY=<your_mcp_static_api_key>
 ```
+
+**Para generar el hash bcrypt de la contraseña:**
+```bash
+node backend/scripts/generate-bcrypt-hash.js "your-password"
+```
+⚠️ Guardar el hash resultante en `AUTH_PASSWORD_HASH` en `.env` y `.env.docker`.
+**Nunca commitear valores reales** de `AUTH_PASSWORD_HASH`, `JWT_SECRET` ni `MCP_API_KEY`.
 
 ---
 

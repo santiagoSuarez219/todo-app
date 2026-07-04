@@ -198,24 +198,24 @@ cualquier agente que consuma el MCP y debe documentarse.
 
 ### Fase 3 — Backend: cookies, CORS, throttler y variables de entorno
 
-- [ ] Editar `backend/src/main.ts`: registrar `app.use(cookieParser())` y añadir
+- [x] Editar `backend/src/main.ts`: registrar `app.use(cookieParser())` y añadir
       `credentials: true` (con origen explícito desde `FRONTEND_URL`) en `enableCors`.
-- [ ] Configurar `ThrottlerModule` (global o específico) y aplicar el límite al
+- [x] Configurar `ThrottlerModule` (global o específico) y aplicar el límite al
       endpoint `POST /auth/login` (p.ej. 5–10 intentos/min → `429` al superar).
-- [ ] Ampliar el `validationSchema` de Joi en `backend/src/app.module.ts` con:
+- [x] Ampliar el `validationSchema` de Joi en `backend/src/app.module.ts` con:
       `AUTH_EMAIL` (req.), `AUTH_PASSWORD_HASH` (req.), `JWT_SECRET` (req.),
       `JWT_EXPIRES_IN` (default `30d`), `MCP_API_KEY` (req.).
-- [ ] Documentar un procedimiento (script `node` de un solo uso, **no commiteado con
+- [x] Documentar un procedimiento (script `node` de un solo uso, **no commiteado con
       valores reales**) para generar el hash bcrypt de la contraseña y poblar
       `AUTH_PASSWORD_HASH`.
-- [ ] Añadir las nuevas variables (sin valores reales) a la tabla de `.env` en
+- [x] Añadir las nuevas variables (sin valores reales) a la tabla de `.env` en
       `backend/CLAUDE.md` y en el `CLAUDE.md` raíz. Corregir de paso el puerto de dev
       a 3000 en la documentación desactualizada.
-- [ ] Registrar las variables en `.env` local y `.env.docker` (valores reales, nunca
+- [x] Registrar las variables en `.env` local y `.env.docker` (valores reales, nunca
       commiteados) y dejarlas listas para Railway en el despliegue.
 
 **Archivos:** editar `backend/src/main.ts`, `backend/src/app.module.ts`,
-`backend/CLAUDE.md`, `CLAUDE.md` (raíz) · configurar `.env` y `.env.docker` (no versionados).
+`backend/CLAUDE.md`, `CLAUDE.md` (raíz) · configurar `.env` y `.env.docker` (no versionados) ✅ **COMPLETADA**
 
 ### Fase 4 — Frontend: cliente HTTP, servicio y hooks de auth
 
