@@ -171,11 +171,11 @@ cualquier agente que consuma el MCP y debe documentarse.
 
 ### Fase 2 — Backend: guard global (JWT-cookie + API key para `/mcp`)
 
-- [ ] Crear `backend/src/common/decorators/public.decorator.ts` (`@Public()` vía
+- [x] Crear `backend/src/common/decorators/public.decorator.ts` (`@Public()` vía
       `SetMetadata`).
-- [ ] (Opcional) Crear `backend/src/common/decorators/current-user.decorator.ts`
+- [x] (Opcional) Crear `backend/src/common/decorators/current-user.decorator.ts`
       para inyectar el usuario del request en los handlers.
-- [ ] Crear `backend/src/common/guards/auth.guard.ts` (implementa `CanActivate`):
+- [x] Crear `backend/src/common/guards/auth.guard.ts` (implementa `CanActivate`):
   1. Si la ruta es `/mcp` (verificar por `request.path`/`request.url`, recordando
      que `/mcp` está fuera del prefijo `api/v1`): validar el header
      `Authorization: Bearer <token>` contra `MCP_API_KEY`; permitir o lanzar
@@ -185,16 +185,16 @@ cualquier agente que consuma el MCP y debe documentarse.
   3. En otro caso: extraer el JWT de la cookie, verificarlo con `JwtService`; si es
      válido, adjuntar el usuario al `request` y permitir; si no,
      `UnauthorizedException`.
-- [ ] Registrar el guard globalmente vía `{ provide: APP_GUARD, useClass: AuthGuard }`,
+- [x] Registrar el guard globalmente vía `{ provide: APP_GUARD, useClass: AuthGuard }`,
       con acceso a `Reflector`, `JwtService` y `ConfigService`.
-- [ ] Marcar la ruta raíz de `backend/src/app.controller.ts` con `@Public()`.
-- [ ] Verificar que Swagger `/api/v1/docs` (healthcheck de Railway) sigue accesible
+- [x] Marcar la ruta raíz de `backend/src/app.controller.ts` con `@Public()`.
+- [x] Verificar que Swagger `/api/v1/docs` (healthcheck de Railway) sigue accesible
       (se sirve como middleware, fuera del pipeline de guards) — confirmarlo.
 
 **Archivos:** crear `backend/src/common/guards/auth.guard.ts`,
 `backend/src/common/decorators/public.decorator.ts` (y opcional
 `current-user.decorator.ts`) · editar `backend/src/app.module.ts`,
-`backend/src/app.controller.ts`.
+`backend/src/app.controller.ts` ✅ **COMPLETADA**
 
 ### Fase 3 — Backend: cookies, CORS, throttler y variables de entorno
 

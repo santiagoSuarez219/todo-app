@@ -1,6 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -20,11 +21,17 @@ async function bootstrap() {
     ],
   });
 
+  // ─── Cookie Parser ──────────────────────────────────────────────────────────
+  app.use(cookieParser());
+
   // ─── CORS ───────────────────────────────────────────────────────────────────
   const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim());
-  app.enableCors({ origin: allowedOrigins });
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+  });
 
   // ─── Validation ─────────────────────────────────────────────────────────────
   app.useGlobalPipes(
