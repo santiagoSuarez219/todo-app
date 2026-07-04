@@ -500,6 +500,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `list_budgets` / `get_budget` / `create_budget` / `update_budget` / `delete_budget` | CRUD de presupuestos |
 | `add_budget_item` / `update_budget_item` / `delete_budget_item` | Gestión de ítems de presupuesto |
 | `get_monthly_expense_summary` | Resumen combinado presupuesto + gastos variables + `cardTotals` |
+| `duplicate_budget` | Duplica un presupuesto completo (ítems + ingresos + gastos, con desplazamiento y clamp de fechas) a otro mes/año; 409 si el destino ya tiene presupuesto |
 | `list_debts` / `create_debt` / `pay_debt_installment` | Deudas — **sin** `update_debt` ni `delete_debt` (solo disponibles vía REST) |
 
 Reglas de gestión de MCPs, criterios para agregar tools nuevas y estructura de

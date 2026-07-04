@@ -1,4 +1,4 @@
-# spec-020 — [IN PROGRESS] Duplicar mes financiero de un presupuesto a otro mes
+# spec-020 — [TESTING] Duplicar mes financiero de un presupuesto a otro mes
 
 ## Contexto
 
@@ -215,19 +215,29 @@ presupuesto en el mes/año destino.
         destino y qué se copia), por crear registros financieros reales en masa.
   - [x] Indicar que ante 409 el agente debe consultar `list_budgets` del
         destino y avisar, no reintentar.
-- [ ] Actualizar `docs/mcps/README.md` (si enumera tools) y la tabla de tools
-      de `backend/CLAUDE.md`.
+- [x] Actualizar `docs/mcps/README.md` (no enumera tools individuales → sin
+      cambios) y la tabla de tools de `backend/CLAUDE.md` (fila
+      `duplicate_budget` agregada).
 - [ ] Verificar que la tool responde vía `/mcp` contra un destino libre (éxito
-      con contadores) y contra uno ocupado (409).
+      con contadores) y contra uno ocupado (409). → **Pendiente** (lo ejecuta
+      `@tester` con los `TC-MCP-*`).
 
 ### Fase 5 — Pruebas
 
-- [ ] Crear `docs/testing/test-020-duplicar-mes-financiero.md` con casos
-      manuales de UI (`@tester` de frontend).
+- [x] Crear `docs/testing/test-020-duplicar-mes-financiero.md` con casos
+      manuales de UI (`@tester` de frontend). Incluye TC-001…TC-012 (UI) y
+      TC-MCP-001…TC-MCP-003.
 - [ ] Backend/e2e (`@tester`): caso feliz (ítems + ingresos + gastos, uno con
       tarjeta) verificando contadores y clamp de fecha (incluir día 31 → mes
       corto); conflicto 409 con **cero** filas creadas; origen inexistente 404.
-- [ ] Casos `TC-MCP-001` / `TC-MCP-002` para la tool `duplicate_budget`.
+      → **Pendiente**: se ejecuta tras la aprobación de los casos manuales.
+- [x] Casos `TC-MCP-001` / `TC-MCP-002` (+ `TC-MCP-003`) para la tool
+      `duplicate_budget` redactados en el `test-020`.
+
+> **Estado de la Fase 5:** El archivo de pruebas manuales está listo y el spec
+> pasa a `[TESTING]`. El usuario debe ejecutar los casos manuales (UI) y
+> reportar cuáles pasan; luego `@tester` de backend ejecuta las pruebas e2e y
+> los `TC-MCP-*` como última fase antes de `[DONE]`.
 
 ## Criterios de aceptación
 
