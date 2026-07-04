@@ -235,22 +235,22 @@ cualquier agente que consuma el MCP y debe documentarse.
 
 ### Fase 5 — Frontend: pantalla de login, guard de rutas y logout
 
-- [ ] Leer `frontend/DESIGN.md` antes de escribir UI.
-- [ ] Crear `frontend/src/pages/Login.tsx`: formulario correo + contraseña
+- [x] Leer `frontend/DESIGN.md` antes de escribir UI.
+- [x] Crear `frontend/src/pages/Login.tsx`: formulario correo + contraseña
       (RHF + `zodResolver`), estados de carga/error, mensaje genérico ante
       credenciales inválidas, estilos con tokens del sistema de diseño y dark mode.
-- [ ] Crear `frontend/src/components/auth/ProtectedRoute.tsx`: usa `useMe`; mientras
+- [x] Crear `frontend/src/components/auth/ProtectedRoute.tsx`: usa `useMe`; mientras
       carga muestra estado de carga; si hay error/`401` redirige a `/login`; si hay
       sesión renderiza `<Outlet />`.
-- [ ] Editar `frontend/src/App.tsx`: añadir ruta pública `/login` (fuera de
+- [x] Editar `frontend/src/App.tsx`: añadir ruta pública `/login` (fuera de
       `MainLayout`) y envolver el árbol de rutas de `MainLayout` con `ProtectedRoute`.
-- [ ] Editar `frontend/src/components/layout/Sidebar.tsx` (y opcionalmente
+- [x] Editar `frontend/src/components/layout/Sidebar.tsx` (y opcionalmente
       `Tabbar.tsx`): acción de cerrar sesión que invoque `useLogout` y redirija a
       `/login`.
 
 **Archivos:** crear `frontend/src/pages/Login.tsx`,
 `frontend/src/components/auth/ProtectedRoute.tsx` · editar `frontend/src/App.tsx`,
-`frontend/src/components/layout/Sidebar.tsx` (opcional `Tabbar.tsx`).
+`frontend/src/components/layout/Sidebar.tsx` (opcional `Tabbar.tsx`) ✅ **COMPLETADA**
 
 ### Fase 6 — MCP: actualizar `todo-api` (autenticación por API key)
 
