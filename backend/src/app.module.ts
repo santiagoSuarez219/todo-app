@@ -9,6 +9,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { McpModule } from './mcp/mcp.module';
 import { FinancesModule } from './finances/finances.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -25,6 +26,11 @@ import { FinancesModule } from './finances/finances.module';
         DB_NAME: Joi.string().required(),
         DB_USER: Joi.string().required(),
         DB_PASSWORD: Joi.string().required(),
+        AUTH_EMAIL: Joi.string().email().required(),
+        AUTH_PASSWORD_HASH: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        JWT_EXPIRES_IN: Joi.string().default('30d'),
+        MCP_API_KEY: Joi.string().required(),
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -44,6 +50,7 @@ import { FinancesModule } from './finances/finances.module';
       }),
     }),
     ScheduleModule.forRoot(),
+    AuthModule,
     ProjectsModule,
     ActivitiesModule,
     McpModule,
