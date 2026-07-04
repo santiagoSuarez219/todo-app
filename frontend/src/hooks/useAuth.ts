@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import * as authService from "@/services/auth.service";
-import { LoginDto } from "@/types";
+import * as authService from "../services/auth.service";
+import type { LoginDto } from "../types";
 
 const AUTH_QUERY_KEY = ["auth", "me"];
 

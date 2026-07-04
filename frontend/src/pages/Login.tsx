@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLogin } from "@/hooks/useAuth";
-import { LoginDto } from "@/types";
+import { useLogin } from "../hooks/useAuth";
+import type { LoginDto } from "../types";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido").min(1, "El email es requerido"),
