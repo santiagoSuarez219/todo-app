@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBudget, useUpdateBudget, useAddBudgetItem, useUpdateBudgetItem, useDeleteBudgetItem, useMonthlyExpenseSummary } from '../../hooks/finances/useBudgets';
+import { useBudget, useUpdateBudget, useAddBudgetItem, useUpdateBudgetItem, useDeleteBudgetItem, useMonthlyExpenseSummary, useDuplicateBudget } from '../../hooks/finances/useBudgets';
 import BudgetForm from '../../components/finances/BudgetForm';
 import BudgetItemForm from '../../components/finances/BudgetItemForm';
+import DuplicateBudgetForm from '../../components/finances/DuplicateBudgetForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { ExpenseType } from '../../types';
-import type { BudgetItem, CreateBudgetItemDto, UpdateBudgetDto, UpdateBudgetItemDto } from '../../types';
+import { translateBudgetError } from '../../lib/translateBudgetError';
+import type { BudgetItem, CreateBudgetItemDto, UpdateBudgetDto, UpdateBudgetItemDto, DuplicateBudgetResult } from '../../types';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -45,11 +47,15 @@ export default function BudgetDetailView() {
   const { mutateAsync: updateItem, isPending: isUpdatingItem } = useUpdateBudgetItem();
   const { mutate: deleteItem, isPending: isDeletingItem } = useDeleteBudgetItem();
   const { data: monthlySummary } = useMonthlyExpenseSummary(budget?.year ?? 0, budget?.month ?? 0);
+  const { mutateAsync: duplicate, isPending: isDuplicating } = useDuplicateBudget();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>({ description: '', plannedAmount: '', type: ExpenseType.BASICO });
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [duplicateSuccess, setDuplicateSuccess] = useState<DuplicateBudgetResult | null>(null);
 
   function startEditing(item: BudgetItem) {
     setEditingItemId(item.id);
@@ -85,6 +91,18 @@ export default function BudgetDetailView() {
     await addItem({ budgetId: id!, dto });
   }
 
+  async function handleDuplicate(dto: { month: number; year: number; name?: string }) {
+    try {
+      setDuplicateError(null);
+      const result = await duplicate({ id: id!, dto });
+      setDuplicateSuccess(result);
+      setDuplicateModalOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      setDuplicateError(translateBudgetError(message));
+    }
+  }
+
   if (isLoading) {
     return <p className="text-sm text-gray-400 dark:text-gray-500">Cargando…</p>;
   }
@@ -117,15 +135,26 @@ export default function BudgetDetailView() {
             {MONTHS[budget.month - 1]} {budget.year}
           </p>
         </div>
-        <button
-          onClick={() => setEditModalOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487z" />
-          </svg>
-          Editar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setDuplicateModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-.621-.504-1.125-1.125-1.125H9.375c-.621 0-1.125.504-1.125 1.125v5.375c0 .621.504 1.125 1.125 1.125Z" />
+            </svg>
+            Duplicar
+          </button>
+          <button
+            onClick={() => setEditModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487z" />
+            </svg>
+            Editar
+          </button>
+        </div>
       </div>
 
       {/* Resumen por tipo */}
@@ -392,6 +421,57 @@ export default function BudgetDetailView() {
             onCancel={() => setEditModalOpen(false)}
             loading={isUpdating}
           />
+        </Modal>
+      )}
+
+      {duplicateModalOpen && !duplicateSuccess && (
+        <Modal title="Duplicar presupuesto" onClose={() => { setDuplicateModalOpen(false); setDuplicateError(null); }}>
+          <div className="space-y-4">
+            {duplicateError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
+                {duplicateError}
+              </div>
+            )}
+            <DuplicateBudgetForm
+              origin={budget}
+              onSubmit={handleDuplicate}
+              onCancel={() => { setDuplicateModalOpen(false); setDuplicateError(null); }}
+              loading={isDuplicating}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {duplicateSuccess && (
+        <Modal title="Presupuesto duplicado" onClose={() => setDuplicateSuccess(null)}>
+          <div className="space-y-4">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+              <p className="text-sm font-medium text-green-700 dark:text-green-300">¡Duplicación completada!</p>
+              <div className="text-xs text-green-600 dark:text-green-400 mt-2 space-y-1">
+                <p>✓ {duplicateSuccess.itemsCopied} ítem{duplicateSuccess.itemsCopied !== 1 ? 's' : ''} copiado{duplicateSuccess.itemsCopied !== 1 ? 's' : ''}</p>
+                <p>✓ {duplicateSuccess.incomesCopied} ingreso{duplicateSuccess.incomesCopied !== 1 ? 's' : ''} recreado{duplicateSuccess.incomesCopied !== 1 ? 's' : ''}</p>
+                <p>✓ {duplicateSuccess.expensesCopied} gasto{duplicateSuccess.expensesCopied !== 1 ? 's' : ''} recreado{duplicateSuccess.expensesCopied !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  const targetId = duplicateSuccess.budget.id;
+                  setDuplicateSuccess(null);
+                  navigate(`/finances/budgets/${targetId}`);
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-700 dark:bg-blue-600 text-white hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
+              >
+                Ver presupuesto
+              </button>
+              <button
+                onClick={() => setDuplicateSuccess(null)}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

@@ -1318,6 +1318,28 @@ export class McpService {
         }
       },
     );
+
+    server.tool(
+      'duplicate_budget',
+      'Duplicate a complete month of budgets, incomes and expenses from a source budget to a destination month/year. All items, incomes, and expenses are copied; dates are shifted to the destination month (clamped to month-end). Returns the duplicated budget and counts of copied records.',
+      {
+        sourceBudgetId: z.string().uuid().describe('UUID of the source budget to duplicate from'),
+        month: z.number().int().min(1).max(12).describe('Destination month (1–12)'),
+        year: z.number().int().min(2020).describe('Destination year (>= 2020)'),
+        name: z
+          .string()
+          .max(255)
+          .optional()
+          .describe('Optional name for the duplicated budget; if omitted, uses the source name'),
+      },
+      async ({ sourceBudgetId, ...dto }) => {
+        try {
+          return ok(await this.budgetsService.duplicate(sourceBudgetId, dto as any));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
   }
 
   // ─── Debts ────────────────────────────────────────────────────────────────

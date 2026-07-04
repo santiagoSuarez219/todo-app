@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Budget } from './entities/budget.entity';
@@ -7,6 +7,7 @@ import { Income } from './entities/income.entity';
 import { Expense } from './entities/expense.entity';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
+import { DuplicateBudgetDto } from './dto/duplicate-budget.dto';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
 import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -37,6 +38,13 @@ export interface MonthlySummary {
   combinedTotal: number;
   budgetId: string | null;
   cardTotals: CardTotal[];
+}
+
+export interface DuplicateBudgetResult {
+  budget: BudgetDetail;
+  itemsCopied: number;
+  incomesCopied: number;
+  expensesCopied: number;
 }
 
 @Injectable()
@@ -230,5 +238,133 @@ export class BudgetsService {
     });
     if (!item) throw new NotFoundException(`BudgetItem ${itemId} not found in budget ${budgetId}`);
     await this.budgetItemsRepository.remove(item);
+  }
+
+  async duplicate(sourceId: string, dto: DuplicateBudgetDto): Promise<DuplicateBudgetResult> {
+    const sourceBudget = await this.findOne(sourceId);
+
+    // Guard against conflict in destination
+    const existingBudget = await this.budgetsRepository.findOne({
+      where: { month: dto.month, year: dto.year },
+    });
+    if (existingBudget) {
+      throw new ConflictException(
+        `Budget already exists for month ${dto.month}/${dto.year}`,
+      );
+    }
+
+    // Fetch all incomes and expenses for source month
+    const [incomes, expenses] = await Promise.all([
+      this.incomesRepository
+        .createQueryBuilder('income')
+        .where('EXTRACT(month FROM income.date) = :month', { month: sourceBudget.month })
+        .andWhere('EXTRACT(year FROM income.date) = :year', { year: sourceBudget.year })
+        .getMany(),
+      this.expensesRepository
+        .createQueryBuilder('expense')
+        .leftJoinAndSelect('expense.creditCard', 'creditCard')
+        .where('EXTRACT(month FROM expense.date) = :month', { month: sourceBudget.month })
+        .andWhere('EXTRACT(year FROM expense.date) = :year', { year: sourceBudget.year })
+        .getMany(),
+    ]);
+
+    return this.dataSource.transaction(async (manager) => {
+      let itemsCopied = 0;
+      let incomesCopied = 0;
+      let expensesCopied = 0;
+      let copiedItems: BudgetItem[] = [];
+
+      // Create destination budget
+      const destBudget = manager.create(Budget, {
+        name: dto.name ?? sourceBudget.name,
+        month: dto.month,
+        year: dto.year,
+      });
+      const savedBudget = await manager.save(destBudget);
+
+      // Clone budget items
+      if (sourceBudget.items && sourceBudget.items.length > 0) {
+        const items = sourceBudget.items.map((item) =>
+          manager.create(BudgetItem, {
+            description: item.description,
+            plannedAmount: item.plannedAmount,
+            type: item.type,
+            budget: savedBudget,
+          }),
+        );
+        copiedItems = await manager.save(items);
+        itemsCopied = items.length;
+      }
+
+      // Recreate incomes with shifted dates
+      if (incomes.length > 0) {
+        const newIncomes = incomes.map((income) =>
+          manager.create(Income, {
+            description: income.description,
+            amount: income.amount,
+            type: income.type,
+            date: this.shiftDate(income.date, sourceBudget.month, sourceBudget.year, dto.month, dto.year),
+          }),
+        );
+        await manager.save(newIncomes);
+        incomesCopied = newIncomes.length;
+      }
+
+      // Recreate expenses with shifted dates and preserve creditCardId
+      if (expenses.length > 0) {
+        const newExpenses = expenses.map((expense) =>
+          manager.create(Expense, {
+            description: expense.description,
+            amount: expense.amount,
+            type: expense.type,
+            creditCard: expense.creditCard ? { id: expense.creditCard.id } : null,
+            date: this.shiftDate(expense.date, sourceBudget.month, sourceBudget.year, dto.month, dto.year),
+          }),
+        );
+        await manager.save(newExpenses);
+        expensesCopied = newExpenses.length;
+      }
+
+      // Compute BudgetDetail fields
+      const totalIncome = incomesCopied > 0
+        ? incomes.reduce((sum, i) => sum + Number(i.amount), 0)
+        : 0;
+
+      const typeSummary = this.computeTypeSummary(
+        copiedItems,
+        expenses,
+        totalIncome,
+      );
+
+      const budgetDetail: BudgetDetail = {
+        id: savedBudget.id,
+        name: savedBudget.name,
+        month: savedBudget.month,
+        year: savedBudget.year,
+        items: copiedItems,
+        createdAt: savedBudget.createdAt,
+        updatedAt: savedBudget.updatedAt,
+        totalIncome,
+        typeSummary,
+      };
+
+      return {
+        budget: budgetDetail,
+        itemsCopied,
+        incomesCopied,
+        expensesCopied,
+      };
+    });
+  }
+
+  private shiftDate(date: string, sourceMonth: number, sourceYear: number, destMonth: number, destYear: number): string {
+    const [year, month, day] = date.split('-').map(Number);
+    const destLastDay = this.getLastDayOfMonth(destYear, destMonth);
+    const shiftedDay = Math.min(day, destLastDay);
+    return `${destYear}-${String(destMonth).padStart(2, '0')}-${String(shiftedDay).padStart(2, '0')}`;
+  }
+
+  private getLastDayOfMonth(year: number, month: number): number {
+    return new Date(year, month, 0).getDate();
   }
 }

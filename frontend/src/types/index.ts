@@ -358,6 +358,19 @@ export interface UpdateBudgetDto {
 
 export type UpdateBudgetItemDto = Partial<Pick<BudgetItem, 'description' | 'plannedAmount' | 'type'>>;
 
+export interface DuplicateBudgetDto {
+  month: number;
+  year: number;
+  name?: string;
+}
+
+export interface DuplicateBudgetResult {
+  budget: Budget;
+  itemsCopied: number;
+  incomesCopied: number;
+  expensesCopied: number;
+}
+
 export interface CardTotal {
   creditCardId: string;
   name: string;
