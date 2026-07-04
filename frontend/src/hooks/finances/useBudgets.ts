@@ -9,8 +9,9 @@ import {
   updateBudgetItem,
   deleteBudgetItem,
   getMonthlyExpenseSummary,
+  duplicateBudget,
 } from '../../services/finances/budgets.service';
-import type { CreateBudgetDto, UpdateBudgetDto, CreateBudgetItemDto, UpdateBudgetItemDto, PaginationParams } from '../../types';
+import type { CreateBudgetDto, UpdateBudgetDto, DuplicateBudgetDto, CreateBudgetItemDto, UpdateBudgetItemDto, PaginationParams } from '../../types';
 
 export function useBudgets(params?: PaginationParams, year?: number, month?: number) {
   return useQuery({
@@ -83,5 +84,17 @@ export function useDeleteBudgetItem() {
     mutationFn: ({ budgetId, itemId }: { budgetId: string; itemId: string }) =>
       deleteBudgetItem(budgetId, itemId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+  });
+}
+
+export function useDuplicateBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: DuplicateBudgetDto }) => duplicateBudget(id, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['budgets'] });
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+      qc.invalidateQueries({ queryKey: ['incomes'] });
+    },
   });
 }

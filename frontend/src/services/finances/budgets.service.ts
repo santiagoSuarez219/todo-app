@@ -4,6 +4,8 @@ import type {
   BudgetItem,
   CreateBudgetDto,
   UpdateBudgetDto,
+  DuplicateBudgetDto,
+  DuplicateBudgetResult,
   CreateBudgetItemDto,
   UpdateBudgetItemDto,
   MonthlySummary,
@@ -59,4 +61,9 @@ export async function getMonthlyExpenseSummary(year: number, month: number): Pro
 
 export async function deleteBudgetItem(budgetId: string, itemId: string): Promise<void> {
   await apiClient.delete(`/finances/budgets/${budgetId}/items/${itemId}`);
+}
+
+export async function duplicateBudget(id: string, dto: DuplicateBudgetDto): Promise<DuplicateBudgetResult> {
+  const { data } = await apiClient.post<{ data: DuplicateBudgetResult }>(`/finances/budgets/${id}/duplicate`, dto);
+  return data.data;
 }
