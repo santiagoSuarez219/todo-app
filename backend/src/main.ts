@@ -13,11 +13,13 @@ async function bootstrap() {
 
   // ─── Global prefix ──────────────────────────────────────────────────────────
   // /mcp is excluded so the MCP endpoint does not get the api/v1 prefix
+  // / (root) is excluded as it's a healthcheck/simple endpoint
   app.setGlobalPrefix(API_PREFIX, {
     exclude: [
       { path: 'mcp', method: RequestMethod.POST },
       { path: 'mcp', method: RequestMethod.GET },
       { path: 'mcp', method: RequestMethod.DELETE },
+      { path: '', method: RequestMethod.GET },
     ],
   });
 
