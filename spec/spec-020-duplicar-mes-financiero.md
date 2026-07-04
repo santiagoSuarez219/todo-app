@@ -167,31 +167,31 @@ presupuesto en el mes/año destino.
 > Leer `DESIGN.md` antes de escribir cualquier UI (tokens, clases de
 > input/label/botón, dark mode). Reutilizar el patrón de `BudgetForm.tsx`.
 
-- [ ] En `types/index.ts`, añadir `DuplicateBudgetDto` (`month`, `year`,
+- [x] En `types/index.ts`, añadir `DuplicateBudgetDto` (`month`, `year`,
       `name?`) y `DuplicateBudgetResult` (Budget + `itemsCopied`,
       `incomesCopied`, `expensesCopied`), coincidiendo exactamente con el
       contrato backend.
-- [ ] En `services/finances/budgets.service.ts`, añadir
+- [x] En `services/finances/budgets.service.ts`, añadir
       `duplicateBudget(id, dto): Promise<DuplicateBudgetResult>` (POST →
       `data.data`, mismo patrón que `createBudget`).
-- [ ] En `hooks/finances/useBudgets.ts`, añadir `useDuplicateBudget()` que en
+- [x] En `hooks/finances/useBudgets.ts`, añadir `useDuplicateBudget()` que en
       `onSuccess` invalide `['budgets']`, `['expenses']` e `['incomes']`
       (confirmar los prefijos reales de las query keys leyendo `useExpenses` y
       `useIncomes` antes de codificar).
-- [ ] Crear `components/finances/DuplicateBudgetForm.tsx` (React Hook Form +
+- [x] Crear `components/finances/DuplicateBudgetForm.tsx` (React Hook Form +
       Zod): select de mes (constante `MONTHS`), input de año, input de nombre
       opcional. `defaultValues` prellenados al mes/año siguiente al del origen;
       recibe `origin: Budget` por props.
-- [ ] En `BudgetsView.tsx`: botón "Duplicar" por card con
+- [x] En `BudgetsView.tsx`: botón "Duplicar" por card con
       `e.stopPropagation()` (la card navega al detalle), estado del modal, y
       manejo de éxito (contadores) / conflicto 409 (mensaje no destructivo, el
       modal no se cierra).
-- [ ] En `BudgetDetailView.tsx`: botón "Duplicar a otro mes" en la barra de
+- [x] En `BudgetDetailView.tsx`: botón "Duplicar a otro mes" en la barra de
       acciones (junto a "Editar"), reutilizando `DuplicateBudgetForm` y el
       panel de feedback.
-- [ ] Panel de feedback de éxito: mostrar los tres contadores y un botón "Ver
+- [x] Panel de feedback de éxito: mostrar los tres contadores y un botón "Ver
       presupuesto" que navegue a `/finances/budgets/${result.budget.id}`.
-- [ ] Manejo del 409: el interceptor Axios colapsa el error a
+- [x] Manejo del 409: el interceptor Axios colapsa el error a
       `new Error(message)` (sin `status`); mostrar `error.message` como bloque
       de error sin cerrar el modal ni perder lo escrito.
 
@@ -200,20 +200,20 @@ presupuesto en el mes/año destino.
 > Ejecutar después del backend y antes de las pruebas e2e, para que
 > `@tester` valide también la tool.
 
-- [ ] Agregar la tool `duplicate_budget` en `registerBudgetTools()`
+- [x] Agregar la tool `duplicate_budget` en `registerBudgetTools()`
       (`backend/src/mcp/mcp.service.ts`), después de
       `get_monthly_expense_summary`, con handler `ok()/err()` que invoca
       `BudgetsService.duplicate(sourceBudgetId, { month, year, name? })`.
-- [ ] Schema Zod exacto a `DuplicateBudgetDto` + `sourceBudgetId` (UUID del
+- [x] Schema Zod exacto a `DuplicateBudgetDto` + `sourceBudgetId` (UUID del
       origen); sin campos inventados. **No** replicar el bug de `create_budget`
       (que omite `type` en items) — aquí no se declaran ítems manualmente.
-- [ ] Actualizar `docs/mcps/finanzas-personales.system-prompt.md`:
-  - [ ] Añadir `duplicate_budget` a la tabla de tools de la sección
+- [x] Actualizar `docs/mcps/finanzas-personales.system-prompt.md`:
+  - [x] Añadir `duplicate_budget` a la tabla de tools de la sección
         **Presupuestos**.
-  - [ ] Regla de comportamiento: **confirmar explícitamente con el usuario
+  - [x] Regla de comportamiento: **confirmar explícitamente con el usuario
         antes de invocar** `duplicate_budget` (indicando mes origen, mes/año
         destino y qué se copia), por crear registros financieros reales en masa.
-  - [ ] Indicar que ante 409 el agente debe consultar `list_budgets` del
+  - [x] Indicar que ante 409 el agente debe consultar `list_budgets` del
         destino y avisar, no reintentar.
 - [ ] Actualizar `docs/mcps/README.md` (si enumera tools) y la tabla de tools
       de `backend/CLAUDE.md`.
