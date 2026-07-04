@@ -53,12 +53,16 @@ import { AuthGuard } from './common/guards/auth.guard';
       }),
     }),
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute globally
-      },
-    ]),
+    ...(process.env.NODE_ENV !== 'test'
+      ? [
+          ThrottlerModule.forRoot([
+            {
+              ttl: 60000, // 1 minute
+              limit: 10, // 10 requests per minute globally
+            },
+          ]),
+        ]
+      : []),
     AuthModule,
     ProjectsModule,
     ActivitiesModule,
@@ -72,10 +76,14 @@ import { AuthGuard } from './common/guards/auth.guard';
       provide: APP_GUARD,
       useClass: AuthGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    ...(process.env.NODE_ENV !== 'test'
+      ? [
+          {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+          },
+        ]
+      : []),
   ],
 })
 export class AppModule {}
