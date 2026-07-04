@@ -50,12 +50,17 @@ export class AuthService {
     const token = this.jwtService.sign(payload, {
       secret,
       expiresIn: expiresIn || '30d',
-    });
+    } as Parameters<typeof this.jwtService.sign>[1]);
 
     return token;
   }
 
-  getCookieOptions() {
+  getCookieOptions(): {
+    httpOnly: boolean;
+    sameSite: 'none' | 'lax';
+    secure: boolean;
+    maxAge: number;
+  } {
     const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
     const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN') || '30d';
 

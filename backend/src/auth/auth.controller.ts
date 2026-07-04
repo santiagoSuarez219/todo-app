@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Body, Res, Req, HttpCode } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { Response, Request } from 'express';
+import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Public } from '../common/decorators/public.decorator';

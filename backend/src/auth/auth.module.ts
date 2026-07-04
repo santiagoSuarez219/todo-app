@@ -14,7 +14,7 @@ import { AuthController } from './auth.controller';
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '30d',
         },
-      }),
+      }) as import('@nestjs/jwt').JwtModuleOptions,
     }),
   ],
   providers: [AuthService],
