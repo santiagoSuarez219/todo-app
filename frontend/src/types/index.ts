@@ -437,3 +437,14 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
 }
+
+// ─── Auth (spec-021) ──────────────────────────────────────────────────────
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface AuthUser {
+  email: string;
+}

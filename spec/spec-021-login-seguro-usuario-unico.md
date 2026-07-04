@@ -219,19 +219,19 @@ cualquier agente que consuma el MCP y debe documentarse.
 
 ### Fase 4 — Frontend: cliente HTTP, servicio y hooks de auth
 
-- [ ] Editar `frontend/src/lib/api-client.ts`: añadir `withCredentials: true`; en el
+- [x] Editar `frontend/src/lib/api-client.ts`: añadir `withCredentials: true`; en el
       interceptor de respuesta, ante `401` redirigir a `/login` (evitando bucles: no
       redirigir cuando la petición sea a `/auth/me` o `/auth/login`).
-- [ ] Crear `frontend/src/services/auth.service.ts`: `login(dto)`, `logout()`,
+- [x] Crear `frontend/src/services/auth.service.ts`: `login(dto)`, `logout()`,
       `getMe()` (patrón de servicios existentes, extrayendo `.data.data`).
-- [ ] Crear `frontend/src/hooks/useAuth.ts`: `useMe` (`useQuery`, key
+- [x] Crear `frontend/src/hooks/useAuth.ts`: `useMe` (`useQuery`, key
       `['auth','me']`), `useLogin` y `useLogout` (`useMutation`; en `onSuccess` de
       logout, limpiar `['auth','me']` y la caché de React Query).
-- [ ] Añadir a `frontend/src/types/index.ts`: `LoginDto` (`email`, `password`) y
+- [x] Añadir a `frontend/src/types/index.ts`: `LoginDto` (`email`, `password`) y
       `AuthUser` (shape de `/auth/me`), coincidiendo con el backend.
 
 **Archivos:** editar `frontend/src/lib/api-client.ts`, `frontend/src/types/index.ts`
-· crear `frontend/src/services/auth.service.ts`, `frontend/src/hooks/useAuth.ts`.
+· crear `frontend/src/services/auth.service.ts`, `frontend/src/hooks/useAuth.ts` ✅ **COMPLETADA**
 
 ### Fase 5 — Frontend: pantalla de login, guard de rutas y logout
 
