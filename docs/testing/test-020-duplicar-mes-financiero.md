@@ -38,7 +38,7 @@
 - Se muestran los tres contadores: ítems copiados, ingresos recreados y gastos
   recreados, con números correctos según el origen.
 - Aparecen los botones "Ver presupuesto" y "Cerrar".
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -53,7 +53,7 @@
 - "Nombre (opcional)" vacío, con placeholder que muestra el nombre del origen.
 - El bloque informativo indica cuántos ítems se copiarán ("Se copiarán: N
   ítems, todos los ingresos y gastos del mes").
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -65,7 +65,7 @@
 **Resultado esperado:**
 - "Mes destino" = **Enero**.
 - "Año destino" = **2027** (año siguiente).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -79,7 +79,7 @@
 **Resultado esperado:**
 - El presupuesto destino se crea con el nombre personalizado escrito.
 - Si el campo se deja vacío, el destino reutiliza el nombre del origen.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -93,7 +93,7 @@
 **Resultado esperado:**
 - Se abre el mismo formulario de duplicación y funciona igual que desde la lista.
 - Al terminar, se muestra el panel de éxito con los tres contadores.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -105,7 +105,7 @@
 - La app navega a `/finances/budgets/{id-del-nuevo-presupuesto}`.
 - El detalle muestra el presupuesto destino con sus ítems copiados y el mes/año
   destino en el encabezado.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -124,7 +124,7 @@ menos días (ej. destino = febrero, o abril/junio de 30 días).
   **último día del mes destino** (ej. día 31 → 28 en febrero no bisiesto, 29 en
   bisiesto; día 31 → 30 en un mes de 30 días).
 - No hay desfase de un día por zona horaria (el día mostrado es el esperado).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -140,7 +140,7 @@ asociada.
 - Los gastos sin tarjeta en el origen siguen sin tarjeta en el destino.
 - (Verificación adicional) Al abrir el presupuesto destino, la sección "Total
   por tarjeta" refleja el gasto copiado con tarjeta.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -152,7 +152,7 @@ asociada.
 **Resultado esperado:**
 - Se abre el modal de duplicación.
 - La app **no** navega a la vista de detalle del presupuesto.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -164,12 +164,14 @@ asociada.
 2. Seleccionar como destino el mes/año que **ya tiene** presupuesto.
 3. Hacer clic en "Duplicar mes".
 **Resultado esperado:**
-- Aparece un bloque de error rojo dentro del modal con el mensaje del backend
-  (ej. "Budget already exists for month 7/2026").
+- Aparece un bloque de error rojo dentro del modal con el mensaje traducido al
+  español (ej. "Ya existe un presupuesto para el mes 7/2026"). El backend y la
+  tool MCP siguen devolviendo el mensaje original en inglés; la traducción
+  ocurre solo en el frontend (`lib/translateBudgetError.ts`).
 - El modal **no se cierra** y no se pierde lo escrito (mes/año/nombre siguen).
 - No se crea ningún presupuesto, ingreso ni gasto nuevo (verificable revisando
   que los contadores de la vista destino no cambiaron).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -181,7 +183,9 @@ asociada.
 - Se bloquea con el mismo error 409 de TC-010.
 - No se duplican los ingresos ni gastos (no quedan registros por duplicado en
   julio 2026).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado (verificado vía API: 409 `Budget already exists for
+month 7/2026`; julio 2026 se mantuvo en 3 gastos y 2 ingresos antes y después
+del intento, sin presupuesto duplicado).
 
 ---
 
@@ -194,7 +198,7 @@ asociada.
 - Los ingresos y gastos recreados ya aparecen (las queries de `expenses` e
   `incomes` fueron invalidadas por el hook al duplicar).
 - Los montos y descripciones coinciden con los del mes origen.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -226,7 +230,10 @@ su mes. El mes/año destino no tiene presupuesto.
 - En la BD quedan creados el presupuesto, sus ítems, y los ingresos/gastos del
   mes destino con fechas desplazadas y clampeadas; los gastos conservan su
   `creditCardId`.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado (ejecutado vía JSON-RPC directo a `/mcp`: origen =
+presupuesto de julio 2026, destino = octubre 2026 libre. Respuesta `ok` con
+`budget` completo, `itemsCopied: 11`, `incomesCopied: 2`, `expensesCopied: 3`,
+coincidiendo con el contenido real de julio 2026).
 
 ---
 
@@ -247,7 +254,9 @@ un presupuesto.
   month 8/2026`), sin crear ninguna fila.
 - Según el system prompt, el agente debe consultar `list_budgets` del destino y
   avisar al usuario, sin reintentar.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado (reintento hacia octubre 2026, ya ocupado por
+TC-MCP-001: respuesta `Error: Budget already exists for month 10/2026`;
+verificado que no se creó un segundo presupuesto en ese mes).
 
 ---
 
@@ -265,4 +274,6 @@ un presupuesto.
 **Output esperado:**
 - La tool responde con un texto de error (`Error: Budget ...
   not found`), sin crear nada.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado (UUID `00000000-0000-0000-0000-000000000000` contra
+mes 11/2026: respuesta `Error: Budget 00000000-0000-0000-0000-000000000000
+not found`; verificado que no se creó ningún presupuesto en noviembre 2026).

@@ -7,6 +7,7 @@ import DuplicateBudgetForm from '../../components/finances/DuplicateBudgetForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { ExpenseType } from '../../types';
+import { translateBudgetError } from '../../lib/translateBudgetError';
 import type { BudgetItem, CreateBudgetItemDto, UpdateBudgetDto, UpdateBudgetItemDto, DuplicateBudgetResult } from '../../types';
 
 const MONTHS = [
@@ -98,7 +99,7 @@ export default function BudgetDetailView() {
       setDuplicateModalOpen(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
-      setDuplicateError(message);
+      setDuplicateError(translateBudgetError(message));
     }
   }
 
@@ -454,7 +455,11 @@ export default function BudgetDetailView() {
             </div>
             <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
               <button
-                onClick={() => navigate(`/finances/budgets/${duplicateSuccess.budget.id}`)}
+                onClick={() => {
+                  const targetId = duplicateSuccess.budget.id;
+                  setDuplicateSuccess(null);
+                  navigate(`/finances/budgets/${targetId}`);
+                }}
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-700 dark:bg-blue-600 text-white hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
               >
                 Ver presupuesto

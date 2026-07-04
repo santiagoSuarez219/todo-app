@@ -1,4 +1,4 @@
-# spec-020 — [TESTING] Duplicar mes financiero de un presupuesto a otro mes
+# spec-020 — [DONE] Duplicar mes financiero de un presupuesto a otro mes
 
 ## Contexto
 
