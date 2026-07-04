@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -19,9 +20,10 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { BudgetsService } from './budgets.service';
+import { BudgetsService, DuplicateBudgetResult } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
+import { DuplicateBudgetDto } from './dto/duplicate-budget.dto';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
 import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 import { MonthlySummaryQueryDto } from './dto/monthly-summary-query.dto';
@@ -40,6 +42,20 @@ export class BudgetsController {
   @ApiCreatedResponse({ type: Budget })
   create(@Body() dto: CreateBudgetDto): Promise<Budget> {
     return this.budgetsService.create(dto);
+  }
+
+  @Post(':id/duplicate')
+  @ApiOperation({
+    summary: 'Duplicate a budget to another month/year with all items, incomes, and expenses',
+  })
+  @ApiCreatedResponse()
+  @ApiNotFoundResponse({ description: 'Source budget not found' })
+  @ApiConflictResponse({ description: 'Budget already exists for destination month/year' })
+  duplicate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DuplicateBudgetDto,
+  ): Promise<DuplicateBudgetResult> {
+    return this.budgetsService.duplicate(id, dto);
   }
 
   @Get()
