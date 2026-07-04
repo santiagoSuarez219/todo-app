@@ -257,20 +257,20 @@ cualquier agente que consuma el MCP y debe documentarse.
 > Ejecutada por `@mcp-builder` de `backend/.agents/`. Antes de la fase de pruebas
 > para que `@tester` valide también el acceso autenticado al MCP.
 
-- [ ] Confirmar que la validación de `MCP_API_KEY` en `auth.guard.ts` (Fase 2) cubre
+- [x] Confirmar que la validación de `MCP_API_KEY` en `auth.guard.ts` (Fase 2) cubre
       `POST`, `GET` y `DELETE` de `/mcp`, incluido el flujo `@Res()`/SSE.
-- [ ] Actualizar `docs/mcps/README.md`: documentar que `/mcp` ahora requiere
+- [x] Actualizar `docs/mcps/README.md`: documentar que `/mcp` ahora requiere
       `Authorization: Bearer <MCP_API_KEY>` y registrar la variable `MCP_API_KEY`.
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md` y
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` y
       `docs/mcps/finanzas-personales.system-prompt.md`: sección de
       conexión/autenticación indicando el header requerido y que es independiente
       del login de usuario.
-- [ ] Verificar que el MCP responde correctamente **con** la API key y devuelve
+- [x] Verificar que el MCP responde correctamente **con** la API key y devuelve
       `401` **sin** ella (sin romper las tools declaradas).
 
 **Archivos:** editar `docs/mcps/README.md`,
 `docs/mcps/asistente-personal.system-prompt.md`,
-`docs/mcps/finanzas-personales.system-prompt.md`.
+`docs/mcps/finanzas-personales.system-prompt.md` ✅ **COMPLETADA**
 
 ### Fase 7 — Pruebas
 

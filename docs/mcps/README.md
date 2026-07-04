@@ -15,6 +15,22 @@ herramientas expuestas.
 > herramientas y un rol distinto: uno de productividad/calendario, otro de
 > finanzas personales.
 
+## Autenticación (spec-021)
+
+El endpoint `/mcp` requiere autenticación por API key:
+
+```
+Authorization: Bearer <MCP_API_KEY>
+```
+
+- `MCP_API_KEY`: token estático configurado en `.env` del backend
+- El cliente MCP del agente debe incluir este header en todas las peticiones a `/mcp`
+- La autenticación es **independiente** del login de usuario (credenciales distintas)
+- Sin el header o con un token inválido, la respuesta es `401 Unauthorized`
+
+**Configuración:** Define `MCP_API_KEY=<tu-token-aqui>` en `.env` (backend) y
+asegúrate de que el cliente MCP del agente lo incluya en el header de cada request.
+
 ## Reglas de gestión
 
 - Antes de implementar cualquier spec, evaluar si la funcionalidad nueva
