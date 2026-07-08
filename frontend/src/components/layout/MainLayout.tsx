@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Tabbar from './Tabbar';
 import Modal from '../Modal';
 import { useCreateActivity } from '../../hooks/useActivities';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 // ─── Quick-add to backlog modal ───────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ function QuickAddModal({ onClose }: { onClose: () => void }) {
 // ─── MainLayout ───────────────────────────────────────────────────────────────
 
 export default function MainLayout() {
+  usePageTitle();
   const [createOpen, setCreateOpen] = useState(false);
 
   function openCreate() {
