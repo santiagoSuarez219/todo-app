@@ -6,10 +6,10 @@ export default function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
         <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent"></div>
-          <p className="mt-4 text-muted-foreground">Cargando...</p>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-700 dark:border-blue-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Cargando...</p>
         </div>
       </div>
     );
