@@ -27,7 +27,7 @@ const schema = z.object({
   energy: z.string().optional(),
   type: z.string().optional(),
   dueDate: z.string().nullish(),
-  notionUrl: z.string().url({ message: 'Debe ser una URL válida' }).nullish(),
+  notionUrl: z.union([z.string().url({ message: 'Debe ser una URL válida' }), z.literal('')]).nullish(),
   // ── Recurrence ──
   isRecurring: z.boolean(),
   recurrenceFrequency: z.nativeEnum(RecurrenceFrequency).optional(),
