@@ -1,4 +1,4 @@
-# spec-022 — [TESTING] Búsqueda de tareas y gastos con scope
+# spec-022 — [DONE] Búsqueda de tareas y gastos con scope
 
 ## Contexto
 
@@ -165,7 +165,9 @@ porque el Dashboard solo carga `limit:50`.
 - [x] Crear `docs/testing/test-022-busqueda-tareas-y-gastos.md` (casos manuales
       UI + `TC-MCP-NNN`).
 - [x] Cambiar el estado del spec a `[TESTING]`.
-- [ ] Tras aprobación manual, invocar `@tester` para e2e y marcar `[DONE]`.
+- [x] Tras aprobación manual, invocar `@tester` para e2e y marcar `[DONE]` (e2e
+      omitido por instrucción explícita del usuario; los 14 casos de
+      `test-022` — 9 UI + 5 MCP — quedan como cobertura de aceptación).
 
 ## Criterios de aceptación
 
