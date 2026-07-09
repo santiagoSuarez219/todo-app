@@ -33,12 +33,16 @@ export default function ExpensesView() {
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  const { data: expenses = [], isLoading, isError } = useExpenses(
+  const { data: expenses = [], isLoading, isFetching, isError } = useExpenses(
     { limit: 100 },
     filterYear,
     filterMonth,
     debouncedSearch.trim().length >= 2 ? debouncedSearch : undefined,
   );
+
+  // Refresco: ya hay datos previos visibles mientras llega el nuevo set
+  // (al escribir o cambiar mes/año) → transición suave en vez de flash.
+  const isRefreshing = isFetching && !isLoading;
   const { data: creditCards = [] } = useCreditCards();
   const { mutateAsync: create, isPending: isCreating } = useCreateExpense();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateExpense();
@@ -159,7 +163,11 @@ export default function ExpensesView() {
         />
       )}
 
-      <div className="flex flex-col gap-2">
+      <div
+        className={`flex flex-col gap-2 transition-opacity duration-200 ${
+          isRefreshing ? 'opacity-50' : 'opacity-100'
+        }`}
+      >
         {expenses.map((expense) => (
           <ExpenseCard
             key={expense.id}

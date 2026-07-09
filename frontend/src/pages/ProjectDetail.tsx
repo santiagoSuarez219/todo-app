@@ -123,10 +123,13 @@ export default function ProjectDetail() {
 
   const now = new Date();
 
-  const sourceActivities = debouncedSearch.trim().length >= 2
-    ? (searchQ.data ?? [])
-    : activities;
+  const isSearching = debouncedSearch.trim().length >= 2;
+  const sourceActivities = isSearching ? (searchQ.data ?? []) : activities;
   const rootActivities = sourceActivities.filter((a) => !a.parent);
+
+  // Loading inicial vs. refresco (datos previos visibles → transición suave).
+  const isInitialLoading = isSearching ? searchQ.isLoading : activitiesLoading;
+  const isRefreshing = isSearching && searchQ.isFetching && !searchQ.isLoading;
 
   const todayCount  = rootActivities.filter((a) => a.dueDate && isToday(a.dueDate)).length;
   const weekCount   = rootActivities.filter((a) => a.dueDate && isThisWeek(a.dueDate)).length;
@@ -284,7 +287,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* Activity list */}
-        {(activitiesLoading || searchQ.isLoading) && (
+        {isInitialLoading && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-28 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
@@ -292,18 +295,22 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {!activitiesLoading && !searchQ.isLoading && filteredActivities.length === 0 && (
+        {!isInitialLoading && filteredActivities.length === 0 && (
           <EmptyState
             message={
-              debouncedSearch.trim().length >= 2
+              isSearching
                 ? `No hay resultados para "${debouncedSearch}" en este proyecto.`
                 : 'No hay actividades en esta categoría.'
             }
           />
         )}
 
-        {!activitiesLoading && !searchQ.isLoading && filteredActivities.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {!isInitialLoading && filteredActivities.length > 0 && (
+          <div
+            className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 transition-opacity duration-200 ${
+              isRefreshing ? 'opacity-50' : 'opacity-100'
+            }`}
+          >
             {filteredActivities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}

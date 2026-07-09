@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getActivities, getActivity, createActivity, updateActivity, deleteActivity,
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
@@ -56,6 +56,9 @@ export function useSearchActivities(query: string, params?: ActivitySearchParams
     queryKey: ['activities', 'search', query, params],
     queryFn: () => searchActivities(query, params),
     enabled: query.trim().length >= 2,
+    // Mantiene los resultados previos mientras llega el nuevo set → evita el
+    // flash a skeleton al escribir (búsqueda suave "as you type").
+    placeholderData: keepPreviousData,
   });
 }
 

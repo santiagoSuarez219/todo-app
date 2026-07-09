@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getExpenses,
   getExpense,
@@ -12,6 +12,9 @@ export function useExpenses(params?: PaginationParams, year?: number, month?: nu
   return useQuery({
     queryKey: ['expenses', params, year, month, search],
     queryFn: () => getExpenses(params, year, month, search),
+    // Mantiene la lista previa mientras se refina por texto o cambia mes/año →
+    // evita el flash al escribir en la búsqueda.
+    placeholderData: keepPreviousData,
   });
 }
 

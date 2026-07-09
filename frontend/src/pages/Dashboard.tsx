@@ -90,10 +90,15 @@ export default function Dashboard() {
   const searchQ = useSearchActivities(debouncedSearch, { limit: 50 });
 
   const now = new Date();
-  const sourceList = debouncedSearch.trim().length >= 2
-    ? (searchQ.data ?? [])
-    : (allQ.data ?? []);
+  const isSearching = debouncedSearch.trim().length >= 2;
+  const sourceList = isSearching ? (searchQ.data ?? []) : (allQ.data ?? []);
   const list = sourceList.filter((a) => !a.parent);
+
+  // Loading inicial (sin datos que mostrar aún) vs. refresco (ya hay datos
+  // previos visibles mientras llega el nuevo set → transición suave).
+  const isInitialLoading = isSearching ? searchQ.isLoading : allQ.isLoading;
+  const isRefreshing = isSearching && searchQ.isFetching && !searchQ.isLoading;
+  const hasError = isSearching ? searchQ.isError : allQ.isError;
 
   const filteredActivities = (() => {
     switch (activeTab) {
@@ -205,7 +210,7 @@ export default function Dashboard() {
         </div>
 
         {/* Activity list */}
-        {(allQ.isLoading || searchQ.isLoading) && (
+        {isInitialLoading && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
@@ -216,22 +221,26 @@ export default function Dashboard() {
           </div>
         )}
 
-        {(allQ.isError || searchQ.isError) && (
+        {hasError && (
           <p className="text-sm text-red-600 dark:text-red-400">Error al cargar actividades.</p>
         )}
 
-        {!allQ.isLoading && !searchQ.isLoading && !allQ.isError && !searchQ.isError && filteredActivities.length === 0 && (
+        {!isInitialLoading && !hasError && filteredActivities.length === 0 && (
           <EmptyState
             message={
-              debouncedSearch.trim().length >= 2
+              isSearching
                 ? `No hay resultados para "${debouncedSearch}".`
                 : 'No hay actividades en esta categoría.'
             }
           />
         )}
 
-        {!allQ.isLoading && !searchQ.isLoading && filteredActivities.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-1">
+        {!isInitialLoading && filteredActivities.length > 0 && (
+          <div
+            className={`grid gap-3 sm:grid-cols-1 transition-opacity duration-200 ${
+              isRefreshing ? 'opacity-50' : 'opacity-100'
+            }`}
+          >
             {filteredActivities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}
