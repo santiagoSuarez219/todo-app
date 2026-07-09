@@ -5,9 +5,12 @@ import {
   useTodayActivities,
   useOverdueActivities,
   useThisWeekActivities,
+  useSearchActivities,
 } from '../hooks/useActivities';
+import { useDebounce } from '../hooks/useDebounce';
 import ActivityCard from '../components/ActivityCard';
 import EmptyState from '../components/EmptyState';
+import SearchBar from '../components/SearchBar';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -77,14 +80,20 @@ function StatCard({
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
 
   const todayQ = useTodayActivities({ limit: 100 });
   const overdueQ = useOverdueActivities({ limit: 100 });
   const weekQ = useThisWeekActivities({ limit: 100 });
   const allQ = useActivities({ limit: 50 });
+  const searchQ = useSearchActivities(debouncedSearch, { limit: 50 });
 
   const now = new Date();
-  const list = (allQ.data ?? []).filter((a) => !a.parent);
+  const sourceList = debouncedSearch.trim().length >= 2
+    ? (searchQ.data ?? [])
+    : (allQ.data ?? []);
+  const list = sourceList.filter((a) => !a.parent);
 
   const filteredActivities = (() => {
     switch (activeTab) {
@@ -151,6 +160,19 @@ export default function Dashboard() {
           </p>
         </div>
 
+        {/* Search bar */}
+        <div className="mb-4">
+          <SearchBar
+            value={searchInput}
+            onChange={setSearchInput}
+            placeholder="Buscar tareas..."
+            onClear={() => {
+              setSearchInput('');
+              setActiveTab('all');
+            }}
+          />
+        </div>
+
         {/* Filter tabs */}
         <div className="flex gap-0 mb-5 border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-none">
           {TABS.map((tab) => (
@@ -183,7 +205,7 @@ export default function Dashboard() {
         </div>
 
         {/* Activity list */}
-        {allQ.isLoading && (
+        {(allQ.isLoading || searchQ.isLoading) && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
@@ -194,15 +216,21 @@ export default function Dashboard() {
           </div>
         )}
 
-        {allQ.isError && (
+        {(allQ.isError || searchQ.isError) && (
           <p className="text-sm text-red-600 dark:text-red-400">Error al cargar actividades.</p>
         )}
 
-        {!allQ.isLoading && !allQ.isError && filteredActivities.length === 0 && (
-          <EmptyState message="No hay actividades en esta categoría." />
+        {!allQ.isLoading && !searchQ.isLoading && !allQ.isError && !searchQ.isError && filteredActivities.length === 0 && (
+          <EmptyState
+            message={
+              debouncedSearch.trim().length >= 2
+                ? `No hay resultados para "${debouncedSearch}".`
+                : 'No hay actividades en esta categoría.'
+            }
+          />
         )}
 
-        {!allQ.isLoading && filteredActivities.length > 0 && (
+        {!allQ.isLoading && !searchQ.isLoading && filteredActivities.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-1">
             {filteredActivities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />

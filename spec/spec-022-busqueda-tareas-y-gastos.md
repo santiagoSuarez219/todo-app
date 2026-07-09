@@ -1,4 +1,4 @@
-# spec-022 — [IN PROGRESS] Búsqueda de tareas y gastos con scope
+# spec-022 — [TESTING] Búsqueda de tareas y gastos con scope
 
 ## Contexto
 
@@ -150,13 +150,13 @@ porque el Dashboard solo carga `limit:50`.
       `docs/mcps/finanzas-personales.system-prompt.md`.
 - [x] Crear `docs/testing/test-022-busqueda-tareas-gastos.md` con 5 casos MCP + 9 manuales.
 
-### Fase 5 — Frontend: integración en las vistas
-- [ ] Dashboard: SearchBar global + `useSearchActivities({limit:50})`;
+### Fase 5 — Frontend: integración en las vistas ✅
+- [x] Dashboard: SearchBar global + `useSearchActivities({limit:50})`;
       `sourceList` bajo tabs; estados carga/vacío; reset al limpiar.
-- [ ] ProjectDetail: SearchBar + `useSearchActivities({limit:100, projectId:id})`;
+- [x] ProjectDetail: SearchBar + `useSearchActivities({limit:100, projectId:id})`;
       coexistencia con tabs y contadores; stat cards se mantienen sobre el total
       del proyecto.
-- [ ] ExpensesView: SearchBar junto a mes/año; `EmptyState` distingue "sin
+- [x] ExpensesView: SearchBar junto a mes/año; `EmptyState` distingue "sin
       gastos en el mes" de "sin resultados para el término".
 
 ### Fase 6 — Tests y cierre

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from '../../hooks/finances/useExpenses';
 import { useCreditCards } from '../../hooks/finances/useCreditCards';
+import { useDebounce } from '../../hooks/useDebounce';
 import ExpenseCard from '../../components/finances/ExpenseCard';
 import ExpenseForm from '../../components/finances/ExpenseForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
+import SearchBar from '../../components/SearchBar';
 import type { Expense, CreateExpenseDto, ExpenseType, UpdateExpenseDto } from '../../types';
 
 const MONTHS = [
@@ -28,8 +30,15 @@ export default function ExpensesView() {
 
   const [filterYear, setFilterYear] = useState<number>(currentYear);
   const [filterMonth, setFilterMonth] = useState<number>(currentMonth);
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
 
-  const { data: expenses = [], isLoading, isError } = useExpenses({ limit: 100 }, filterYear, filterMonth);
+  const { data: expenses = [], isLoading, isError } = useExpenses(
+    { limit: 100 },
+    filterYear,
+    filterMonth,
+    debouncedSearch.trim().length >= 2 ? debouncedSearch : undefined,
+  );
   const { data: creditCards = [] } = useCreditCards();
   const { mutateAsync: create, isPending: isCreating } = useCreateExpense();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateExpense();
@@ -127,11 +136,27 @@ export default function ExpensesView() {
         </div>
       </div>
 
+      {/* Search bar */}
+      <div>
+        <SearchBar
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Buscar por descripción..."
+          onClear={() => setSearchInput('')}
+        />
+      </div>
+
       {isLoading && <p className="text-sm text-gray-400 dark:text-gray-500">Cargando…</p>}
       {isError && <p className="text-sm text-red-500 dark:text-red-400">Error al cargar los gastos.</p>}
 
       {!isLoading && expenses.length === 0 && (
-        <EmptyState message={`No hay gastos en ${MONTHS[filterMonth - 1]} ${filterYear}.`} />
+        <EmptyState
+          message={
+            debouncedSearch.trim().length >= 2
+              ? `No hay resultados para "${debouncedSearch}" en ${MONTHS[filterMonth - 1]} ${filterYear}.`
+              : `No hay gastos en ${MONTHS[filterMonth - 1]} ${filterYear}.`
+          }
+        />
       )}
 
       <div className="flex flex-col gap-2">
