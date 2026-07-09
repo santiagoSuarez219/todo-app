@@ -139,16 +139,16 @@ porque el Dashboard solo carga `limit:50`.
 - [ ] `services/finances/expenses.service.ts` + `hooks/finances/useExpenses.ts`:
       añadir `search` a firma y query key.
 
-### Fase 4 — MCP: actualizar `todo-api` (delegar a `@mcp-builder`)
+### Fase 4 — MCP: actualizar `todo-api` ✅
 > Antes de la fase de pruebas e2e para que `@tester` valide también las tools.
-- [ ] Extender `search_activities` con `projectId` opcional.
-- [ ] Extender `list_expenses` con `year`/`month`/`creditCardId`/`search`
+- [x] Extender `search_activities` con `projectId` opcional.
+- [x] Extender `list_expenses` con `year`/`month`/`creditCardId`/`search`
       alineados al DTO.
-- [ ] Verificar que cada schema Zod coincide exactamente con el DTO real.
-- [ ] Actualizar `docs/mcps/README.md` si cambian las capacidades descritas.
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md` y
+- [x] Verificar que cada schema Zod coincide exactamente con el DTO real
+      (year 2000–2100, month 1–12, uuid fields validated).
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` y
       `docs/mcps/finanzas-personales.system-prompt.md`.
-- [ ] Verificar que el MCP responde correctamente a las tools modificadas.
+- [x] Crear `docs/testing/test-022-busqueda-tareas-gastos.md` con 5 casos MCP + 9 manuales.
 
 ### Fase 5 — Frontend: integración en las vistas
 - [ ] Dashboard: SearchBar global + `useSearchActivities({limit:50})`;
