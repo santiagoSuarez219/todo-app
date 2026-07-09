@@ -129,14 +129,14 @@ porque el Dashboard solo carga `limit:50`.
 - [x] Verificar retrocompatibilidad: sin `search`, respuesta idéntica; con
       `search` + year/month los filtros se combinan con AND (TypeScript verified).
 
-### Fase 3 — Frontend: infraestructura + capa de datos
-- [ ] Leer `frontend/DESIGN.md` (tokens de input, dark mode, focus ring).
-- [ ] Crear `hooks/useDebounce.ts`.
-- [ ] Crear `components/SearchBar.tsx` (tokens DESIGN.md, dark mode, botón X).
-- [ ] `types/index.ts`: añadir `ActivitySearchParams`.
-- [ ] `services/activities.service.ts` + `hooks/useActivities.ts`: tipar
-      `ActivitySearchParams`; `enabled` con query ≥ 2.
-- [ ] `services/finances/expenses.service.ts` + `hooks/finances/useExpenses.ts`:
+### Fase 3 — Frontend: infraestructura + capa de datos ✅
+- [x] Leer `frontend/DESIGN.md` (tokens de input, dark mode, focus ring).
+- [x] Crear `hooks/useDebounce.ts` (genérico, 300ms default, sin dependencias).
+- [x] Crear `components/SearchBar.tsx` (icono lupa, botón X, dark mode, DESIGN.md tokens).
+- [x] `types/index.ts`: añadir `PaginationParams` + `ActivitySearchParams`.
+- [x] `services/activities.service.ts` + `hooks/useActivities.ts`: tipar
+      `ActivitySearchParams`; `enabled` con query ≥ 2 caracteres.
+- [x] `services/finances/expenses.service.ts` + `hooks/finances/useExpenses.ts`:
       añadir `search` a firma y query key.
 
 ### Fase 4 — MCP: actualizar `todo-api` ✅
