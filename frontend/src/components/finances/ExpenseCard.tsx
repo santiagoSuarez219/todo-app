@@ -42,6 +42,14 @@ function TrashIcon() {
   );
 }
 
+function DuplicateIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z" />
+    </svg>
+  );
+}
+
 interface EditState {
   description: string;
   amount: string;
@@ -61,6 +69,7 @@ interface Props {
   onSaveEdit: (expense: Expense) => void;
   onCancelEdit: () => void;
   onDelete: (expense: Expense) => void;
+  onDuplicate: (expense: Expense) => void;
   isSaving: boolean;
 }
 
@@ -78,6 +87,7 @@ export default function ExpenseCard({
   onSaveEdit,
   onCancelEdit,
   onDelete,
+  onDuplicate,
   isSaving,
 }: Props) {
   if (isEditing) {
@@ -204,6 +214,15 @@ export default function ExpenseCard({
           >
             <EditIcon />
             <span>Editar</span>
+          </button>
+          <button
+            onClick={() => onDuplicate(expense)}
+            disabled={editDisabled}
+            title="Duplicar"
+            className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-green-700 dark:hover:text-green-400 px-1.5 py-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-30 transition-colors"
+          >
+            <DuplicateIcon />
+            <span>Duplicar</span>
           </button>
           <button
             onClick={() => onDelete(expense)}

@@ -22,6 +22,7 @@ import {
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+import { DuplicateExpenseDto } from './dto/duplicate-expense.dto';
 import { Expense } from './entities/expense.entity';
 import { ExpensesQueryDto } from './dto/expenses-query.dto';
 
@@ -35,6 +36,17 @@ export class ExpensesController {
   @ApiCreatedResponse({ type: Expense })
   create(@Body() dto: CreateExpenseDto): Promise<Expense> {
     return this.expensesService.create(dto);
+  }
+
+  @Post(':id/duplicate')
+  @ApiOperation({ summary: 'Duplicate an expense to another month' })
+  @ApiCreatedResponse({ type: Expense })
+  @ApiNotFoundResponse()
+  duplicate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DuplicateExpenseDto,
+  ): Promise<Expense> {
+    return this.expensesService.duplicate(id, dto);
   }
 
   @Get()

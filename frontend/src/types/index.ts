@@ -196,6 +196,11 @@ export interface Expense {
   updatedAt: string;
 }
 
+export interface DuplicateExpenseDto {
+  month: number;
+  year: number;
+}
+
 export interface Account {
   id: string;
   name: string;

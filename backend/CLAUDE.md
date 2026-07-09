@@ -520,6 +520,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `get_activity_instances` | Instancias generadas por una plantilla |
 | `cancel_future_instances` | Cancela instancias futuras pendientes de una plantilla |
 | `list_expenses` / `get_expense` / `create_expense` / `update_expense` / `delete_expense` | CRUD de gastos (sin `creditCardId` expuesto) |
+| `duplicate_expense` | Duplica un gasto individual a otro mes/año (con desplazamiento y clamp de fechas, preservando tarjeta de crédito) |
 | `list_incomes` / `get_income` / `create_income` / `update_income` / `delete_income` | CRUD de ingresos |
 | `list_purchases` / `get_purchase` / `create_purchase` / `update_purchase` / `delete_purchase` | CRUD de lista de deseos |
 | `list_accounts` / `get_account` / `create_account` / `update_account` / `delete_account` | CRUD de cuentas |
