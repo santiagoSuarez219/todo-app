@@ -111,15 +111,15 @@ porque el Dashboard solo carga `limit:50`.
 
 ## Fases de implementación
 
-### Fase 1 — Backend: búsqueda de actividades con scope por proyecto
-- [ ] Cambiar el estado del spec a `[IN PROGRESS]`.
-- [ ] `activities.service.ts`: extender `search(query, pagination, projectId?)`
+### Fase 1 — Backend: búsqueda de actividades con scope por proyecto ✅
+- [x] Cambiar el estado del spec a `[IN PROGRESS]`.
+- [x] `activities.service.ts`: extender `search(query, pagination, projectId?)`
       manteniendo early-return con término vacío y la cláusula ILIKE; `andWhere`
       por `activity.projectId` solo si `projectId` está presente.
-- [ ] `activities.controller.ts`: añadir `@Query('projectId') projectId?` y
+- [x] `activities.controller.ts`: añadir `@Query('projectId', ParseUUIDPipe)` y
       reenviarlo.
-- [ ] Verificar retrocompatibilidad: sin `projectId`, respuesta idéntica a hoy;
-      orden de `baseQuery()` intacto.
+- [x] Verificar retrocompatibilidad: sin `projectId`, respuesta idéntica a hoy;
+      orden de `baseQuery()` intacto (TypeScript compilation verified).
 
 ### Fase 2 — Backend: búsqueda de gastos por texto
 - [ ] `expenses-query.dto.ts`: añadir `search?: string` opcional.
