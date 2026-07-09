@@ -133,14 +133,15 @@ export class ActivitiesController {
   }
 
   @Get('search/:query')
-  @ApiOperation({ summary: 'Buscar actividades por nombre, descripcion o proyecto' })
+  @ApiOperation({ summary: 'Buscar actividades por nombre, descripcion o proyecto (scope global o por proyecto)' })
   @ApiParam({ name: 'query', type: String })
   @ApiOkResponse({ type: [Activity] })
   search(
     @Param('query') query: string,
     @Query() pagination: PaginationDto,
+    @Query('projectId', new ParseUUIDPipe({ optional: true })) projectId?: string,
   ): Promise<Activity[]> {
-    return this.activitiesService.search(query, pagination);
+    return this.activitiesService.search(query, pagination, projectId);
   }
 
   @Get(':id/subtasks')
