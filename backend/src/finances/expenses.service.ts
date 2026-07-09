@@ -30,7 +30,7 @@ export class ExpensesService {
     return this.expensesRepository.save(expense);
   }
 
-  findAll({ page = 1, limit = 20, year, month, creditCardId }: ExpensesQueryDto): Promise<Expense[]> {
+  findAll({ page = 1, limit = 20, year, month, creditCardId, search }: ExpensesQueryDto): Promise<Expense[]> {
     const qb = this.expensesRepository
       .createQueryBuilder('expense')
       .leftJoinAndSelect('expense.creditCard', 'creditCard')
@@ -42,6 +42,7 @@ export class ExpensesService {
     if (year) qb.andWhere('EXTRACT(year FROM expense.date) = :year', { year });
     if (month) qb.andWhere('EXTRACT(month FROM expense.date) = :month', { month });
     if (creditCardId) qb.andWhere('expense.creditCardId = :creditCardId', { creditCardId });
+    if (search) qb.andWhere('expense.description ILIKE :search', { search: `%${search.trim()}%` });
 
     return qb.getMany();
   }

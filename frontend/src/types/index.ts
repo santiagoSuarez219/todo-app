@@ -126,6 +126,15 @@ export interface CreateActivityDto {
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;
 
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface ActivitySearchParams extends PaginationParams {
+  projectId?: string;
+}
+
 // ─── Finances — Enums ────────────────────────────────────────────────────────
 
 export const ExpenseType = {
@@ -436,4 +445,15 @@ export interface PaginatedResponse<T> {
 export interface PaginationParams {
   page?: number;
   limit?: number;
+}
+
+// ─── Auth (spec-021) ──────────────────────────────────────────────────────
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface AuthUser {
+  email: string;
 }

@@ -38,7 +38,7 @@ export class ExpensesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List expenses (paginated, filtered by year/month, ordered by date DESC)' })
+  @ApiOperation({ summary: 'List expenses (paginated, filtered by year/month/description, ordered by date DESC)' })
   @ApiOkResponse({ type: [Expense] })
   findAll(@Query() query: ExpensesQueryDto): Promise<Expense[]> {
     return this.expensesService.findAll(query);

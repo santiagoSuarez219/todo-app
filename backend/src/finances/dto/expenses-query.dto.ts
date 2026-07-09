@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class ExpensesQueryDto extends PaginationDto {
@@ -24,4 +24,9 @@ export class ExpensesQueryDto extends PaginationDto {
   @IsUUID()
   @IsOptional()
   creditCardId?: string;
+
+  @ApiPropertyOptional({ example: 'groceries' })
+  @IsString()
+  @IsOptional()
+  search?: string;
 }

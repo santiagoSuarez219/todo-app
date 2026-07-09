@@ -1,5 +1,7 @@
 import { Routes, Route, Outlet } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
@@ -44,25 +46,31 @@ function FinancesLayout() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<MainLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="projects" element={<ProjectList />} />
-        <Route path="projects/:id" element={<ProjectDetail />} />
-        <Route path="activities/today" element={<TodayView />} />
-        <Route path="activities/this-week" element={<WeekView />} />
-        <Route path="activities/overdue" element={<OverdueView />} />
-        <Route path="activities/backlog" element={<BacklogView />} />
-        <Route element={<FinancesLayout />}>
-          <Route path="finances" element={<FinancesDashboard />} />
-          <Route path="finances/expenses" element={<ExpensesView />} />
-          <Route path="finances/incomes" element={<IncomesView />} />
-          <Route path="finances/purchases" element={<PurchasesView />} />
-          <Route path="finances/accounts" element={<AccountsView />} />
-          <Route path="finances/credit-cards" element={<CreditCardsView />} />
-          <Route path="finances/cdts" element={<CdtsView />} />
-          <Route path="finances/budgets" element={<BudgetsView />} />
-          <Route path="finances/budgets/:id" element={<BudgetDetailView />} />
-          <Route path="finances/debts" element={<DebtsView />} />
+      {/* Public routes */}
+      <Route path="login" element={<Login />} />
+
+      {/* Protected routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<MainLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="projects" element={<ProjectList />} />
+          <Route path="projects/:id" element={<ProjectDetail />} />
+          <Route path="activities/today" element={<TodayView />} />
+          <Route path="activities/this-week" element={<WeekView />} />
+          <Route path="activities/overdue" element={<OverdueView />} />
+          <Route path="activities/backlog" element={<BacklogView />} />
+          <Route element={<FinancesLayout />}>
+            <Route path="finances" element={<FinancesDashboard />} />
+            <Route path="finances/expenses" element={<ExpensesView />} />
+            <Route path="finances/incomes" element={<IncomesView />} />
+            <Route path="finances/purchases" element={<PurchasesView />} />
+            <Route path="finances/accounts" element={<AccountsView />} />
+            <Route path="finances/credit-cards" element={<CreditCardsView />} />
+            <Route path="finances/cdts" element={<CdtsView />} />
+            <Route path="finances/budgets" element={<BudgetsView />} />
+            <Route path="finances/budgets/:id" element={<BudgetDetailView />} />
+            <Route path="finances/debts" element={<DebtsView />} />
+          </Route>
         </Route>
       </Route>
     </Routes>

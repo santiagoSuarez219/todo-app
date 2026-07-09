@@ -440,16 +440,19 @@ export class ActivitiesService {
     ).getMany();
   }
 
-  async search(query: string, pagination: PaginationDto): Promise<Activity[]> {
+  async search(query: string, pagination: PaginationDto, projectId?: string): Promise<Activity[]> {
     const term = query.trim();
     if (!term) return [];
 
-    return this.paginate(
-      this.baseQuery().where(
-        '(activity.name ILIKE :q OR activity.description ILIKE :q OR project.name ILIKE :q)',
-        { q: `%${term}%` },
-      ),
-      pagination,
-    ).getMany();
+    let qb = this.baseQuery().where(
+      '(activity.name ILIKE :q OR activity.description ILIKE :q OR project.name ILIKE :q)',
+      { q: `%${term}%` },
+    );
+
+    if (projectId) {
+      qb = qb.andWhere('activity.projectId = :projectId', { projectId });
+    }
+
+    return this.paginate(qb, pagination).getMany();
   }
 }

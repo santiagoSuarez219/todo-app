@@ -26,6 +26,7 @@ import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { Activity } from './entities/activity.entity';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { SearchActivitiesQueryDto } from './dto/search-activities-query.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { ActivityType } from '../common/enums/activity-type.enum';
 import { Priority } from '../common/enums/priority.enum';
@@ -133,14 +134,14 @@ export class ActivitiesController {
   }
 
   @Get('search/:query')
-  @ApiOperation({ summary: 'Buscar actividades por nombre, descripcion o proyecto' })
+  @ApiOperation({ summary: 'Buscar actividades por nombre, descripcion o proyecto (scope global o por proyecto)' })
   @ApiParam({ name: 'query', type: String })
   @ApiOkResponse({ type: [Activity] })
   search(
     @Param('query') query: string,
-    @Query() pagination: PaginationDto,
+    @Query() { projectId, ...pagination }: SearchActivitiesQueryDto,
   ): Promise<Activity[]> {
-    return this.activitiesService.search(query, pagination);
+    return this.activitiesService.search(query, pagination, projectId);
   }
 
   @Get(':id/subtasks')

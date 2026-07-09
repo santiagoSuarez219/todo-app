@@ -164,12 +164,30 @@ Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, c
 
 ---
 
+## Autenticación (spec-021)
+
+Todas las herramientas disponibles en este MCP se acceden a través del endpoint `/mcp`
+del backend. **Requiere autenticación por API key:**
+
+```
+Authorization: Bearer <MCP_API_KEY>
+```
+
+- **Header requerido:** `Authorization: Bearer <MCP_API_KEY>`
+- **MCP_API_KEY:** Token estático configurado en variables de entorno del backend
+- **Contexto:** Esta autenticación es independiente del login del usuario (credenciales distintas)
+- **Respuesta sin autenticación:** `401 Unauthorized`
+
+Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al servidor.
+
+---
+
 ## Herramientas disponibles
 
 ### Gastos
 | Herramienta | Cuándo usarla |
 |-------------|---------------|
-| `list_expenses` | Listar todos los gastos (paginado) |
+| `list_expenses` | Listar gastos con filtrado opcional por año, mes, tarjeta de crédito o búsqueda por descripción |
 | `get_expense` | Obtener un gasto por UUID |
 | `create_expense` | Registrar un nuevo gasto |
 | `update_expense` | Corregir descripción, monto, fecha o tipo |
