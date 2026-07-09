@@ -26,6 +26,7 @@ import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { Activity } from './entities/activity.entity';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { SearchActivitiesQueryDto } from './dto/search-activities-query.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { ActivityType } from '../common/enums/activity-type.enum';
 import { Priority } from '../common/enums/priority.enum';
@@ -138,8 +139,7 @@ export class ActivitiesController {
   @ApiOkResponse({ type: [Activity] })
   search(
     @Param('query') query: string,
-    @Query() pagination: PaginationDto,
-    @Query('projectId', new ParseUUIDPipe({ optional: true })) projectId?: string,
+    @Query() { projectId, ...pagination }: SearchActivitiesQueryDto,
   ): Promise<Activity[]> {
     return this.activitiesService.search(query, pagination, projectId);
   }
