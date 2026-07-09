@@ -16,7 +16,7 @@
 - Con 2+ caracteres, muestra solo tareas del servidor que coinciden.
 - Los tabs aplican filtro sobre los resultados de búsqueda.
 - Al limpiar, se restaura el estado inicial.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-002 — Dashboard: sin resultados en búsqueda
 **Precondición:** Dashboard con tareas cargadas.
@@ -25,7 +25,7 @@
 2. Esperar debounce.
 3. Verificar que muestra EmptyState con mensaje "No hay resultados para 'xyzabc123'."
 **Resultado esperado:** EmptyState diferencia búsqueda vacía de "sin tareas en categoría".
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-003 — ProjectDetail: búsqueda dentro del proyecto
 **Precondición:** ProjectDetail de un proyecto con al menos 5 tareas.
@@ -40,7 +40,7 @@
 - La búsqueda es por proyecto (no global).
 - Los tabs aplican filtro sobre búsqueda.
 - Los stats no cambian con la búsqueda.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-004 — ProjectDetail: aislamiento por proyecto
 **Precondición:** Dos proyectos (A y B) cada uno con tareas que contienen "task" en el nombre.
@@ -52,7 +52,7 @@
 5. Buscar "task" nuevamente.
 6. Verificar que solo muestra tareas de Proyecto B.
 **Resultado esperado:** La búsqueda está aislada por proyecto (parámetro `projectId` en el backend).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-005 — ExpensesView: búsqueda por descripción
 **Precondición:** ExpensesView con gastos del mes actual (ej. 5+ gastos).
@@ -65,7 +65,7 @@
 **Resultado esperado:** 
 - La búsqueda refina dentro del mes/año seleccionado.
 - Es combinable con los filtros existentes.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-006 — ExpensesView: sin resultados en mes
 **Precondición:** ExpensesView en un mes sin gastos.
@@ -76,7 +76,7 @@
 4. Escribir un término de búsqueda en el SearchBar.
 5. Verificar EmptyState: "No hay resultados para '[término]' en [Mes] [Año]."
 **Resultado esperado:** EmptyState diferencia "mes sin gastos" de "búsqueda sin resultados".
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-007 — SearchBar: icono de lupa y botón X
 **Precondición:** Cualquier página con SearchBar (Dashboard, ProjectDetail o ExpensesView).
@@ -87,7 +87,7 @@
 4. Hacer clic en el botón X.
 5. Verificar que limpia el input y restaura la lista original.
 **Resultado esperado:** Componente SearchBar funciona según el spec.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-008 — SearchBar: dark mode
 **Precondición:** Aplicación en modo oscuro.
@@ -99,7 +99,7 @@
 5. Cambiar a modo claro.
 6. Verificar que los colores se ajustan correctamente.
 **Resultado esperado:** SearchBar respeta los tokens de dark mode definidos en DESIGN.md.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-009 — Debounce: Network tab
 **Precondición:** Dashboard o ProjectDetail abierto, Network tab del navegador visible.
@@ -110,7 +110,7 @@
 4. Esperar 300ms después de la última letra.
 5. Verificar que hay exactamente 1 request con `/activities/search/test`.
 **Resultado esperado:** useDebounce funciona correctamente con delay de 300ms.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
