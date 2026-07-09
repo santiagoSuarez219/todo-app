@@ -169,7 +169,7 @@ Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, c
 ### Gastos
 | Herramienta | Cuándo usarla |
 |-------------|---------------|
-| `list_expenses` | Listar todos los gastos (paginado) |
+| `list_expenses` | Listar gastos con filtrado opcional por año, mes, tarjeta de crédito o búsqueda por descripción |
 | `get_expense` | Obtener un gasto por UUID |
 | `create_expense` | Registrar un nuevo gasto |
 | `update_expense` | Corregir descripción, monto, fecha o tipo |

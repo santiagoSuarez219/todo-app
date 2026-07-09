@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useProject } from '../hooks/useProjects';
-import { useActivitiesByProject, useCreateActivity, useDeleteActivity } from '../hooks/useActivities';
+import { useActivitiesByProject, useCreateActivity, useDeleteActivity, useSearchActivities } from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
+import { useDebounce } from '../hooks/useDebounce';
 import StatusBadge from '../components/StatusBadge';
 import ActivityCard from '../components/ActivityCard';
 import ActivityForm from '../components/ActivityForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import { SearchBar } from '../components/SearchBar';
 import type { Activity, CreateActivityDto } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -108,17 +110,26 @@ export default function ProjectDetail() {
   const [clearOpen, setClearOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
 
   const { data: project, isLoading: projectLoading } = useProject(id!);
   const { data: allProjects } = useProjects();
   const { data: activities = [], isLoading: activitiesLoading } = useActivitiesByProject(id!, { limit: 100 });
+  const searchQ = useSearchActivities(debouncedSearch, { limit: 100, projectId: id });
 
   const createActivity = useCreateActivity();
   const deleteActivity = useDeleteActivity();
 
   const now = new Date();
 
-  const rootActivities = activities.filter((a) => !a.parent);
+  const isSearching = debouncedSearch.trim().length >= 2;
+  const sourceActivities = isSearching ? (searchQ.data ?? []) : activities;
+  const rootActivities = sourceActivities.filter((a) => !a.parent);
+
+  // Loading inicial vs. refresco (datos previos visibles → transición suave).
+  const isInitialLoading = isSearching ? searchQ.isLoading : activitiesLoading;
+  const isRefreshing = isSearching && searchQ.isFetching && !searchQ.isLoading;
 
   const todayCount  = rootActivities.filter((a) => a.dueDate && isToday(a.dueDate)).length;
   const weekCount   = rootActivities.filter((a) => a.dueDate && isThisWeek(a.dueDate)).length;
@@ -234,6 +245,19 @@ export default function ProjectDetail() {
           Actividades del proyecto
         </h2>
 
+        {/* Search bar */}
+        <div className="mb-4">
+          <SearchBar
+            value={searchInput}
+            onChange={setSearchInput}
+            placeholder="Buscar en este proyecto..."
+            onClear={() => {
+              setSearchInput('');
+              setActiveTab('all');
+            }}
+          />
+        </div>
+
         {/* Filter tabs */}
         <div className="flex gap-0 mb-5 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           {TABS.map((tab) => (
@@ -263,7 +287,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* Activity list */}
-        {activitiesLoading && (
+        {isInitialLoading && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-28 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
@@ -271,12 +295,22 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {!activitiesLoading && filteredActivities.length === 0 && (
-          <EmptyState message="No hay actividades en esta categoría." />
+        {!isInitialLoading && filteredActivities.length === 0 && (
+          <EmptyState
+            message={
+              isSearching
+                ? `No hay resultados para "${debouncedSearch}" en este proyecto.`
+                : 'No hay actividades en esta categoría.'
+            }
+          />
         )}
 
-        {!activitiesLoading && filteredActivities.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {!isInitialLoading && filteredActivities.length > 0 && (
+          <div
+            className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 transition-opacity duration-200 ${
+              isRefreshing ? 'opacity-50' : 'opacity-100'
+            }`}
+          >
             {filteredActivities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}

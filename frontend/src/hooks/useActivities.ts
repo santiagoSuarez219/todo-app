@@ -1,11 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getActivities, getActivity, createActivity, updateActivity, deleteActivity,
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
   getActivitiesByProject, searchActivities, getActivitySubtasks, createSubtask,
   getWithoutProjectActivities, getActivityInstances, cancelFutureInstances,
 } from '../services/activities.service';
-import type { CreateActivityDto, UpdateActivityDto, PaginationParams } from '../types';
+import type { CreateActivityDto, UpdateActivityDto, PaginationParams, ActivitySearchParams } from '../types';
 
 export function useActivities(params?: PaginationParams) {
   return useQuery({
@@ -51,11 +51,14 @@ export function useActivitiesByProject(projectId: string, params?: PaginationPar
   });
 }
 
-export function useSearchActivities(query: string, params?: PaginationParams) {
+export function useSearchActivities(query: string, params?: ActivitySearchParams) {
   return useQuery({
     queryKey: ['activities', 'search', query, params],
     queryFn: () => searchActivities(query, params),
-    enabled: query.trim().length > 0,
+    enabled: query.trim().length >= 2,
+    // Mantiene los resultados previos mientras llega el nuevo set → evita el
+    // flash a skeleton al escribir (búsqueda suave "as you type").
+    placeholderData: keepPreviousData,
   });
 }
 

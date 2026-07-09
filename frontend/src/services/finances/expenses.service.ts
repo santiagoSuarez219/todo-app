@@ -5,9 +5,15 @@ export async function getExpenses(
   params?: PaginationParams,
   year?: number,
   month?: number,
+  search?: string,
 ): Promise<Expense[]> {
   const { data } = await apiClient.get<{ data: Expense[] }>('/finances/expenses', {
-    params: { ...params, ...(year ? { year } : {}), ...(month ? { month } : {}) },
+    params: {
+      ...params,
+      ...(year ? { year } : {}),
+      ...(month ? { month } : {}),
+      ...(search ? { search } : {}),
+    },
   });
   return data.data;
 }

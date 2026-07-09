@@ -482,15 +482,16 @@ export class McpService {
 
     server.tool(
       'search_activities',
-      'Search activities by name, description or project name (case-insensitive)',
+      'Search activities by name, description or project name (case-insensitive), optionally scoped to a project',
       {
         query: z.string().min(1).describe('Search term'),
+        projectId: z.string().uuid().optional().describe('Optional project UUID to scope search to a specific project'),
         ...paginationSchema,
       },
-      async ({ query, ...pagination }) => {
+      async ({ query, projectId, ...pagination }) => {
         try {
           return ok(
-            await this.activitiesService.search(query, pagination as PaginationDto),
+            await this.activitiesService.search(query, pagination as PaginationDto, projectId),
           );
         } catch (e) {
           return err(e);
@@ -603,11 +604,18 @@ export class McpService {
   private registerExpenseTools(server: McpServer): void {
     server.tool(
       'list_expenses',
-      'List all expenses with optional pagination',
-      paginationSchema,
-      async (pagination) => {
+      'List expenses with optional filtering by year, month, credit card, or description search',
+      {
+        page: z.number().int().min(1).default(1).optional().describe('Page number (default: 1)'),
+        limit: z.number().int().min(1).max(100).default(20).optional().describe('Items per page, max 100 (default: 20)'),
+        year: z.number().int().min(2000).max(2100).optional().describe('Filter by year (2000-2100)'),
+        month: z.number().int().min(1).max(12).optional().describe('Filter by month (1-12)'),
+        creditCardId: z.string().uuid().optional().describe('Filter by credit card UUID'),
+        search: z.string().optional().describe('Search by expense description (case-insensitive)'),
+      },
+      async (params) => {
         try {
-          return ok(await this.expensesService.findAll(pagination as PaginationDto));
+          return ok(await this.expensesService.findAll(params as any));
         } catch (e) {
           return err(e);
         }
