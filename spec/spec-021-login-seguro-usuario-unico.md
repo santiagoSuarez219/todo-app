@@ -1,4 +1,4 @@
-# spec-021 — [TESTING] Login seguro de usuario único
+# spec-021 — [DONE] Login seguro de usuario único
 
 > Estado inicial: sin marcar (aún no implementado). Según el `CLAUDE.md` raíz,
 > el estado `[IN PROGRESS]` se coloca en el título al iniciar la Fase 1. Al

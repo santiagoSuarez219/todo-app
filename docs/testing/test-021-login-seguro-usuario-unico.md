@@ -15,7 +15,7 @@
 - Después de 1-2 segundos, la página redirige a `/` (Dashboard)
 - El usuario está autenticado y puede navegar por la app
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -32,7 +32,7 @@
 - No se redirige a ningún lado
 - El campo de contraseña se limpia
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -49,7 +49,7 @@
 - No se redirige
 - El campo de contraseña se limpia
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -64,7 +64,7 @@
 - Luego eres redirigido a `/login`
 - No se ve contenido de la app
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -80,7 +80,7 @@
 - Se redirige a `/login`
 - Al intentar acceder a una ruta protegida, eres redirigido nuevamente a `/login`
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -97,7 +97,7 @@
 - La respuesta es `200 OK` con `{ statusCode: 200, message: "success", data: { email: "tu-email@example.com" } }`
 - La cookie `auth_token` se envía automáticamente (HttpOnly)
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -113,7 +113,7 @@
 - La petición devuelve `401 Unauthorized`
 - El mensaje indica "Missing authentication cookie" o "Invalid or expired token"
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -129,7 +129,7 @@
 - El 6º intento devuelve `429 Too Many Requests` con un mensaje del throttler
 - El botón muestra "Iniciando sesión..." pero el servidor rechaza la petición
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -153,7 +153,7 @@
   - ✅ `SameSite`: None (permite cross-site, requerido porque Vercel ≠ Railway)
   - ✅ `Max-Age`: ~2592000 segundos
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -170,7 +170,7 @@
 - El botón de login es visible y clickeable
 - Los mensajes de error son legibles
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -189,7 +189,7 @@
   - Contraseña vacía: "La contraseña es requerida"
 - El botón no envía el formulario si hay errores
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -211,7 +211,7 @@ curl -X POST http://localhost:3000/mcp \
 - Status: `401 Unauthorized`
 - Cuerpo: `{ "statusCode": 401, "message": "Missing or invalid authorization header", ... }`
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -231,7 +231,7 @@ curl -X POST http://localhost:3000/mcp \
 - Status: `401 Unauthorized`
 - Cuerpo: `{ "statusCode": 401, "message": "Invalid API key", ... }`
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -252,7 +252,7 @@ curl -X POST http://localhost:3000/mcp \
 - Cuerpo: JSON-RPC con resultado válido (lista de proyectos, aunque sea vacía)
 - Ejemplo: `{ "jsonrpc":"2.0","result":[...],"id":1 }`
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -270,7 +270,7 @@ curl -X GET http://localhost:3000/mcp \
 - Status: `401 Unauthorized`
 - Cuerpo: `{ "statusCode": 401, "message": "Missing or invalid authorization header", ... }`
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -288,7 +288,7 @@ curl -X GET http://localhost:3000/api/v1/auth/me \
 - Cuerpo: `{ "statusCode": 200, "message": "success", "data": { "email": "..." } }`
 - **Nota:** `/auth/me` usa JWT-cookie, NO MCP API key (son flujos de auth distintos)
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
@@ -296,19 +296,19 @@ curl -X GET http://localhost:3000/api/v1/auth/me \
 
 | TC | Nombre | Estado |
 |-----|----|--------|
-| TC-001 | Login con credenciales correctas | ⬜ |
-| TC-002 | Login con email incorrecto | ⬜ |
-| TC-003 | Login con contraseña incorrecta | ⬜ |
-| TC-004 | Acceso a ruta protegida sin sesión | ⬜ |
-| TC-005 | Logout desde Sidebar | ⬜ |
-| TC-006 | GET /auth/me con sesión válida | ⬜ |
-| TC-007 | GET /auth/me sin sesión | ⬜ |
-| TC-008 | Rate limiting en /auth/login | ⬜ |
-| TC-009 | Cookie httpOnly y flags de seguridad | ⬜ |
-| TC-010 | Dark mode durante login | ⬜ |
-| TC-011 | Validación de formulario (lado cliente) | ⬜ |
-| TC-MCP-001 | POST /mcp sin API key | ⬜ |
-| TC-MCP-002 | POST /mcp con API key inválida | ⬜ |
-| TC-MCP-003 | POST /mcp con API key válida | ⬜ |
-| TC-MCP-004 | GET /mcp sin API key (SSE) | ⬜ |
-| TC-MCP-005 | GET /auth/me con JWT válido | ⬜ |
+| TC-001 | Login con credenciales correctas | ✅ |
+| TC-002 | Login con email incorrecto | ✅ |
+| TC-003 | Login con contraseña incorrecta | ✅ |
+| TC-004 | Acceso a ruta protegida sin sesión | ✅ |
+| TC-005 | Logout desde Sidebar | ✅ |
+| TC-006 | GET /auth/me con sesión válida | ✅ |
+| TC-007 | GET /auth/me sin sesión | ✅ |
+| TC-008 | Rate limiting en /auth/login | ✅ |
+| TC-009 | Cookie httpOnly y flags de seguridad | ✅ |
+| TC-010 | Dark mode durante login | ✅ |
+| TC-011 | Validación de formulario (lado cliente) | ✅ |
+| TC-MCP-001 | POST /mcp sin API key | ✅ |
+| TC-MCP-002 | POST /mcp con API key inválida | ✅ |
+| TC-MCP-003 | POST /mcp con API key válida | ✅ |
+| TC-MCP-004 | GET /mcp sin API key (SSE) | ✅ |
+| TC-MCP-005 | GET /auth/me con JWT válido | ✅ |
