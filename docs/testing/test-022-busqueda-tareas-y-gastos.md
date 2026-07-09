@@ -132,7 +132,7 @@
 - Array de actividades del proyecto especificado que coinciden con "backend".
 - Sin tareas de otros proyectos.
 - Respeta `limit` y `page`.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-MCP-002 — search_activities sin projectId
 **Herramienta probada:** `search_activities` sin parámetro `projectId`.
@@ -147,7 +147,7 @@
 **Output esperado:**
 - Array de actividades de **todos los proyectos** que coinciden con "tarea".
 - Valida retrocompatibilidad (sin `projectId`, igual que antes).
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-MCP-003 — list_expenses con search + year + month
 **Herramienta probada:** `list_expenses` en `todo-api` MCP.
@@ -166,7 +166,7 @@
 - Array de gastos cuya descripción contiene "comida" en jul/2026.
 - Combina filtros year, month y search con AND.
 - Respeta `limit` y `page`.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-MCP-004 — list_expenses sin search (retrocompat)
 **Herramienta probada:** `list_expenses` sin parámetro `search`.
@@ -182,7 +182,7 @@
 **Output esperado:**
 - Array de gastos en jul/2026 (igual que antes).
 - Sin cambios en comportamiento.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ### TC-MCP-005 — list_expenses sin resultados
 **Herramienta probada:** `list_expenses` con búsqueda que no tiene coincidencias.
@@ -198,7 +198,7 @@
 **Output esperado:**
 - Array vacío `[]`.
 - Sin errores.
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Aprobado
 
 ---
 
