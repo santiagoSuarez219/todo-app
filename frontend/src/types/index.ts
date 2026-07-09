@@ -126,6 +126,15 @@ export interface CreateActivityDto {
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;
 
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface ActivitySearchParams extends PaginationParams {
+  projectId?: string;
+}
+
 // ─── Finances — Enums ────────────────────────────────────────────────────────
 
 export const ExpenseType = {

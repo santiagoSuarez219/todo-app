@@ -4,6 +4,7 @@ import type {
   CreateActivityDto,
   UpdateActivityDto,
   PaginationParams,
+  ActivitySearchParams,
   ActivityStatus,
   ActivityType,
   Priority,
@@ -105,7 +106,7 @@ export async function createSubtask(
 
 export async function searchActivities(
   query: string,
-  params?: PaginationParams,
+  params?: ActivitySearchParams,
 ): Promise<Activity[]> {
   return getList(`/activities/search/${encodeURIComponent(query)}`, params);
 }

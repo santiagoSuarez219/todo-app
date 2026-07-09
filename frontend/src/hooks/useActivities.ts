@@ -5,7 +5,7 @@ import {
   getActivitiesByProject, searchActivities, getActivitySubtasks, createSubtask,
   getWithoutProjectActivities, getActivityInstances, cancelFutureInstances,
 } from '../services/activities.service';
-import type { CreateActivityDto, UpdateActivityDto, PaginationParams } from '../types';
+import type { CreateActivityDto, UpdateActivityDto, PaginationParams, ActivitySearchParams } from '../types';
 
 export function useActivities(params?: PaginationParams) {
   return useQuery({
@@ -51,11 +51,11 @@ export function useActivitiesByProject(projectId: string, params?: PaginationPar
   });
 }
 
-export function useSearchActivities(query: string, params?: PaginationParams) {
+export function useSearchActivities(query: string, params?: ActivitySearchParams) {
   return useQuery({
     queryKey: ['activities', 'search', query, params],
     queryFn: () => searchActivities(query, params),
-    enabled: query.trim().length > 0,
+    enabled: query.trim().length >= 2,
   });
 }
 
