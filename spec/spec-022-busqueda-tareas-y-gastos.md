@@ -121,13 +121,13 @@ porque el Dashboard solo carga `limit:50`.
 - [x] Verificar retrocompatibilidad: sin `projectId`, respuesta idéntica a hoy;
       orden de `baseQuery()` intacto (TypeScript compilation verified).
 
-### Fase 2 — Backend: búsqueda de gastos por texto
-- [ ] `expenses-query.dto.ts`: añadir `search?: string` opcional.
-- [ ] `expenses.service.ts` `findAll()`: `andWhere` ILIKE sobre
+### Fase 2 — Backend: búsqueda de gastos por texto ✅
+- [x] `expenses-query.dto.ts`: añadir `search?: string` opcional.
+- [x] `expenses.service.ts` `findAll()`: `andWhere` ILIKE sobre
       `expense.description` cuando `search` venga con texto, combinable con
       year/month/creditCardId.
-- [ ] Verificar retrocompatibilidad: sin `search`, respuesta idéntica; con
-      `search` + year/month los filtros se combinan con AND.
+- [x] Verificar retrocompatibilidad: sin `search`, respuesta idéntica; con
+      `search` + year/month los filtros se combinan con AND (TypeScript verified).
 
 ### Fase 3 — Frontend: infraestructura + capa de datos
 - [ ] Leer `frontend/DESIGN.md` (tokens de input, dark mode, focus ring).
