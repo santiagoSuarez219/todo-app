@@ -148,7 +148,7 @@ porque el Dashboard solo carga `limit:50`.
       (year 2000–2100, month 1–12, uuid fields validated).
 - [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` y
       `docs/mcps/finanzas-personales.system-prompt.md`.
-- [x] Crear `docs/testing/test-022-busqueda-tareas-gastos.md` con 5 casos MCP + 9 manuales.
+- [x] Crear `docs/testing/test-022-busqueda-tareas-y-gastos.md` con 5 casos MCP + 9 manuales.
 
 ### Fase 5 — Frontend: integración en las vistas ✅
 - [x] Dashboard: SearchBar global + `useSearchActivities({limit:50})`;
@@ -162,9 +162,9 @@ porque el Dashboard solo carga `limit:50`.
 ### Fase 6 — Tests y cierre
 - [x] Backend: casos felices Jest (actividades por proyecto + retrocompat global;
       gastos por texto + combinación con year/month). Ejecutar `npm run test`.
-- [ ] Crear `docs/testing/test-022-busqueda-tareas-y-gastos.md` (casos manuales
+- [x] Crear `docs/testing/test-022-busqueda-tareas-y-gastos.md` (casos manuales
       UI + `TC-MCP-NNN`).
-- [ ] Cambiar el estado del spec a `[TESTING]`.
+- [x] Cambiar el estado del spec a `[TESTING]`.
 - [ ] Tras aprobación manual, invocar `@tester` para e2e y marcar `[DONE]`.
 
 ## Criterios de aceptación
