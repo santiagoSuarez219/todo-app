@@ -160,7 +160,7 @@ porque el Dashboard solo carga `limit:50`.
       gastos en el mes" de "sin resultados para el término".
 
 ### Fase 6 — Tests y cierre
-- [ ] Backend: casos felices Jest (actividades por proyecto + retrocompat global;
+- [x] Backend: casos felices Jest (actividades por proyecto + retrocompat global;
       gastos por texto + combinación con year/month). Ejecutar `npm run test`.
 - [ ] Crear `docs/testing/test-022-busqueda-tareas-y-gastos.md` (casos manuales
       UI + `TC-MCP-NNN`).
