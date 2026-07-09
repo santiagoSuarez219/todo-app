@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { useDarkMode } from '../../hooks/useDarkMode';
+import { useLogout } from '../../hooks/useAuth';
 
 interface Props {
   onCreateActivity: () => void;
@@ -153,6 +154,14 @@ function MoonIcon() {
   );
 }
 
+function LogOutIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h12a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 22.5 21h-12a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
+    </svg>
+  );
+}
+
 // ─── Link style ───────────────────────────────────────────────────────────────
 
 const linkCls = ({ isActive }: { isActive: boolean }) =>
@@ -164,8 +173,15 @@ const linkCls = ({ isActive }: { isActive: boolean }) =>
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 export default function Sidebar({ onCreateActivity }: Props) {
+  const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
   const { dark, toggleDark } = useDarkMode();
+  const logoutMutation = useLogout();
+
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync();
+    navigate("/login");
+  };
 
   return (
     <aside className="w-56 shrink-0 h-screen sticky top-0 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden md:flex flex-col overflow-hidden">
@@ -296,8 +312,8 @@ export default function Sidebar({ onCreateActivity }: Props) {
         </button>
       </div>
 
-      {/* Footer — dark mode toggle */}
-      <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0">
+      {/* Footer — dark mode toggle and logout */}
+      <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0 space-y-1">
         <button
           onClick={toggleDark}
           aria-label="Toggle dark mode"
@@ -305,6 +321,15 @@ export default function Sidebar({ onCreateActivity }: Props) {
         >
           {dark ? <SunIcon /> : <MoonIcon />}
           {dark ? 'Modo claro' : 'Modo oscuro'}
+        </button>
+        <button
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+          aria-label="Logout"
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <LogOutIcon />
+          Cerrar sesión
         </button>
       </div>
     </aside>

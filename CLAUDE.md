@@ -155,7 +155,13 @@ cd frontend && npm run lint
 | `DB_PASSWORD` | `.env` | Contraseña de la base de datos |
 | `NODE_ENV` | `.env` | `development \| production \| test` |
 | `FRONTEND_URL` | `.env` | URL del frontend para CORS |
-| `VITE_API_URL` | `frontend/.env.local` | URL base de la API (`http://localhost:3002/api/v1`) |
+| `AUTH_EMAIL` | `.env` | Email del usuario único (spec-021) |
+| `AUTH_PASSWORD` | `.env` | Contraseña en texto plano (spec-021) — solo de referencia/recuperación, el login nunca la compara directamente |
+| `AUTH_PASSWORD_HASH` | `.env` | Hash bcrypt de la contraseña (spec-021) — usado por el login vía `bcrypt.compare()`; generar ambos con `backend/scripts/generate-bcrypt-hash.js` |
+| `JWT_SECRET` | `.env` | Secret para firmar JWT (spec-021) — mín. 32 caracteres |
+| `JWT_EXPIRES_IN` | `.env` | Expiración del JWT (spec-021) — ej. `30d`, default `30d` |
+| `MCP_API_KEY` | `.env` | Token estático para autenticar `/mcp` (spec-021) |
+| `VITE_API_URL` | `frontend/.env.local` | URL base de la API (`http://localhost:3000/api/v1`) |
 
 > ⚠️ Nunca escribas valores reales de variables de entorno en este archivo
 > ni en ningún archivo rastreado por git.

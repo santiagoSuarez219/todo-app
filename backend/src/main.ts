@@ -1,6 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -12,19 +13,27 @@ async function bootstrap() {
 
   // ─── Global prefix ──────────────────────────────────────────────────────────
   // /mcp is excluded so the MCP endpoint does not get the api/v1 prefix
+  // / (root) is excluded as it's a healthcheck/simple endpoint
   app.setGlobalPrefix(API_PREFIX, {
     exclude: [
       { path: 'mcp', method: RequestMethod.POST },
       { path: 'mcp', method: RequestMethod.GET },
       { path: 'mcp', method: RequestMethod.DELETE },
+      { path: '', method: RequestMethod.GET },
     ],
   });
+
+  // ─── Cookie Parser ──────────────────────────────────────────────────────────
+  app.use(cookieParser());
 
   // ─── CORS ───────────────────────────────────────────────────────────────────
   const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim());
-  app.enableCors({ origin: allowedOrigins });
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+  });
 
   // ─── Validation ─────────────────────────────────────────────────────────────
   app.useGlobalPipes(
