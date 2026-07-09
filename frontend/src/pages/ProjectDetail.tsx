@@ -10,7 +10,7 @@ import ActivityForm from '../components/ActivityForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
-import SearchBar from '../components/SearchBar';
+import { SearchBar } from '../components/SearchBar';
 import type { Activity, CreateActivityDto } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

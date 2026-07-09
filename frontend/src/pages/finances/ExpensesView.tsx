@@ -7,7 +7,7 @@ import ExpenseForm from '../../components/finances/ExpenseForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
-import SearchBar from '../../components/SearchBar';
+import { SearchBar } from '../../components/SearchBar';
 import type { Expense, CreateExpenseDto, ExpenseType, UpdateExpenseDto } from '../../types';
 
 const MONTHS = [

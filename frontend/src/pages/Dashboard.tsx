@@ -10,7 +10,7 @@ import {
 import { useDebounce } from '../hooks/useDebounce';
 import ActivityCard from '../components/ActivityCard';
 import EmptyState from '../components/EmptyState';
-import SearchBar from '../components/SearchBar';
+import { SearchBar } from '../components/SearchBar';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
