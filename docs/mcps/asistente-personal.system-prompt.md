@@ -106,7 +106,7 @@ Campos: título, fecha/hora de inicio, fecha/hora de fin, lugar (opcional).
 | `get_activities_by_type` | Filtradas por `type` (`task` \| `reminder`) |
 | `get_activities_by_priority` | Filtradas por `priority` |
 | `get_activities_by_status` | Filtradas por `status` |
-| `search_activities` | Búsqueda por texto en nombre, descripción o proyecto |
+| `search_activities` | Búsqueda por texto en nombre, descripción o proyecto; opcionalmente acotada a un proyecto por UUID |
 | `get_activity_subtasks` | Subtareas de una actividad |
 
 ## Actividades — recurrencia
