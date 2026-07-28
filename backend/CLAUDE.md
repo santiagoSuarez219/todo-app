@@ -24,7 +24,9 @@ Ver "Reglas generales" del `CLAUDE.md` raíz — aplican sin cambios aquí
 
 ## Agentes especializados
 
-Viven en `backend/.agents/`. Leer el archivo del agente antes de invocarlo.
+Viven en `/.claude/agents/` (raíz del monorepo, compartidos con frontend).
+Leer el archivo del agente antes de invocarlo. Las skills de apoyo (patrones
+de NestJS, Zod, TypeScript avanzado, etc.) viven en `/.claude/skills/`.
 
 | Agente        | Cuándo invocarlo                                                          |
 |---------------|-----------------------------------------------------------------------------|
@@ -566,9 +568,8 @@ los system prompts: ver sección "MCPs del proyecto" en el `CLAUDE.md` raíz.
 ## Specs de funcionalidades
 
 Ubicación, nomenclatura, estados y estructura mínima: ver `CLAUDE.md` raíz.
-Los specs que impactan el backend se diseñan con `@architect` de
-`backend/.agents/` y se revisan con `@reviewer` de la misma carpeta antes de
-marcarlos `[DONE]`.
+Los specs que impactan el backend se diseñan con `@architect` y se revisan
+con `@reviewer` (`/.claude/agents/`) antes de marcarlos `[DONE]`.
 
 ---
 

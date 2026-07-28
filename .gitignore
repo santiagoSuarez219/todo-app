@@ -49,4 +49,5 @@ backend/README.md
 
 # Claude Code tooling
 .agents/
+.claude/skills/
 skills-lock.json
