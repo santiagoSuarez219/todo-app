@@ -265,7 +265,7 @@ export class ActivitiesService {
       }
     }
 
-    const saved = await this.activitiesRepository.save(activity);
+    let saved = await this.activitiesRepository.save(activity);
 
     // spec-024: completing the parent completes its whole subtask tree.
     // Only fires on the transition into "completed" — resaving an already
@@ -276,6 +276,10 @@ export class ActivitiesService {
       saved.status === ActivityStatus.COMPLETED
     ) {
       await this.completeSubtaskTree(saved.id);
+      // `saved.subtasks` was loaded before the cascade ran, so it still
+      // holds the pre-cascade statuses. Re-fetch so the response — read
+      // directly by REST/MCP callers, not just the UI — reflects reality.
+      saved = await this.findOne(saved.id);
     }
 
     // Propagate inheritable fields to future pending instances

@@ -1,4 +1,4 @@
-# spec-024 — [TESTING] Completar subtareas automáticamente al completar la tarea padre
+# spec-024 — [DONE] Completar subtareas automáticamente al completar la tarea padre
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -167,6 +167,33 @@ Este spec verifica ese supuesto en las pruebas manuales en lugar de asumirlo.
       sin desplegar aún), no por un defecto del código — pendiente de
       re-ejecución tras el despliegue. Datos de prueba (11 locales + 2 de
       producción) eliminados y verificados con `404`.
+
+### Fase 5 — Revisión de código y cierre
+
+- [x] `@reviewer` audita el diff completo contra `development`: lógica de
+      cascada correcta (transición, recursión, guarda anti-ciclo, no
+      reversión), diff quirúrgico (solo los 7 archivos previstos), sin
+      regresiones (23/23 unitarios, 38/40 e2e — las 2 fallas son preexistentes
+      y ajenas a este spec), convenciones de `backend/CLAUDE.md` respetadas.
+- [x] **Bug corregido:** la respuesta del `PATCH /activities/:id` devolvía
+      `subtasks[]` con el status previo a la cascada (el array se cargaba en
+      memoria antes del `UPDATE` masivo y nunca se refrescaba). Ahora, cuando
+      la cascada se dispara, `ActivitiesService.update()` vuelve a consultar
+      la actividad (`this.findOne(saved.id)`) antes de retornarla, para que la
+      respuesta —leída también por REST y por el MCP, no solo por la UI—
+      refleje el estado real. Verificado manualmente contra el backend local
+      (`PATCH` devuelve la subtarea con `status: "completed"`) y con la suite
+      automática en verde (23 unitarios, 8/8 e2e de spec-024).
+- [x] Hallazgos menores del reviewer (cascada no atómica, sin transacción; test
+      unitario superficial del recorrido recursivo; `visited` sin `rootId`)
+      registrados como deuda técnica en `spec/backlog.md`, sin corregir en
+      este spec — decisión explícita del usuario.
+- [x] `TC-MCP-024-001` se acepta diferido a post-despliegue, con decisión
+      explícita del usuario: el resto de criterios de aceptación (1–9) están
+      verificados por UI + e2e + unitarios + revisión de código; `mcp.service.ts`
+      delega literalmente en `ActivitiesService.update()`, así que hereda la
+      cascada corregida por construcción — sin lógica MCP propia que pueda
+      fallar de forma independiente.
 
 ## Criterios de aceptación
 
