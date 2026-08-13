@@ -6,6 +6,7 @@ import { CreditCard } from './entities/credit-card.entity';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpensesQueryDto } from './dto/expenses-query.dto';
+import { DuplicateExpenseDto } from './dto/duplicate-expense.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -77,5 +78,34 @@ export class ExpensesService {
   async remove(id: string): Promise<void> {
     const expense = await this.findOne(id);
     await this.expensesRepository.remove(expense);
+  }
+
+  async duplicate(sourceId: string, dto: DuplicateExpenseDto): Promise<Expense> {
+    const sourceExpense = await this.findOne(sourceId);
+
+    const [sourceYear, sourceMonth, sourceDay] = sourceExpense.date.split('-').map(Number);
+    const destDate = this.shiftDate(sourceExpense.date, sourceMonth, sourceYear, dto.month, dto.year);
+
+    const newExpense = this.expensesRepository.create({
+      description: sourceExpense.description,
+      amount: sourceExpense.amount,
+      type: sourceExpense.type,
+      date: destDate,
+      creditCard: sourceExpense.creditCard ? { id: sourceExpense.creditCard.id } : null,
+    });
+
+    const savedExpense = await this.expensesRepository.save(newExpense);
+    return this.findOne(savedExpense.id);
+  }
+
+  private shiftDate(date: string, sourceMonth: number, sourceYear: number, destMonth: number, destYear: number): string {
+    const [year, month, day] = date.split('-').map(Number);
+    const destLastDay = this.getLastDayOfMonth(destYear, destMonth);
+    const shiftedDay = Math.min(day, destLastDay);
+    return `${destYear}-${String(destMonth).padStart(2, '0')}-${String(shiftedDay).padStart(2, '0')}`;
+  }
+
+  private getLastDayOfMonth(year: number, month: number): number {
+    return new Date(year, month, 0).getDate();
   }
 }

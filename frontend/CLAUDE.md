@@ -26,14 +26,16 @@ leer `DESIGN.md` antes de escribir código de UI, etc.).
 
 ## Agentes especializados
 
-Viven en `frontend/.agents/`. Leer el archivo del agente antes de invocarlo.
+Viven en `/.claude/agents/` (raíz del monorepo, compartidos con backend).
+Leer el archivo del agente antes de invocarlo. Las skills de apoyo
+(accesibilidad, React, Tailwind, formularios, etc.) viven en `/.claude/skills/`.
 
 | Agente        | Cuándo invocarlo                                                          |
 |---------------|-----------------------------------------------------------------------------|
 | `@architect`  | Diseño de specs que impactan el frontend: fases, archivos, sin código     |
 | `@reviewer`   | Revisión de código frontend antes de marcar un spec como `[DONE]`        |
 | `@tester`     | Preparación de casos de prueba manuales en `docs/testing/`                |
-| `@mcp-builder`| Coordina con el `@mcp-builder` de `backend/.agents/` cuando un cambio de UI requiere actualizar un system prompt |
+| `@mcp-builder`| Coordina el ajuste de un system prompt en `docs/mcps/` cuando un cambio de UI lo requiere — la modificación real de `mcp.service.ts` la hace sobre `backend/` |
 
 ---
 
@@ -320,7 +322,7 @@ correspondiente en `docs/mcps/` — reglas completas en el `CLAUDE.md` raíz.
 
 - No hay tests automatizados en frontend actualmente.
 - Validación por casos manuales en `docs/testing/test-NNN.md`, preparados con
-  `@tester` de `frontend/.agents/` y ejecutados por el usuario.
+  `@tester` (`/.claude/agents/`) y ejecutados por el usuario.
 - Antes de cerrar una tarea de UI, verificar manualmente el golden path y los
   casos borde relevantes (ver skill `/verify` si aplica).
 
@@ -329,9 +331,8 @@ correspondiente en `docs/mcps/` — reglas completas en el `CLAUDE.md` raíz.
 ## Specs de funcionalidades
 
 Ubicación, nomenclatura, estados y estructura mínima: ver `CLAUDE.md` raíz.
-Los specs que impactan el frontend se diseñan con `@architect` de
-`frontend/.agents/` y se revisan con `@reviewer` de la misma carpeta antes de
-marcarlos `[DONE]`.
+Los specs que impactan el frontend se diseñan con `@architect` y se revisan
+con `@reviewer` (`/.claude/agents/`) antes de marcarlos `[DONE]`.
 
 ---
 

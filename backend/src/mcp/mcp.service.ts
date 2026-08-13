@@ -687,6 +687,23 @@ export class McpService {
         }
       },
     );
+
+    server.tool(
+      'duplicate_expense',
+      'Duplicate an expense to another month with date shifted to destination month (day clamped to last day if necessary)',
+      {
+        expenseId: z.string().uuid().describe('Source expense UUID'),
+        month: z.number().int().min(1).max(12).describe('Destination month (1-12)'),
+        year: z.number().int().min(2020).describe('Destination year (>= 2020)'),
+      },
+      async ({ expenseId, month, year }) => {
+        try {
+          return ok(await this.expensesService.duplicate(expenseId, { month, year }));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
   }
 
   // ─── Incomes ──────────────────────────────────────────────────────────────

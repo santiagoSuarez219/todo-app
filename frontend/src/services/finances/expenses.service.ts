@@ -1,5 +1,5 @@
 import apiClient from '../../lib/api-client';
-import type { Expense, CreateExpenseDto, UpdateExpenseDto, PaginationParams } from '../../types';
+import type { Expense, CreateExpenseDto, UpdateExpenseDto, DuplicateExpenseDto, PaginationParams } from '../../types';
 
 export async function getExpenses(
   params?: PaginationParams,
@@ -35,4 +35,9 @@ export async function updateExpense(id: string, dto: UpdateExpenseDto): Promise<
 
 export async function deleteExpense(id: string): Promise<void> {
   await apiClient.delete(`/finances/expenses/${id}`);
+}
+
+export async function duplicateExpense(id: string, dto: DuplicateExpenseDto): Promise<Expense> {
+  const { data } = await apiClient.post<{ data: Expense }>(`/finances/expenses/${id}/duplicate`, dto);
+  return data.data;
 }
