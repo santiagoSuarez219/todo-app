@@ -281,3 +281,128 @@ describe('ActivitiesService - update() cascade to subtasks (spec-024)', () => {
     });
   });
 });
+
+// spec-025 — Cronograma: vista de calendario mensual
+describe('ActivitiesService - findByMonth() (spec-025)', () => {
+  let service: ActivitiesService;
+  let mockRepository: any;
+  let mockProjectsService: any;
+  let mockQb: any;
+
+  beforeEach(async () => {
+    mockQb = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    };
+
+    mockRepository = {
+      createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+    };
+
+    mockProjectsService = {
+      findOne: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ActivitiesService,
+        {
+          provide: getRepositoryToken(Activity),
+          useValue: mockRepository,
+        },
+        {
+          provide: ProjectsService,
+          useValue: mockProjectsService,
+        },
+      ],
+    }).compile();
+
+    service = module.get<ActivitiesService>(ActivitiesService);
+  });
+
+  it('exists as a method on the service', () => {
+    // Fails in red until Fase 1 implements `findByMonth` on the service.
+    expect(typeof (service as any).findByMonth).toBe('function');
+  });
+
+  it('computes the visible grid range (Monday of the week containing day 1 → Sunday of the week containing the last day) and queries within it', async () => {
+    // March 2031: day 1 is a Saturday, last day (31) is a Monday.
+    // Visible grid: Monday 2031-02-24 → Sunday 2031-04-06.
+    await (service as any).findByMonth({ year: 2031, month: 3 });
+
+    expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
+    const andWhereCalls = mockQb.andWhere.mock.calls;
+    const rangeCall = andWhereCalls.find(([, params]: [string, any]) =>
+      params && 'start' in params && 'end' in params,
+    );
+    expect(rangeCall).toBeDefined();
+
+    const [, params] = rangeCall;
+    const start = new Date(params.start);
+    const end = new Date(params.end);
+
+    expect(start.getFullYear()).toBe(2031);
+    expect(start.getMonth()).toBe(1); // February (0-indexed)
+    expect(start.getDate()).toBe(24);
+
+    expect(end.getFullYear()).toBe(2031);
+    expect(end.getMonth()).toBe(3); // April (0-indexed)
+    expect(end.getDate()).toBe(6);
+  });
+
+  it('filters isTemplate = false and parent IS NULL (top-level activities only)', async () => {
+    await (service as any).findByMonth({ year: 2031, month: 3 });
+
+    const allWhereCalls = [
+      ...mockQb.where.mock.calls,
+      ...mockQb.andWhere.mock.calls,
+    ];
+    const conditions = allWhereCalls.map((call: any[]) => call[0]).join(' ');
+
+    expect(conditions).toMatch(/isTemplate\s*=\s*false/);
+    expect(conditions).toMatch(/parent/i);
+    expect(conditions).toMatch(/IS NULL/i);
+  });
+
+  it('locates activities by COALESCE(dueDate, instanceDate) — not by dueDate alone', async () => {
+    await (service as any).findByMonth({ year: 2031, month: 3 });
+
+    const allWhereCalls = [
+      ...mockQb.where.mock.calls,
+      ...mockQb.andWhere.mock.calls,
+    ];
+    const conditions = allWhereCalls.map((call: any[]) => call[0]).join(' ');
+
+    expect(conditions).toMatch(/COALESCE/i);
+    expect(conditions).toMatch(/dueDate/);
+    expect(conditions).toMatch(/instanceDate/);
+  });
+
+  it('does NOT filter by status — unlike findToday/findThisWeek/findOverdue, completed activities must remain in the result set', async () => {
+    await (service as any).findByMonth({ year: 2031, month: 3 });
+
+    const allWhereCalls = [
+      ...mockQb.where.mock.calls,
+      ...mockQb.andWhere.mock.calls,
+    ];
+    const conditions = allWhereCalls.map((call: any[]) => call[0]).join(' ');
+
+    expect(conditions).not.toMatch(/activity\.status/);
+  });
+
+  it('does not paginate — applies only a safety `take` cap, and returns getMany() directly', async () => {
+    mockQb.getMany.mockResolvedValue([{ id: 'a1' }, { id: 'a2' }]);
+
+    const result = await (service as any).findByMonth({ year: 2031, month: 3 });
+
+    expect(mockQb.take).toHaveBeenCalledWith(500);
+    expect(mockQb.getMany).toHaveBeenCalled();
+    expect(result).toEqual([{ id: 'a1' }, { id: 'a2' }]);
+  });
+});
