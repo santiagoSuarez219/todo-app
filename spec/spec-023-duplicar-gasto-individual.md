@@ -1,4 +1,4 @@
-# spec-023 — [TESTING] Duplicar un gasto individual a otro mes
+# spec-023 — [DONE] Duplicar un gasto individual a otro mes
 
 ## Contexto
 
@@ -222,7 +222,7 @@ respuesta natural.
 - [x] Actualizar la tabla de tools de `backend/CLAUDE.md` (fila
       `duplicate_expense` agregada). `docs/mcps/README.md` no enumera tools
       individuales → sin cambios.
-- [ ] Verificar que la tool responde vía `/mcp` (éxito devolviendo el gasto
+- [x] Verificar que la tool responde vía `/mcp` (éxito devolviendo el gasto
       creado). → lo ejecuta `@tester` con los `TC-MCP-*`.
 
 ### Fase 5 — Pruebas
@@ -233,14 +233,19 @@ respuesta natural.
       día 31 → mes de 30/28 días); prellenado del formulario al mes siguiente;
       feedback de éxito; manejo de error. Más `TC-MCP-001…` para
       `duplicate_expense`.
-- [ ] Backend/e2e (`@tester`): caso feliz (gasto con y sin tarjeta) verificando
+- [x] Backend/e2e (`@tester`): caso feliz (gasto con y sin tarjeta) verificando
       `description`/`amount`/`type`/`creditCardId` copiados y `date`
       desplazada+clampeada (incluir día 31 → mes corto y febrero bisiesto);
       origen inexistente → 404. Si se extrajo el helper a util común (opción b),
       re-ejecutar los e2e de spec-020 para descartar regresión del clamp.
-- [ ] Casos `TC-MCP-001` (duplicar a período válido) y `TC-MCP-002` (origen
+      → `backend/src/finances/expenses.service.duplicate.spec.ts` (unit, 19/19
+      verde) y `backend/test/e2e-023-duplicar-gasto-individual.e2e-spec.ts`
+      (e2e, 16/16 casos de spec-023 en verde). El clamp se replicó como
+      privado en `expenses.service.ts` (opción a), no se extrajo helper
+      común — `budgets.service.ts` no se tocó.
+- [x] Casos `TC-MCP-001` (duplicar a período válido) y `TC-MCP-002` (origen
       inexistente → error) para la tool `duplicate_expense`, redactados en el
-      `test-023`.
+      `test-023`. → validados vía `/mcp` en el e2e (`TC-MCP-023-01/02/03`).
 
 ## Criterios de aceptación
 
@@ -265,3 +270,17 @@ respuesta natural.
   fecha; con y sin tarjeta; origen 404.
 - MCP: `TC-MCP-001` (duplicar a período válido) y `TC-MCP-002` (origen
   inexistente → error).
+
+## Cierre
+
+- Automáticas: `npm run test` (19/19 verde) y `npm run test:e2e` (16/16 casos
+  de spec-023 verde) — ver `backend/src/finances/expenses.service.duplicate.spec.ts`
+  y `backend/test/e2e-023-duplicar-gasto-individual.e2e-spec.ts`.
+- Manuales: ronda ejecutada y cerrada en `docs/testing/test-023-duplicar-gasto-individual.md`
+  — 15/15 casos (`TC-001`–`TC-012`, `TC-MCP-001`–`003`) aprobados por el usuario.
+- **Nota abierta:** al verificar por API durante la ronda, TC-004 y TC-005
+  (clamp 31 enero → 29/28 febrero) no mostraban el gasto duplicado esperado
+  en la base de datos pese a que el usuario los confirmó como aprobados en la
+  UI. El usuario decidió explícitamente cerrar el spec como `[DONE]` sin
+  investigar más en esta sesión — ver detalle en los "Hallazgos" de TC-004/TC-005
+  en `test-023`.
