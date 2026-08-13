@@ -465,6 +465,23 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
 - Cron `EVERY_DAY_AT_MIDNIGHT`: por cada plantilla activa (`isTemplate: true`, `isRecurring: true`) evalúa si corresponde generar una instancia para el día siguiente y la crea.
 - Al editar una plantilla, `name` / `description` / `priority` / `energy` se propagan automáticamente a las instancias futuras que sigan `pending` (no afecta instancias ya completadas o pasadas).
 
+#### Completar subtareas en cascada (spec-024)
+
+- Al hacer `update()` sobre una actividad y su `status` **transiciona** hacia
+  `completed` (el status anterior no era `completed`), `ActivitiesService`
+  completa automáticamente **todo el árbol de subtareas** de esa actividad:
+  hijas directas y sus propias subtareas, recursivamente, sin límite de
+  profundidad.
+- Se completan **todas** las subtareas sin excepción, incluidas las que
+  estuvieran en `cancelled`.
+- La propagación es de **un solo sentido**: si luego el padre se desmarca (pasa
+  de `completed` a otro status), las subtareas ya completadas **no revierten**.
+- No se dispara si la actividad ya estaba en `completed` (evita re-propagar
+  sobre subtareas que el usuario haya reabierto manualmente después), ni si el
+  `update()` no toca el campo `status`.
+- Al vivir en el servicio, aplica igual desde REST (`PATCH /activities/:id`),
+  MCP (`update_activity`) y la UI — sin lógica duplicada en el frontend.
+
 #### Deudas (`debts.service.ts`)
 
 - `payInstallment(debtId)`: crea automáticamente un `Expense` de tipo `pago_deuda` con `description: "Cuota: <descripción de la deuda>"`, incrementa `paidInstallments`, recalcula `remainingValue` y, si `paidInstallments === totalInstallments`, cambia `status` a `pagada`.
