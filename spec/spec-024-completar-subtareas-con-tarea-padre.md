@@ -147,19 +147,26 @@ Este spec verifica ese supuesto en las pruebas manuales en lugar de asumirlo.
       no requiere cambios — el README es un índice de MCPs/tools expuestas, no
       documenta reglas de negocio de cada tool (eso vive en el system prompt).
       Sin tools nuevas ni cambios de firma, no amerita edición.
-- [ ] Verificar con una llamada real al MCP que `update_activity` con
+- [x] Verificar con una llamada real al MCP que `update_activity` con
       `status: "completed"` cierra el árbol de subtareas (caso `TC-MCP-024-001`).
-      Pendiente: se ejecuta junto con la ronda manual de Fase 4
-      (`docs/testing/test-024-completar-subtareas-con-tarea-padre.md`).
+      Ejecutado en la ronda manual de Fase 4: el MCP conectado en esta sesión
+      apunta a **producción**, que aún no tiene este spec desplegado, así que
+      la cascada no se observó ahí (esperado — no es un defecto). Queda
+      documentado en `docs/testing/test-024-completar-subtareas-con-tarea-padre.md`
+      como pendiente de re-ejecución post-despliegue.
 
 ### Fase 4 — Documentación y pruebas manuales
 
 - [x] Documentar la regla en la sección "Lógica de Negocio Importante" de
       `backend/CLAUDE.md` (nueva subsección "Completar subtareas en cascada
       (spec-024)").
-- [ ] Ejecutar la ronda manual de `docs/testing/test-024-completar-subtareas-con-tarea-padre.md`
-      (la ejecuta el usuario sobre la UI; Claude prepara datos y registra hallazgos).
-      Incluye `TC-MCP-024-001`, pendiente de la Fase 3.
+- [x] Ejecutar la ronda manual de `docs/testing/test-024-completar-subtareas-con-tarea-padre.md`
+      (la ejecutó el usuario sobre la UI; Claude preparó los datos y registró
+      los hallazgos). Resultado: 7/8 aprobados (`TC-024-001` a `007`);
+      `TC-MCP-024-001` quedó fallido por entorno (MCP apunta a producción,
+      sin desplegar aún), no por un defecto del código — pendiente de
+      re-ejecución tras el despliegue. Datos de prueba (11 locales + 2 de
+      producción) eliminados y verificados con `404`.
 
 ## Criterios de aceptación
 
