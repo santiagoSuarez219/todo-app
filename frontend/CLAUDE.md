@@ -202,6 +202,7 @@ Pages
 | `/activities/this-week` | `WeekView` | Actividades de la semana |
 | `/activities/overdue` | `OverdueView` | Actividades vencidas |
 | `/activities/backlog` | `BacklogView` | Actividades sin fecha |
+| `/activities/schedule` | `ScheduleView` | Cronograma — calendario mensual |
 | `/finances` | `FinancesDashboard` | Overview financiero |
 | `/finances/expenses` | `ExpensesView` | Gastos |
 | `/finances/incomes` | `IncomesView` | Ingresos |
@@ -279,6 +280,12 @@ asumir un shape, no reproducirlo aquí para evitar que ambos se desincronicen.
 - `ProjectForm.tsx`
 - `ConfirmDialog.tsx`, `EmptyState.tsx`, `Modal.tsx`, `Pagination.tsx`
 - `PriorityBadge.tsx`, `StatusBadge.tsx`, `EnergyIndicator.tsx`
+
+### Cronograma (`components/schedule/`)
+- `MonthNavigator.tsx`, `MonthCalendar.tsx`, `CalendarDayCell.tsx`,
+  `ActivityChip.tsx`, `DayActivitiesModal.tsx` — vista de calendario mensual
+  (spec-025), consumidos por `pages/ScheduleView.tsx`. Lógica pura de fechas
+  en `lib/calendar.ts`.
 
 ### Finanzas (`components/finances/`)
 - Un `*Card.tsx` + `*Form.tsx` por recurso: `Account`, `CreditCard`, `Cdt`,

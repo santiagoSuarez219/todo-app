@@ -176,6 +176,7 @@ externas). Autenticación: no implementada — app de uso personal, un solo usua
 | `GET` | `/activities/tomorrow` | `dueDate` mañana |
 | `GET` | `/activities/this-week` | Semana actual (Lun–Dom) por `dueDate` |
 | `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
+| `GET` | `/activities/schedule` | Cronograma mensual — `?year=&month=`, ver lógica |
 | `GET` | `/activities/without-project` | Sin proyecto asociado |
 | `GET` | `/activities/project/:projectId` | Por proyecto |
 | `GET` | `/activities/type/:type` | Por tipo |
@@ -460,6 +461,21 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
 - `task`: vencida si `dueDate < hoy 00:00` y `status != 'completed'`
 - `reminder`: vencida si `dueDate < ahora` y `status != 'completed'`
 
+#### Cronograma mensual (`findByMonth`, spec-025)
+
+- `GET /activities/schedule?year=&month=` devuelve actividades de nivel
+  superior (`parent IS NULL`) y no-plantilla (`isTemplate = false`) dentro
+  del **rango visible de la grilla mensual**: el mes objetivo más los días de
+  relleno Lunes–Domingo del mes anterior/siguiente (mismo criterio de semana
+  que `findThisWeek`).
+- La ubicación en el calendario usa `COALESCE(dueDate, instanceDate)`, no
+  solo `dueDate` — así las instancias de tareas recurrentes (que solo
+  reciben `instanceDate`, ver `buildInstanceFromTemplate`) también aparecen.
+- **No** filtra por `status`: a diferencia de `findToday`/`findThisWeek`/
+  `findOverdue`, las actividades completadas se incluyen (la UI las muestra
+  atenuadas en vez de ocultarlas).
+- Sin paginación; aplica un `take(500)` de seguridad.
+
 #### Recurrencia (`recurrence-scheduler.service.ts`)
 
 - Cron `EVERY_DAY_AT_MIDNIGHT`: por cada plantilla activa (`isTemplate: true`, `isRecurring: true`) evalúa si corresponde generar una instancia para el día siguiente y la crea.
@@ -528,6 +544,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `get_tomorrow_activities` | Actividades de mañana |
 | `get_this_week_activities` | Actividades de la semana actual |
 | `get_overdue_activities` | Actividades vencidas |
+| `get_activities_by_month` | Actividades del cronograma mensual (mes + relleno Lun–Dom), por `dueDate`/`instanceDate`; incluye completadas (spec-025) |
 | `get_activities_without_project` | Actividades sin proyecto asociado |
 | `get_activities_by_project` | Por proyecto |
 | `get_activities_by_type` | Por tipo |

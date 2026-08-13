@@ -1,4 +1,4 @@
-# spec-025 — [NOT STARTED] Cronograma — vista de calendario mensual de actividades
+# spec-025 — [TESTING] Cronograma — vista de calendario mensual de actividades
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -147,29 +147,29 @@ Sin cambios de esquema. Sin migración.
 
 ## Fases de implementación
 
-### Fase 1 — Backend: endpoint de cronograma
-- [ ] `schedule-query.dto.ts`: `year` + `month`, `@Type(() => Number)`, `@IsInt`, `@Min`/`@Max`.
-- [ ] `activities.service.ts`: helper de rango visible de grilla (Lunes de la semana del día 1 → Domingo de la semana del último día) + `findByMonth(query)` sobre `baseQuery()` con los filtros descritos en "Impacto en el sistema".
-- [ ] `activities.controller.ts`: `@Get('schedule')`, ubicado antes de `@Get(':id')`, con anotaciones Swagger consistentes con el resto del controlador.
-- [ ] Poner en verde los unitarios y el e2e de este spec.
+### Fase 1 — Backend: endpoint de cronograma ✅ Completada
+- [x] `schedule-query.dto.ts`: `year` + `month`, `@Type(() => Number)`, `@IsInt`, `@Min`/`@Max`.
+- [x] `activities.service.ts`: helper de rango visible de grilla (Lunes de la semana del día 1 → Domingo de la semana del último día) + `findByMonth(query)` sobre `baseQuery()` con los filtros descritos en "Impacto en el sistema".
+- [x] `activities.controller.ts`: `@Get('schedule')`, ubicado antes de `@Get(':id')`, con anotaciones Swagger consistentes con el resto del controlador.
+- [x] Poner en verde los unitarios y el e2e de este spec.
 
-### Fase 2 — Frontend: capa de datos y utilidades
-- [ ] `types/index.ts`: `ScheduleParams`.
-- [ ] `services/activities.service.ts`: `getScheduleActivities(year, month)`.
-- [ ] `hooks/useActivities.ts`: `useScheduleActivities` con `keepPreviousData`.
-- [ ] `lib/calendar.ts`: matriz de semanas + agrupación por fecha local (con prueba manual explícita de zona horaria, ver `TC-025-009`).
+### Fase 2 — Frontend: capa de datos y utilidades ✅ Completada
+- [x] `types/index.ts`: `ScheduleParams`.
+- [x] `services/activities.service.ts`: `getScheduleActivities(year, month)`.
+- [x] `hooks/useActivities.ts`: `useScheduleActivities` con `keepPreviousData`.
+- [x] `lib/calendar.ts`: matriz de semanas + agrupación por fecha local (con prueba manual explícita de zona horaria, ver `TC-025-009`).
 
-### Fase 3 — Frontend: UI del cronograma
-- [ ] Releer `frontend/DESIGN.md` antes de escribir UI (tokens, dark mode, badges).
-- [ ] `components/schedule/MonthNavigator.tsx`, `ActivityChip.tsx`, `CalendarDayCell.tsx`, `MonthCalendar.tsx`, `DayActivitiesModal.tsx`.
-- [ ] `pages/ScheduleView.tsx` + ruta en `App.tsx` + entrada en `Sidebar.tsx`.
-- [ ] Verificar dark mode y comportamiento responsive de la grilla (desktop y mobile, aunque no esté en la Tabbar).
+### Fase 3 — Frontend: UI del cronograma ✅ Completada
+- [x] Releer `frontend/DESIGN.md` antes de escribir UI (tokens, dark mode, badges).
+- [x] `components/schedule/MonthNavigator.tsx`, `ActivityChip.tsx`, `CalendarDayCell.tsx`, `MonthCalendar.tsx`, `DayActivitiesModal.tsx`.
+- [x] `pages/ScheduleView.tsx` + ruta en `App.tsx` + entrada en `Sidebar.tsx`.
+- [x] `npm run build` (tsc + vite) y `npm run lint` sin errores nuevos — verificación de dark mode/responsive real queda para la ronda manual (`TC-025-*`), que ejecuta el usuario.
 
-### Fase 4 — MCP: actualizar `todo-api`
-- [ ] Agregar `get_activities_by_month` en `mcp.service.ts` como wrapper de `activitiesService.findByMonth()`, con schema Zod alineado 1:1 con `ScheduleQueryDto` (`year`, `month`).
-- [ ] Registrar la tool en la tabla de `backend/CLAUDE.md` ("Tools disponibles") y en `docs/mcps/README.md` si aplica.
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md` con la nueva capacidad.
-- [ ] Verificar con una llamada real al MCP que la tool responde el set esperado (`TC-MCP-025-001`).
+### Fase 4 — MCP: actualizar `todo-api` ✅ Completada
+- [x] Agregar `get_activities_by_month` en `mcp.service.ts` como wrapper de `activitiesService.findByMonth()`, con schema Zod alineado 1:1 con `ScheduleQueryDto` (`year`, `month`).
+- [x] Registrar la tool en la tabla de `backend/CLAUDE.md` ("Tools disponibles"). `docs/mcps/README.md` no requirió cambios (es un índice de MCPs, no de tools individuales — mismo criterio que spec-024).
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` con la nueva capacidad (tabla de consultas especializadas + tabla de "Consultas y flujos frecuentes").
+- [ ] Verificar con una llamada real al MCP que la tool responde el set esperado (`TC-MCP-025-001`) — pendiente de la ronda de pruebas manuales (Fase 5).
 
 ### Fase 5 — Pruebas
 - [ ] `@tester` ejecuta unitarios + e2e y confirma verde.
@@ -225,5 +225,5 @@ Sin cambios de esquema. Sin migración.
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{fecha}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-13

@@ -5,12 +5,13 @@ import type {
   UpdateActivityDto,
   PaginationParams,
   ActivitySearchParams,
+  ScheduleParams,
   ActivityStatus,
   ActivityType,
   Priority,
 } from '../types';
 
-async function getList(url: string, params?: PaginationParams): Promise<Activity[]> {
+async function getList<P extends object = PaginationParams>(url: string, params?: P): Promise<Activity[]> {
   const { data } = await apiClient.get<{ data: Activity[] }>(url, { params });
   return data.data;
 }
@@ -52,6 +53,10 @@ export async function getThisWeekActivities(params?: PaginationParams): Promise<
 
 export async function getOverdueActivities(params?: PaginationParams): Promise<Activity[]> {
   return getList('/activities/overdue', params);
+}
+
+export async function getScheduleActivities(year: number, month: number): Promise<Activity[]> {
+  return getList<ScheduleParams>('/activities/schedule', { year, month });
 }
 
 export async function getActivitiesByProject(

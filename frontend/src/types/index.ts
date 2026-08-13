@@ -135,6 +135,11 @@ export interface ActivitySearchParams extends PaginationParams {
   projectId?: string;
 }
 
+export interface ScheduleParams {
+  year: number;
+  month: number;
+}
+
 // ─── Finances — Enums ────────────────────────────────────────────────────────
 
 export const ExpenseType = {
