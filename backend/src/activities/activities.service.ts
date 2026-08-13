@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Activity } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -223,6 +223,7 @@ export class ActivitiesService {
 
   async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
     const activity = await this.findOne(id);
+    const previousStatus = activity.status;
     const effectiveDto = { ...dto, type: dto.type ?? activity.type } as CreateActivityDto;
     const {
       projectId,
@@ -266,6 +267,17 @@ export class ActivitiesService {
 
     const saved = await this.activitiesRepository.save(activity);
 
+    // spec-024: completing the parent completes its whole subtask tree.
+    // Only fires on the transition into "completed" — resaving an already
+    // completed activity (or updating without touching status) must not
+    // re-run the cascade over subtasks the user may have reopened since.
+    if (
+      previousStatus !== ActivityStatus.COMPLETED &&
+      saved.status === ActivityStatus.COMPLETED
+    ) {
+      await this.completeSubtaskTree(saved.id);
+    }
+
     // Propagate inheritable fields to future pending instances
     if (saved.isTemplate) {
       const today = new Date();
@@ -288,6 +300,42 @@ export class ActivitiesService {
     }
 
     return saved;
+  }
+
+  /**
+   * spec-024: recursively completes every descendant of `rootId`, level by
+   * level, regardless of their current status (including `cancelled`).
+   * Guards against cycles by never revisiting an id already completed.
+   */
+  private async completeSubtaskTree(rootId: string): Promise<void> {
+    const visited = new Set<string>();
+    let parentIds = [rootId];
+
+    while (parentIds.length > 0) {
+      const children = await this.activitiesRepository.find({
+        where: { parent: { id: In(parentIds) } },
+        select: ['id'],
+      });
+
+      const childIds = children
+        .map((child) => child.id)
+        .filter((childId) => !visited.has(childId));
+
+      if (childIds.length === 0) {
+        break;
+      }
+
+      childIds.forEach((childId) => visited.add(childId));
+
+      await this.activitiesRepository
+        .createQueryBuilder()
+        .update(Activity)
+        .set({ status: ActivityStatus.COMPLETED })
+        .where('id IN (:...ids)', { ids: childIds })
+        .execute();
+
+      parentIds = childIds;
+    }
   }
 
   async remove(id: string): Promise<void> {

@@ -1,4 +1,4 @@
-# spec-024 — [NOT STARTED] Completar subtareas automáticamente al completar la tarea padre
+# spec-024 — [TESTING] Completar subtareas automáticamente al completar la tarea padre
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -104,44 +104,62 @@ Este spec verifica ese supuesto en las pruebas manuales en lugar de asumirlo.
 
 ## Fases de implementación
 
-### Fase 1 — Propagación en el servicio
+### Fase 1 — Propagación en el servicio ✅ Completada
 
-- [ ] En `ActivitiesService.update()`, capturar `previousStatus` antes del
+- [x] En `ActivitiesService.update()`, capturar `previousStatus` antes del
       `Object.assign` que sobrescribe los campos entrantes.
-- [ ] Tras el `save`, detectar la transición
+- [x] Tras el `save`, detectar la transición
       (`previousStatus !== COMPLETED && saved.status === COMPLETED`).
-- [ ] Implementar el método privado `completeSubtaskTree(rootId: string)`:
+- [x] Implementar el método privado `completeSubtaskTree(rootId: string)`:
       recolectar descendientes nivel por nivel con `find({ where: { parent: { id: In(ids) } } })`
       hasta que no queden más, acumulando ids ya visitados como guarda
       anti-ciclo, y aplicar un único `UPDATE` masivo por id.
-- [ ] Invocar la propagación solo ante la transición detectada.
-- [ ] Verificar que el `Activity` devuelto por `update()` sigue siendo el padre
+- [x] Invocar la propagación solo ante la transición detectada.
+- [x] Verificar que el `Activity` devuelto por `update()` sigue siendo el padre
       guardado (no cambia el contrato de la respuesta del endpoint).
 
-### Fase 2 — Pruebas automáticas en verde
+### Fase 2 — Pruebas automáticas en verde ✅ Completada
 
-- [ ] Ejecutar los casos unitarios y e2e escritos junto con este spec y llevarlos
-      de rojo a verde sin modificar sus asserts.
-- [ ] `npm run test` y `npm run test:e2e` en `backend/` sin regresiones.
+- [x] Ejecutar los casos unitarios y e2e escritos junto con este spec y llevarlos
+      de rojo a verde sin modificar sus asserts. (9/9 unitarios de
+      `activities.service.spec.ts`, 8/8 e2e de spec-024).
+- [x] `npm run test` y `npm run test:e2e` en `backend/` sin regresiones (las 2
+      fallas de `app.e2e-spec.ts` y `auth.e2e-spec.ts` son preexistentes, no
+      relacionadas con este spec — verificado contra el commit previo).
 
-### Fase 3 — MCP: actualizar `todo-api`
+### Fase 3 — MCP: actualizar `todo-api` ✅ Completada (docs) / pendiente verificación real
 
-- [ ] Confirmar que **no** hacen falta cambios en `mcp.service.ts`
-      (`update_activity` ya delega en el servicio).
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md` con la regla:
+- [x] Confirmar que **no** hacen falta cambios en `mcp.service.ts`
+      (`update_activity` ya delega en el servicio). Confirmado: la tool
+      `update_activity` (línea ~275) hace únicamente
+      `this.activitiesService.update(id, dto)`, sin lógica propia de status ni
+      de subtareas — hereda la propagación en cascada sin tocar su schema Zod
+      ni el handler.
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` con la regla:
       completar una tarea con `update_activity` completa también todas sus
-      subtareas en cascada, de forma irreversible.
-- [ ] Revisar `docs/mcps/README.md` y actualizarlo solo si el cambio de
-      comportamiento lo amerita (no hay tools nuevas que registrar).
+      subtareas en cascada, de forma irreversible. Se agregó la sección
+      "⚠️ Completar tareas con subtareas (propagación en cascada)" bajo la
+      tabla de "Actividades — CRUD" y una regla en "Reglas de comportamiento"
+      que exige advertir al usuario antes de completar una tarea con
+      subtareas.
+- [x] Revisar `docs/mcps/README.md` y actualizarlo solo si el cambio de
+      comportamiento lo amerita (no hay tools nuevas que registrar). Revisado:
+      no requiere cambios — el README es un índice de MCPs/tools expuestas, no
+      documenta reglas de negocio de cada tool (eso vive en el system prompt).
+      Sin tools nuevas ni cambios de firma, no amerita edición.
 - [ ] Verificar con una llamada real al MCP que `update_activity` con
       `status: "completed"` cierra el árbol de subtareas (caso `TC-MCP-024-001`).
+      Pendiente: se ejecuta junto con la ronda manual de Fase 4
+      (`docs/testing/test-024-completar-subtareas-con-tarea-padre.md`).
 
 ### Fase 4 — Documentación y pruebas manuales
 
-- [ ] Documentar la regla en la sección "Lógica de Negocio Importante" de
-      `backend/CLAUDE.md`.
+- [x] Documentar la regla en la sección "Lógica de Negocio Importante" de
+      `backend/CLAUDE.md` (nueva subsección "Completar subtareas en cascada
+      (spec-024)").
 - [ ] Ejecutar la ronda manual de `docs/testing/test-024-completar-subtareas-con-tarea-padre.md`
       (la ejecuta el usuario sobre la UI; Claude prepara datos y registra hallazgos).
+      Incluye `TC-MCP-024-001`, pendiente de la Fase 3.
 
 ## Criterios de aceptación
 
@@ -183,5 +201,5 @@ Este spec verifica ese supuesto en las pruebas manuales en lugar de asumirlo.
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{pendiente}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-13
