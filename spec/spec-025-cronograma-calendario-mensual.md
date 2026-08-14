@@ -1,4 +1,4 @@
-# spec-025 — [IN PROGRESS] Cronograma — vista de calendario mensual de actividades
+# spec-025 — [DONE] Cronograma — vista de calendario mensual de actividades
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -145,7 +145,7 @@ Sin cambios de backend, sin migración, sin cambios en `docs/mcps/`.
 | Archivo | Cambio |
 |---------|--------|
 | `backend/src/activities/dto/schedule-query.dto.ts` | **Nuevo.** `ScheduleQueryDto`: `year` (int, 2000–2100) + `month` (int, 1–12), siguiendo el patrón de `MonthlySummaryQueryDto`. Ambos requeridos, sin paginación. |
-| `backend/src/activities/activities.service.ts` | Nuevo método `findByMonth(query: ScheduleQueryDto): Promise<Activity[]>`. Calcula el rango visible de la grilla (Lunes–Domingo que envuelve el mes) y consulta sobre `baseQuery()` filtrando `isTemplate = false`, `parent IS NULL` y `COALESCE(dueDate, instanceDate)` dentro del rango. Sin `paginate()`; `take` de seguridad (500) para no dejar la query abierta. No filtra por `status` (a diferencia de `findThisWeek`/`findToday`/`findOverdue`). |
+| `backend/src/activities/activities.service.ts` | Nuevo método `findByMonth(query: ScheduleQueryDto): Promise<Activity[]>`. Calcula el rango visible de la grilla (Lunes–Domingo que envuelve el mes) y consulta sobre `baseQuery()` filtrando `isTemplate = false`, `parent IS NULL` y ubicando por `dueDate` o, si es `NULL`, `instanceDate` (comparado contra strings `YYYY-MM-DD` locales, **no** `COALESCE` cross-type — ver corrección de bug en Fase 9) dentro del rango. Sin `paginate()`; `take` de seguridad (500) para no dejar la query abierta. No filtra por `status` (a diferencia de `findThisWeek`/`findToday`/`findOverdue`). |
 | `backend/src/activities/activities.controller.ts` | Nueva ruta `@Get('schedule')`, registrada en el bloque de "Consultas especializadas" **antes** de `@Get(':id')` (si va después, `ParseUUIDPipe` intenta parsear `"schedule"` como UUID y revienta). |
 | `backend/src/activities/activities.service.spec.ts` | Casos unitarios nuevos para `findByMonth()` (ver "Pruebas asociadas"). |
 | `backend/test/e2e-025-cronograma-calendario-mensual.e2e-spec.ts` | Nuevo archivo de pruebas e2e. |
@@ -275,15 +275,17 @@ desde los datos vivos de `useScheduleActivities` — ver
 - [x] **Bloqueante corregido:** las instancias de tareas recurrentes (`instanceDate`, sin `dueDate`) quedaban corridas un día en los bordes de la grilla. Causa: (a) backend — `COALESCE(activity.dueDate, activity.instanceDate)` promovía la columna `date` a `timestamptz` usando la timezone de sesión de Postgres (UTC), distinta de la timezone local del servidor (UTC-5) usada para construir el rango de la grilla, excluyendo instancias en el primer día visible e incluyendo una de más en el día siguiente al último; (b) frontend — `activityLocationDate()` parseaba `instanceDate` (`'YYYY-MM-DD'`) con `new Date(...)`, que asume UTC, corriendo el chip un día atrás en timezones negativas. Corregido: `findByMonth()` ahora compara `dueDate`/`instanceDate` con condiciones separadas por tipo (sin `COALESCE` cross-type, `instanceDate` contra strings `YYYY-MM-DD` calculados en local); `activityLocationDate()` detecta strings date-only y construye el `Date` con campos locales. Nuevo caso e2e `TC-025-e2e-03b` cubre los 4 bordes exactos (día de inicio, día de fin, un día antes, un día después). Unitario de `findByMonth()` actualizado para reflejar la nueva condición. 29/29 unitarios, 30/32 → 47 e2e totales (2 fallas preexistentes ajenas), build/lint limpios en ambos paquetes.
 - [x] Hallazgos menores del reviewer resueltos: `ActivityChip.tsx` usa `ActivityStatus.COMPLETED` en vez de string literal; redacción de la Fase 5 corregida para reflejar que el `EmptyState` de mes vacío sí oculta la grilla (comportamiento final, no el intermedio); `take(500)` silencioso registrado en `spec/backlog.md`.
 - [x] **Decisión del usuario sobre AC-12/`TC-MCP-025-001`:** no bloquea el `[DONE]` — `get_activities_by_month` es un wrapper delgado sobre `findByMonth()` (mismo método ya probado por REST y e2e), bajo riesgo de fallar de forma independiente. Queda documentado como deuda de verificación a re-ejecutar después del despliegue.
-- [ ] `@reviewer` reconfirma el fix del bloqueante antes de marcar `[DONE]`.
+- [x] `@reviewer` reconfirma el fix del bloqueante: **✅ APROBADO**. Verificó con SQL real contra Postgres que el predicado viejo reproduce el bug (excluye el primer día visible, incluye uno de más tras el último) y que el nuevo lo corrige en los 4 bordes; confirmó `TC-025-e2e-03b` como regresión genuina contra la base real (no tautológica); verificó el fix de `activityLocationDate()` con `TZ=America/Bogota`; confirmó 29/29 unitarios, 47 e2e (2 fallas preexistentes ajenas); build/lint limpios; y que el diff no arrastra nada del reformateo de Prettier descartado.
+- [x] Hallazgos menores de la segunda pasada corregidos: `backend/CLAUDE.md` y la tabla de "Impacto en el sistema" de este spec ya no recomiendan el patrón `COALESCE` que causó el bug — documentan la comparación real (`dueDate` o `instanceDate` contra `YYYY-MM-DD` locales).
 
 ## Criterios de aceptación
 
 1. `GET /activities/schedule?year=&month=` devuelve únicamente actividades
    con `parent IS NULL` y `isTemplate = false`.
-2. El resultado incluye actividades cuya `COALESCE(dueDate, instanceDate)`
-   cae dentro del rango visible de la grilla (mes objetivo + relleno
-   Lunes–Domingo), y excluye las que caen fuera de ese rango.
+2. El resultado incluye actividades cuya fecha de ubicación (`dueDate` o,
+   si es `NULL`, `instanceDate`) cae dentro del rango visible de la grilla
+   (mes objetivo + relleno Lunes–Domingo), incluidos los bordes exactos de
+   ese rango, y excluye las que caen fuera.
 3. El resultado incluye actividades sin `dueDate` pero con `instanceDate`
    dentro del rango (instancias de tareas recurrentes).
 4. El resultado excluye actividades sin `dueDate` **y** sin `instanceDate`
@@ -330,7 +332,11 @@ desde los datos vivos de `useScheduleActivities` — ver
     caso por criterio de aceptación verificable vía API (1–6).
   - `backend/src/activities/activities.service.spec.ts` — casos unitarios de
     `findByMonth()`: cálculo del rango visible, filtros de plantilla/
-    subtarea, `COALESCE`, no-filtrado de `status`.
+    subtarea, ubicación por `dueDate`/`instanceDate` sin `COALESCE`
+    cross-type, no-filtrado de `status`.
+  - `backend/test/e2e-025-cronograma-calendario-mensual.e2e-spec.ts` —
+    `TC-025-e2e-03b` (regresión, Fase 9): `instanceDate` exactamente en los
+    4 bordes de la grilla, contra la base de datos real.
   - La ampliación (filtro por proyecto, AC-13 a AC-16) es 100% frontend, sin
     tocar backend — no agrega pruebas automáticas; se cubre solo con la ronda
     manual 2 (`TC-025-010`–`013`), consistente con que el frontend no tiene

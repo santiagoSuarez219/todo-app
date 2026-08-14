@@ -84,7 +84,7 @@ export class ActivitiesController {
   }
 
   @Get('schedule')
-  @ApiOperation({ summary: 'Get top-level activities within a month\'s visible calendar grid range (Mon–Sun fill included), located by COALESCE(dueDate, instanceDate)' })
+  @ApiOperation({ summary: 'Get top-level activities within a month\'s visible calendar grid range (Mon–Sun fill included), located by dueDate or, if absent, instanceDate' })
   @ApiOkResponse({ type: [Activity] })
   findBySchedule(@Query() query: ScheduleQueryDto): Promise<Activity[]> {
     return this.activitiesService.findByMonth(query);

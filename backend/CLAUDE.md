@@ -468,9 +468,18 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
   del **rango visible de la grilla mensual**: el mes objetivo más los días de
   relleno Lunes–Domingo del mes anterior/siguiente (mismo criterio de semana
   que `findThisWeek`).
-- La ubicación en el calendario usa `COALESCE(dueDate, instanceDate)`, no
-  solo `dueDate` — así las instancias de tareas recurrentes (que solo
-  reciben `instanceDate`, ver `buildInstanceFromTemplate`) también aparecen.
+- La ubicación en el calendario usa `dueDate` o, si es `NULL`, `instanceDate`
+  — así las instancias de tareas recurrentes (que solo reciben
+  `instanceDate`, ver `buildInstanceFromTemplate`) también aparecen.
+  **No usar `COALESCE(dueDate, instanceDate)`**: `instanceDate` es una
+  columna `date` pura, y un `COALESCE` contra `dueDate` (`timestamptz`)
+  fuerza a Postgres a promoverla usando la timezone de **sesión** de la
+  base de datos (UTC), no la del servidor — desalinea el resultado con el
+  rango de grilla (calculado en hora local) y corre las instancias un día en
+  los bordes. La condición correcta compara `instanceDate` contra strings
+  `YYYY-MM-DD` construidos con campos locales (`toDateOnlyString()`), nunca
+  contra un `Date`/`timestamptz`. Bug real detectado en revisión de código,
+  corregido antes de `[DONE]` — ver `spec-025`, Fase 9.
 - **No** filtra por `status`: a diferencia de `findToday`/`findThisWeek`/
   `findOverdue`, las actividades completadas se incluyen (la UI las muestra
   atenuadas en vez de ocultarlas).
