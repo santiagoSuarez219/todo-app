@@ -327,14 +327,13 @@ describe('ActivitiesService - findByMonth() (spec-025)', () => {
   });
 
   it('exists as a method on the service', () => {
-    // Fails in red until Fase 1 implements `findByMonth` on the service.
-    expect(typeof (service as any).findByMonth).toBe('function');
+    expect(typeof service.findByMonth).toBe('function');
   });
 
   it('computes the visible grid range (Monday of the week containing day 1 → Sunday of the week containing the last day) and queries within it', async () => {
     // March 2031: day 1 is a Saturday, last day (31) is a Monday.
     // Visible grid: Monday 2031-02-24 → Sunday 2031-04-06.
-    await (service as any).findByMonth({ year: 2031, month: 3 });
+    await service.findByMonth({ year: 2031, month: 3 });
 
     expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
     const andWhereCalls = mockQb.andWhere.mock.calls;
@@ -357,7 +356,7 @@ describe('ActivitiesService - findByMonth() (spec-025)', () => {
   });
 
   it('filters isTemplate = false and parent IS NULL (top-level activities only)', async () => {
-    await (service as any).findByMonth({ year: 2031, month: 3 });
+    await service.findByMonth({ year: 2031, month: 3 });
 
     const allWhereCalls = [
       ...mockQb.where.mock.calls,
@@ -370,8 +369,15 @@ describe('ActivitiesService - findByMonth() (spec-025)', () => {
     expect(conditions).toMatch(/IS NULL/i);
   });
 
-  it('locates activities by COALESCE(dueDate, instanceDate) — not by dueDate alone', async () => {
-    await (service as any).findByMonth({ year: 2031, month: 3 });
+  it('locates activities by dueDate, or by instanceDate when dueDate is absent — not by a COALESCE across timestamptz/date types', async () => {
+    // Bug fixed after code review: COALESCE(dueDate, instanceDate) forced
+    // Postgres to promote the `date` column to timestamptz using the DB
+    // session timezone, silently shifting instanceDate-only activities by a
+    // day near the grid's boundaries (see e2e-025 for the regression case
+    // against a real DB). The query must instead branch explicitly: match
+    // on dueDate when present, or on instanceDate only when dueDate is NULL
+    // — each compared against params of its own matching type.
+    await service.findByMonth({ year: 2031, month: 3 });
 
     const allWhereCalls = [
       ...mockQb.where.mock.calls,
@@ -379,13 +385,25 @@ describe('ActivitiesService - findByMonth() (spec-025)', () => {
     ];
     const conditions = allWhereCalls.map((call: any[]) => call[0]).join(' ');
 
-    expect(conditions).toMatch(/COALESCE/i);
-    expect(conditions).toMatch(/dueDate/);
-    expect(conditions).toMatch(/instanceDate/);
+    expect(conditions).not.toMatch(/COALESCE/i);
+    expect(conditions).toMatch(/activity\.dueDate\s+BETWEEN\s+:start\s+AND\s+:end/);
+    expect(conditions).toMatch(/activity\.dueDate\s+IS\s+NULL/i);
+    expect(conditions).toMatch(/activity\.instanceDate\s+BETWEEN\s+:startDateOnly\s+AND\s+:endDateOnly/);
+
+    // The instanceDate params must be plain YYYY-MM-DD strings (not Date
+    // objects/timestamps), so the DB compares date-to-date, never promoting
+    // through a timezone-aware type.
+    const dateOnlyCall = allWhereCalls.find(
+      ([, params]: [string, any]) => params && 'startDateOnly' in params,
+    );
+    expect(dateOnlyCall).toBeDefined();
+    const [, dateOnlyParams] = dateOnlyCall;
+    expect(dateOnlyParams.startDateOnly).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(dateOnlyParams.endDateOnly).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it('does NOT filter by status — unlike findToday/findThisWeek/findOverdue, completed activities must remain in the result set', async () => {
-    await (service as any).findByMonth({ year: 2031, month: 3 });
+    await service.findByMonth({ year: 2031, month: 3 });
 
     const allWhereCalls = [
       ...mockQb.where.mock.calls,

@@ -224,6 +224,38 @@ describe('spec-025 — Cronograma: GET /activities/schedule (e2e)', () => {
       expect(ids).toContain(instanceOnly.id);
     });
 
+    it('TC-025-e2e-03b (AC-3, regression): includes instanceDate exactly on the grid boundaries, excludes it one day outside them', async () => {
+      // Bug found in code review: COALESCE(dueDate, instanceDate) promoted
+      // the `date` column to timestamptz using the DB session timezone,
+      // excluding instances landing on the grid's first visible day and
+      // including ones a day past its last visible day. Same grid as
+      // TC-025-e2e-03: 2033-01-31 (start) → 2033-03-06 (end).
+      const onStart = await createInstanceOnlyActivity({
+        name: 'AC3b — instancia en el primer día visible de la grilla',
+        instanceDate: '2033-01-31',
+      });
+      const onEnd = await createInstanceOnlyActivity({
+        name: 'AC3b — instancia en el último día visible de la grilla',
+        instanceDate: '2033-03-06',
+      });
+      const beforeStart = await createInstanceOnlyActivity({
+        name: 'AC3b — instancia un día antes del inicio de la grilla',
+        instanceDate: '2033-01-30',
+      });
+      const afterEnd = await createInstanceOnlyActivity({
+        name: 'AC3b — instancia un día después del fin de la grilla',
+        instanceDate: '2033-03-07',
+      });
+
+      const response = await getSchedule(2033, 2).expect(200);
+      const ids: string[] = response.body.data.map((a: Activity) => a.id);
+
+      expect(ids).toContain(onStart.id);
+      expect(ids).toContain(onEnd.id);
+      expect(ids).not.toContain(beforeStart.id);
+      expect(ids).not.toContain(afterEnd.id);
+    });
+
     it('TC-025-e2e-04 (AC-4): excludes activities with neither dueDate nor instanceDate (backlog)', async () => {
       // year=2034, month=11 — no date fields set at all.
       const backlog = await createActivity({

@@ -487,21 +487,50 @@ export class ActivitiesService {
   }
 
   /**
+   * Formats a Date as a plain `YYYY-MM-DD` calendar-date string using its
+   * LOCAL fields (never `toISOString()`, which is UTC and would shift the
+   * day near a timezone boundary). Used to compare against `instanceDate`
+   * (a `date` column) without going through timestamptz — see `findByMonth`.
+   */
+  private toDateOnlyString(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  /**
    * spec-025: activities for the "Cronograma" monthly calendar view. Only
    * top-level, non-template activities within the visible grid range,
-   * located by COALESCE(dueDate, instanceDate) so recurring task instances
-   * (which only get `instanceDate`, not `dueDate`) show up too. Unlike
-   * findToday/findThisWeek/findOverdue, completed activities are NOT
+   * located by dueDate or, if absent, instanceDate — so recurring task
+   * instances (which only get `instanceDate`, not `dueDate`) show up too.
+   * Unlike findToday/findThisWeek/findOverdue, completed activities are NOT
    * filtered out — the calendar shows them attenuated instead of hiding them.
+   *
+   * Bug fixed after code review: originally this used
+   * `COALESCE(activity.dueDate, activity.instanceDate) BETWEEN :start AND :end`.
+   * `instanceDate` is a plain `date` column; COALESCE-ing it with a
+   * `timestamptz` forces Postgres to promote it to timestamptz using the
+   * **session timezone** (UTC here), while `:start`/`:end` are JS Dates
+   * built from local wall-clock midnight (server TZ, UTC-5). That mismatch
+   * silently excluded instances landing on the grid's first visible day and
+   * included ones a day past its last visible day. Comparing `instanceDate`
+   * against plain `YYYY-MM-DD` strings (`toDateOnlyString`, local fields)
+   * instead keeps the comparison a pure calendar-date comparison, immune to
+   * timezone promotion.
    */
   findByMonth(query: ScheduleQueryDto): Promise<Activity[]> {
     const { start, end } = this.getVisibleGridRange(query.year, query.month);
+    const startDateOnly = this.toDateOnlyString(start);
+    const endDateOnly = this.toDateOnlyString(end);
     return this.baseQuery()
       .where('activity.isTemplate = false')
       .andWhere('activity.parent IS NULL')
       .andWhere(
-        'COALESCE(activity.dueDate, activity.instanceDate) BETWEEN :start AND :end',
-        { start, end },
+        `(
+          (activity.dueDate BETWEEN :start AND :end)
+          OR
+          (activity.dueDate IS NULL AND activity.instanceDate BETWEEN :startDateOnly AND :endDateOnly)
+        )`,
+        { start, end, startDateOnly, endDateOnly },
       )
       .take(500)
       .getMany();

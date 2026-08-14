@@ -35,3 +35,16 @@
   `completed`. Es inocuo (la terminación está garantizada porque `visited`
   crece monótonamente y el bucle corta cuando `childIds.length === 0`), pero
   `visited.add(rootId)` al inicio del método lo dejaría cerrado del todo.
+
+- **`take(500)` silencioso en `findByMonth()` (Cronograma, spec-025).**
+  `ActivitiesService.findByMonth()` (`backend/src/activities/activities.service.ts`)
+  aplica un `take(500)` de seguridad sobre el rango visible de la grilla
+  mensual, sin paginar. Si un mes acumulara más de 500 actividades de nivel
+  superior, la respuesta se trunca en silencio — ni la UI (`ScheduleView`) ni
+  el agente vía `get_activities_by_month` reciben ninguna señal de que el
+  set está incompleto; ambos ven un array "completo" que no lo es. Para el
+  volumen actual de la app (uso personal) es un límite muy lejano, pero si
+  se vuelve relevante, agregar un indicador de truncamiento en la respuesta
+  (ej. un campo `truncated: boolean` o un total aparte) evitaría el
+  silencio. Detectado en revisión de código de spec-025, no bloqueó el
+  `[DONE]`.

@@ -1,4 +1,4 @@
-import { Priority, type Activity } from '../../types';
+import { ActivityStatus, Priority, type Activity } from '../../types';
 
 const priorityDot: Record<Priority, string> = {
   [Priority.HIGH]: 'bg-red-500',
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function ActivityChip({ activity, onClick }: Props) {
-  const completed = activity.status === 'completed';
+  const completed = activity.status === ActivityStatus.COMPLETED;
 
   return (
     <button

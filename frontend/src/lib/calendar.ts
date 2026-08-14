@@ -22,14 +22,29 @@ export function isSameLocalDay(a: Date, b: Date): boolean {
   );
 }
 
+const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 /**
  * Fecha de ubicación de una actividad en el calendario: `dueDate` si existe,
  * o `instanceDate` en su defecto (instancias de tareas recurrentes solo
  * traen `instanceDate` — ver spec-025, "Hallazgo de datos").
+ *
+ * Bug corregido tras revisión de código: `instanceDate` llega como string
+ * `YYYY-MM-DD` (columna `date` pura). `new Date('YYYY-MM-DD')` lo parsea como
+ * **medianoche UTC**, no como fecha local — en timezones con offset negativo
+ * (ej. UTC-5) eso cae en el día calendario *anterior*, corriendo un día atrás
+ * cada instancia recurrente. `dueDate` sí trae offset (ISO completo) y no
+ * tiene este problema. Se detecta el caso date-only y se construye el `Date`
+ * con sus campos locales en vez de dejar que el parser asuma UTC.
  */
 export function activityLocationDate(activity: Activity): Date | null {
   const raw = activity.dueDate ?? activity.instanceDate;
   if (!raw) return null;
+  const dateOnly = DATE_ONLY_RE.exec(raw);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
   return new Date(raw);
 }
 

@@ -232,10 +232,12 @@ Sin cambios de esquema. Sin migración.
 
 **Bug encontrado y corregido durante la ronda manual (`TC-025-007`):**
 `ScheduleView` no mostraba ningún `EmptyState` cuando el mes no tenía
-actividades — solo la grilla vacía. Corregido: se agregó
-`<EmptyState message="No tienes actividades este mes." />` cuando
-`data.length === 0`, sin ocultar la grilla. `npm run build`/`npm run lint`
-verificados.
+actividades — solo la grilla vacía. Corregido en dos pasos: primero se
+agregó `<EmptyState message="No tienes actividades este mes." />` **junto a**
+la grilla (sin ocultarla); el usuario reportó que se veían ambas cosas juntas
+y no tenía sentido, así que se ajustó a **ocultar la grilla** cuando
+`data.length === 0` — comportamiento final, verificado en la reconfirmación
+de `TC-025-007`. `npm run build`/`npm run lint` verificados en cada paso.
 
 **Bug encontrado y corregido durante la ronda manual (`TC-025-003`):**
 `DayActivitiesModal` mostraba un snapshot congelado de las actividades del día
@@ -269,8 +271,11 @@ desde los datos vivos de `useScheduleActivities` — ver
 - [x] Limpieza de los datos de la ronda 2 — 0 registros huérfanos verificados (2 proyectos + 5 actividades).
 
 ### Fase 9 — Revisión y cierre final
-- [ ] `@reviewer` audita el diff completo contra `development` (implementación original + ampliación juntas).
-- [ ] Marcar el spec como `[DONE]` solo si AC-1 a AC-16 están verificados, ambas rondas manuales aprobadas, y `TC-MCP-025-001` resuelto (hoy diferido a post-despliegue — su resolución no bloquea el `[DONE]` si se documenta como deuda de verificación post-deploy, a decidir con el usuario en esa fase).
+- [x] `@reviewer` audita el diff completo contra `development` (implementación original + ampliación juntas). Veredicto inicial: **CAMBIOS REQUERIDOS** — bug bloqueante encontrado (ver abajo).
+- [x] **Bloqueante corregido:** las instancias de tareas recurrentes (`instanceDate`, sin `dueDate`) quedaban corridas un día en los bordes de la grilla. Causa: (a) backend — `COALESCE(activity.dueDate, activity.instanceDate)` promovía la columna `date` a `timestamptz` usando la timezone de sesión de Postgres (UTC), distinta de la timezone local del servidor (UTC-5) usada para construir el rango de la grilla, excluyendo instancias en el primer día visible e incluyendo una de más en el día siguiente al último; (b) frontend — `activityLocationDate()` parseaba `instanceDate` (`'YYYY-MM-DD'`) con `new Date(...)`, que asume UTC, corriendo el chip un día atrás en timezones negativas. Corregido: `findByMonth()` ahora compara `dueDate`/`instanceDate` con condiciones separadas por tipo (sin `COALESCE` cross-type, `instanceDate` contra strings `YYYY-MM-DD` calculados en local); `activityLocationDate()` detecta strings date-only y construye el `Date` con campos locales. Nuevo caso e2e `TC-025-e2e-03b` cubre los 4 bordes exactos (día de inicio, día de fin, un día antes, un día después). Unitario de `findByMonth()` actualizado para reflejar la nueva condición. 29/29 unitarios, 30/32 → 47 e2e totales (2 fallas preexistentes ajenas), build/lint limpios en ambos paquetes.
+- [x] Hallazgos menores del reviewer resueltos: `ActivityChip.tsx` usa `ActivityStatus.COMPLETED` en vez de string literal; redacción de la Fase 5 corregida para reflejar que el `EmptyState` de mes vacío sí oculta la grilla (comportamiento final, no el intermedio); `take(500)` silencioso registrado en `spec/backlog.md`.
+- [x] **Decisión del usuario sobre AC-12/`TC-MCP-025-001`:** no bloquea el `[DONE]` — `get_activities_by_month` es un wrapper delgado sobre `findByMonth()` (mismo método ya probado por REST y e2e), bajo riesgo de fallar de forma independiente. Queda documentado como deuda de verificación a re-ejecutar después del despliegue.
+- [ ] `@reviewer` reconfirma el fix del bloqueante antes de marcar `[DONE]`.
 
 ## Criterios de aceptación
 
