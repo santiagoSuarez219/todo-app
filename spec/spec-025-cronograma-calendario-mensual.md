@@ -263,10 +263,10 @@ desde los datos vivos de `useScheduleActivities` — ver
 - [x] `frontend/CLAUDE.md`: agregado `ProjectFilter.tsx`/`scheduleFilters.ts` al inventario.
 - [x] `npm run build` y `npm run lint` sin errores nuevos (4 preexistentes ajenos).
 
-### Fase 8 — Pruebas de la ampliación (ronda manual 2)
-- [ ] `docs/testing/test-025-cronograma-calendario-mensual.md`: sección "Ronda 2 — filtro por proyecto", casos `TC-025-010`–`013` (ver "Pruebas asociadas" más abajo), redactados junto con esta ampliación (test-first).
-- [ ] El usuario ejecuta la ronda 2; Claude prepara datos vía API, guía y registra hallazgos.
-- [ ] Limpieza de los datos de la ronda 2.
+### Fase 8 — Pruebas de la ampliación (ronda manual 2) ✅ Completada
+- [x] `docs/testing/test-025-cronograma-calendario-mensual.md`: sección "Ronda 2 — filtro por proyecto", casos `TC-025-010`–`013`, redactados junto con esta ampliación (test-first).
+- [x] El usuario ejecuta la ronda 2; Claude prepara datos vía API, guía y registra hallazgos. **4/4 aprobados, sin bugs encontrados.**
+- [x] Limpieza de los datos de la ronda 2 — 0 registros huérfanos verificados (2 proyectos + 5 actividades).
 
 ### Fase 9 — Revisión y cierre final
 - [ ] `@reviewer` audita el diff completo contra `development` (implementación original + ampliación juntas).

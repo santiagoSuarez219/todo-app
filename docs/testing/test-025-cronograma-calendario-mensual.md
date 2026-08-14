@@ -359,13 +359,13 @@ en ese entorno). Se re-ejecuta tras el despliegue, mismo criterio que
 
 | Recurso | Endpoint de creación | Identificador | Día efectivo (mes visible) | Usado en | Eliminado |
 |---|---|---|---|---|---|
-| "[TEST spec-025] Proyecto A" | `POST /projects` | `{{id-proyecto-a}}` | — | TC-025-011, TC-025-012, TC-025-013 | ⬜ |
-| "[TEST spec-025] Proyecto B" | `POST /projects` | `{{id-proyecto-b}}` | — | TC-025-011, TC-025-012 | ⬜ |
-| "[TEST spec-025] R2 - proyecto A, pendiente" (`project: {{id-proyecto-a}}`) | `POST /activities` | `{{id-act-a1}}` | `{{fecha dentro del mes visible}}` | TC-025-010, TC-025-011 | ⬜ |
-| "[TEST spec-025] R2 - proyecto A, completada" (`project: {{id-proyecto-a}}`, `status: completed`) | `POST /activities` | `{{id-act-a2}}` | `{{mismo mes}}` | TC-025-011 (combinación con TC-025-004) | ⬜ |
-| "[TEST spec-025] R2 - proyecto B, pendiente" (`project: {{id-proyecto-b}}`) | `POST /activities` | `{{id-act-b1}}` | `{{mismo mes}}` | TC-025-010, TC-025-011 | ⬜ |
-| "[TEST spec-025] R2 - sin proyecto" (sin `project`) | `POST /activities` | `{{id-act-sin-proyecto}}` | `{{mismo mes}}` | TC-025-010, TC-025-012 | ⬜ |
-| "[TEST spec-025] R2 - proyecto A, mes siguiente" (`project: {{id-proyecto-a}}`) | `POST /activities` | `{{id-act-a3}}` | `{{mes siguiente al visible, para TC-025-013}}` | TC-025-013 | ⬜ |
+| "[TEST spec-025] Proyecto A" | `POST /projects` | `59b30efe-6de3-4cb2-898a-cb463a45a945` | — | TC-025-011, TC-025-012, TC-025-013 | ⬜ |
+| "[TEST spec-025] Proyecto B" | `POST /projects` | `809777a0-733b-4f51-9a65-c9d97cb3ad7b` | — | TC-025-011, TC-025-012 | ⬜ |
+| "[TEST spec-025] R2 - proyecto A, pendiente" (proyecto A) | `POST /activities` | `6cf40ff3-0369-496a-895c-c066ba1bfc29` | 2026-10-10 | TC-025-010, TC-025-011 | ⬜ |
+| "[TEST spec-025] R2 - proyecto A, completada" (proyecto A, `status: completed`) | `POST /activities` | `bdcd1cd9-3ff9-45c3-ba2b-165e892d59be` | 2026-10-10 | TC-025-011 (combinación con TC-025-004) | ⬜ |
+| "[TEST spec-025] R2 - proyecto B, pendiente" (proyecto B) | `POST /activities` | `d7ba3267-9611-429b-b85f-fb5beac11761` | 2026-10-10 | TC-025-010, TC-025-011 | ⬜ |
+| "[TEST spec-025] R2 - sin proyecto" (sin `project`) | `POST /activities` | `735b86d4-0328-4577-a23b-2cf811cf9b67` | 2026-10-10 | TC-025-010, TC-025-012 | ⬜ |
+| "[TEST spec-025] R2 - proyecto A, mes siguiente" (proyecto A) | `POST /activities` | `ec06575c-3da9-481a-b65f-cb59168a0b3d` | 2026-11-10 (mes siguiente al objetivo) | TC-025-013 | ⬜ |
 
 **Notas de uso:**
 - Reutilizar, si es posible, el mismo mes objetivo de la Ronda 1 (octubre
@@ -379,8 +379,14 @@ en ese entorno). Se re-ejecuta tras el despliegue, mismo criterio que
 - Todas las actividades y proyectos de esta ronda llevan el prefijo
   `[TEST spec-025]` para distinguirlos de datos reales durante la limpieza.
 
-**Entorno de pruebas:** `{{a confirmar al ejecutar — por defecto desarrollo}}`
-**Fecha de la ronda:** `{{a completar al ejecutar}}`
+**Decisión al ejecutar:** se crearon 2 proyectos nuevos de prueba (no se
+reutilizaron proyectos reales). Las 4 actividades de "mismo mes" comparten
+el **10 de octubre de 2026** (mismo día efectivo, dentro del rango de la
+Ronda 1) para poder verificarlas todas en una sola celda; la actividad de
+"mes siguiente" cae en el **10 de noviembre de 2026**.
+
+**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`)
+**Fecha de la ronda:** 2026-08-14
 
 ### Casos de prueba
 
@@ -398,8 +404,9 @@ proyecto A, proyecto B y sin proyecto.
 **Resultado esperado:** El valor por defecto del selector es "Todos" y el
 comportamiento de la grilla es idéntico al de antes de esta ampliación (mismo
 resultado que se validó en la Ronda 1, `TC-025-001`/`TC-025-004`).
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — "Todos" por defecto, las 4 actividades del
+10-oct visibles juntas sin distinción de proyecto.
 
 ---
 
@@ -424,8 +431,11 @@ pendiente y una `completed`) y en proyecto B.
 **Resultado esperado:** Grilla, chips, contador y modal muestran únicamente
 actividades del proyecto A; el estilo atenuado de la actividad completada se
 mantiene sin cambios respecto a lo validado en `TC-025-004`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — solo las 2 actividades de proyecto A
+visibles en grilla y modal, la completada atenuada. Paso 4 del caso (recálculo
+del contador "+X más") no aplicó: con solo 2 actividades de proyecto A ese
+día no hay overflow que contar (por debajo del máximo de 3 chips visibles).
 
 ---
 
@@ -442,8 +452,9 @@ y al menos una sin proyecto.
    actividad sin proyecto.
 **Resultado esperado:** Solo se muestran actividades con `project: null` en
 grilla, chips y modal; ninguna actividad con proyecto asignado aparece.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — solo "R2 - sin proyecto" visible en grilla
+y modal, sin actividades de proyecto A ni B.
 
 ---
 
@@ -473,13 +484,17 @@ resetearse; cuando el filtro no tiene coincidencias en el mes visible se
 muestra un empty state distinguible del de "mes vacío" y con forma explícita
 de volver a "Todos"; al usarla, la grilla vuelve a mostrar todas las
 actividades del mes.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — el filtro "Proyecto B" persistió al
+navegar a noviembre, se mostró el empty state específico (distinto del de
+mes vacío) con el botón "Ver todas", y al usarlo reapareció la actividad de
+proyecto A en la grilla.
 
 ### Resumen de la ronda 2
-- Aprobados: {{n}} — Fallidos: {{n}} — Pendientes: 4
-  (`TC-025-010` a `TC-025-013`, no ejecutados aún — implementación de la
-  Fase 7 no iniciada).
-- Bugs encontrados y corregidos: {{a completar al ejecutar}}
-- Hallazgos escalados a `spec/backlog.md`: {{a completar}}
-- Limpieza de datos de prueba: ⬜ Pendiente
+- Aprobados: 4 (`TC-025-010` a `TC-025-013`) — Fallidos: 0 — Pendientes: 0.
+- Bugs encontrados: ninguno — la implementación de la Fase 7 pasó los 4
+  casos sin hallazgos.
+- Hallazgos escalados a `spec/backlog.md`: ninguno.
+- Limpieza de datos de prueba: ✅ Completada — 2 proyectos y 5 actividades
+  eliminados vía API; verificado con búsqueda `TEST spec-025` (0 restantes)
+  y listado de proyectos (0 restantes).
