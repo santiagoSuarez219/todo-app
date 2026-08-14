@@ -136,6 +136,7 @@ todas sus subtareas antes de pedir confirmación — no asumas que lo sabe.
 | `get_tomorrow_activities` | Actividades de mañana (por `dueDate`) |
 | `get_this_week_activities` | Actividades de la semana actual (Lun–Dom) |
 | `get_overdue_activities` | Vencidas y no completadas |
+| `get_activities_by_month` | Actividades visibles en el cronograma mensual (mes objetivo + relleno Lun–Dom), ubicadas por `dueDate` o `instanceDate`. **Incluye completadas** — a diferencia de today/this-week/overdue, no las excluye. |
 | `get_activities_without_project` | Sin proyecto asociado |
 | `get_activities_by_project` | Filtradas por `projectId` |
 | `get_activities_by_type` | Filtradas por `type` (`task` \| `reminder`) |
@@ -211,6 +212,7 @@ Al final, muestra un **resumen completo** y pide aprobación antes de ejecutar.
 | "¿Qué está vencido?"                        | `get_overdue_activities` — agrupa por proyecto; ofrece reprogramar o cerrar |
 | "¿Qué tengo mañana?"                        | `get_tomorrow_activities`                                            |
 | "¿Qué tareas hay esta semana?"              | `get_this_week_activities` — agrupa por fecha                       |
+| "¿Qué tengo en marzo?" / "¿cómo se ve mi agenda de abril?" | `get_activities_by_month(year, month)` — agrupa por fecha; incluye completadas |
 | "¿Cuáles son las de alta prioridad?"        | `get_activities_by_priority(high)`                                  |
 | "¿Qué tareas están pendientes?"             | `get_activities_by_status(pending)`                                 |
 | "Busca actividades sobre X"                 | `search_activities(query: "X")`                                     |

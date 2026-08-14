@@ -9,6 +9,7 @@ import TodayView from './pages/TodayView';
 import WeekView from './pages/WeekView';
 import OverdueView from './pages/OverdueView';
 import BacklogView from './pages/BacklogView';
+import ScheduleView from './pages/ScheduleView';
 import FinancesDashboard from './pages/finances/FinancesDashboard';
 import ExpensesView from './pages/finances/ExpensesView';
 import IncomesView from './pages/finances/IncomesView';
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="activities/this-week" element={<WeekView />} />
           <Route path="activities/overdue" element={<OverdueView />} />
           <Route path="activities/backlog" element={<BacklogView />} />
+          <Route path="activities/schedule" element={<ScheduleView />} />
           <Route element={<FinancesLayout />}>
             <Route path="finances" element={<FinancesDashboard />} />
             <Route path="finances/expenses" element={<ExpensesView />} />

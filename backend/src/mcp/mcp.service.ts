@@ -386,6 +386,22 @@ export class McpService {
     );
 
     server.tool(
+      'get_activities_by_month',
+      "Get top-level, non-template activities visible on a month's schedule calendar grid (the target month plus Mon–Sun fill days from the surrounding weeks), located by dueDate or, if absent, instanceDate. Includes completed activities (unlike get_today_activities/get_this_week_activities/get_overdue_activities, which exclude them).",
+      {
+        year: z.number().int().min(2000).max(2100).describe('Year (e.g. 2026)'),
+        month: z.number().int().min(1).max(12).describe('Month (1–12)'),
+      },
+      async ({ year, month }) => {
+        try {
+          return ok(await this.activitiesService.findByMonth({ year, month }));
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
       'get_activities_without_project',
       'Get all activities that are not associated with any project',
       paginationSchema,

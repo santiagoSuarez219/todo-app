@@ -33,7 +33,7 @@ cp .env.example .env
 | Variable | Descripcion | Ejemplo |
 |---|---|---|
 | `NODE_ENV` | Entorno de ejecucion | `development` |
-| `PORT` | Puerto del servidor | `3000` |
+| `PORT` | Puerto del servidor | `3003` |
 | `DB_HOST` | Host de la base de datos | `localhost` |
 | `DB_PORT` | Puerto de la base de datos | `5432` |
 | `DB_NAME` | Nombre de la base de datos | `todo_db` |
@@ -64,14 +64,14 @@ npm run start:dev
 npm run start:prod
 ```
 
-El servidor estara disponible en `http://localhost:3000`.
+El servidor estara disponible en `http://localhost:3003`.
 
 ## Documentacion API
 
 Con el servidor corriendo, accede a Swagger en:
 
 ```
-http://localhost:3000/api/docs
+http://localhost:3003/api/docs
 ```
 
 ## Endpoints principales

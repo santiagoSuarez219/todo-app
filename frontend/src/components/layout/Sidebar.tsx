@@ -58,6 +58,14 @@ function BacklogIcon() {
   );
 }
 
+function ScheduleIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5M8.25 13.5h.008v.008H8.25V13.5Zm3.75 0h.008v.008H12V13.5Zm3.75 0h.008v.008H15.75V13.5Zm-7.5 3h.008v.008H8.25V16.5Zm3.75 0h.008v.008H12V16.5Zm3.75 0h.008v.008H15.75V16.5Z" />
+    </svg>
+  );
+}
+
 function GridIcon() {
   return (
     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -206,6 +214,9 @@ export default function Sidebar({ onCreateActivity }: Props) {
         </NavLink>
         <NavLink to="/activities/backlog" className={linkCls}>
           <BacklogIcon /> Backlog
+        </NavLink>
+        <NavLink to="/activities/schedule" className={linkCls}>
+          <ScheduleIcon /> Cronograma
         </NavLink>
 
         {/* Projects section */}
