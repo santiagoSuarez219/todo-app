@@ -27,6 +27,7 @@ import { UpdateActivityDto } from './dto/update-activity.dto';
 import { Activity } from './entities/activity.entity';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { SearchActivitiesQueryDto } from './dto/search-activities-query.dto';
+import { ScheduleQueryDto } from './dto/schedule-query.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { ActivityType } from '../common/enums/activity-type.enum';
 import { Priority } from '../common/enums/priority.enum';
@@ -80,6 +81,13 @@ export class ActivitiesController {
   @ApiOkResponse({ type: [Activity] })
   findOverdue(@Query() pagination: PaginationDto): Promise<Activity[]> {
     return this.activitiesService.findOverdue(pagination);
+  }
+
+  @Get('schedule')
+  @ApiOperation({ summary: 'Get top-level activities within a month\'s visible calendar grid range (Mon–Sun fill included), located by dueDate or, if absent, instanceDate' })
+  @ApiOkResponse({ type: [Activity] })
+  findBySchedule(@Query() query: ScheduleQueryDto): Promise<Activity[]> {
+    return this.activitiesService.findByMonth(query);
   }
 
   @Get('without-project')

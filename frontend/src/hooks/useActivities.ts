@@ -4,6 +4,7 @@ import {
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
   getActivitiesByProject, searchActivities, getActivitySubtasks, createSubtask,
   getWithoutProjectActivities, getActivityInstances, cancelFutureInstances,
+  getScheduleActivities,
 } from '../services/activities.service';
 import type { CreateActivityDto, UpdateActivityDto, PaginationParams, ActivitySearchParams } from '../types';
 
@@ -58,6 +59,16 @@ export function useSearchActivities(query: string, params?: ActivitySearchParams
     enabled: query.trim().length >= 2,
     // Mantiene los resultados previos mientras llega el nuevo set → evita el
     // flash a skeleton al escribir (búsqueda suave "as you type").
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useScheduleActivities(year: number, month: number) {
+  return useQuery({
+    queryKey: ['activities', 'schedule', year, month],
+    queryFn: () => getScheduleActivities(year, month),
+    // Evita el flash a skeleton al navegar entre meses — mismo patrón que
+    // useSearchActivities.
     placeholderData: keepPreviousData,
   });
 }

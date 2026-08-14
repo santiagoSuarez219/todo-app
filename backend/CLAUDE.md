@@ -24,7 +24,9 @@ Ver "Reglas generales" del `CLAUDE.md` raíz — aplican sin cambios aquí
 
 ## Agentes especializados
 
-Viven en `backend/.agents/`. Leer el archivo del agente antes de invocarlo.
+Viven en `/.claude/agents/` (raíz del monorepo, compartidos con frontend).
+Leer el archivo del agente antes de invocarlo. Las skills de apoyo (patrones
+de NestJS, Zod, TypeScript avanzado, etc.) viven en `/.claude/skills/`.
 
 | Agente        | Cuándo invocarlo                                                          |
 |---------------|-----------------------------------------------------------------------------|
@@ -57,9 +59,9 @@ de IA. Estado actual: MVP en desarrollo activo.
 | MCP | `@modelcontextprotocol/sdk` (JSON-RPC sobre HTTP en `/mcp`) |
 | Tareas programadas | `@nestjs/schedule` (cron de recurrencia) |
 
-**Puerto:** `3000`
+**Puerto:** `3003`
 **Prefijo global:** `/api/v1` (excepto `/mcp`)
-**Swagger UI:** `http://localhost:3000/api/v1/docs`
+**Swagger UI:** `http://localhost:3003/api/v1/docs`
 
 ### Comandos
 
@@ -95,7 +97,7 @@ DB_PASSWORD=todo_password
 # Environment
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
-PORT=3000
+PORT=3003
 
 # Authentication (spec-021)
 AUTH_EMAIL=user@example.com
@@ -141,7 +143,7 @@ ni `MCP_API_KEY`.
 Este archivo describe la API que este mismo servicio expone (no consume APIs
 externas). Autenticación: no implementada — app de uso personal, un solo usuario.
 
-- Base URL desarrollo: `http://localhost:3000/api/v1`
+- Base URL desarrollo: `http://localhost:3003/api/v1`
 - Base URL producción: `{{url de producción — ver Despliegue en CLAUDE.md raíz}}`
 
 ### Formato de respuesta
@@ -174,6 +176,7 @@ externas). Autenticación: no implementada — app de uso personal, un solo usua
 | `GET` | `/activities/tomorrow` | `dueDate` mañana |
 | `GET` | `/activities/this-week` | Semana actual (Lun–Dom) por `dueDate` |
 | `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
+| `GET` | `/activities/schedule` | Cronograma mensual — `?year=&month=`, ver lógica |
 | `GET` | `/activities/without-project` | Sin proyecto asociado |
 | `GET` | `/activities/project/:projectId` | Por proyecto |
 | `GET` | `/activities/type/:type` | Por tipo |
@@ -458,10 +461,51 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
 - `task`: vencida si `dueDate < hoy 00:00` y `status != 'completed'`
 - `reminder`: vencida si `dueDate < ahora` y `status != 'completed'`
 
+#### Cronograma mensual (`findByMonth`, spec-025)
+
+- `GET /activities/schedule?year=&month=` devuelve actividades de nivel
+  superior (`parent IS NULL`) y no-plantilla (`isTemplate = false`) dentro
+  del **rango visible de la grilla mensual**: el mes objetivo más los días de
+  relleno Lunes–Domingo del mes anterior/siguiente (mismo criterio de semana
+  que `findThisWeek`).
+- La ubicación en el calendario usa `dueDate` o, si es `NULL`, `instanceDate`
+  — así las instancias de tareas recurrentes (que solo reciben
+  `instanceDate`, ver `buildInstanceFromTemplate`) también aparecen.
+  **No usar `COALESCE(dueDate, instanceDate)`**: `instanceDate` es una
+  columna `date` pura, y un `COALESCE` contra `dueDate` (`timestamptz`)
+  fuerza a Postgres a promoverla usando la timezone de **sesión** de la
+  base de datos (UTC), no la del servidor — desalinea el resultado con el
+  rango de grilla (calculado en hora local) y corre las instancias un día en
+  los bordes. La condición correcta compara `instanceDate` contra strings
+  `YYYY-MM-DD` construidos con campos locales (`toDateOnlyString()`), nunca
+  contra un `Date`/`timestamptz`. Bug real detectado en revisión de código,
+  corregido antes de `[DONE]` — ver `spec-025`, Fase 9.
+- **No** filtra por `status`: a diferencia de `findToday`/`findThisWeek`/
+  `findOverdue`, las actividades completadas se incluyen (la UI las muestra
+  atenuadas en vez de ocultarlas).
+- Sin paginación; aplica un `take(500)` de seguridad.
+
 #### Recurrencia (`recurrence-scheduler.service.ts`)
 
 - Cron `EVERY_DAY_AT_MIDNIGHT`: por cada plantilla activa (`isTemplate: true`, `isRecurring: true`) evalúa si corresponde generar una instancia para el día siguiente y la crea.
 - Al editar una plantilla, `name` / `description` / `priority` / `energy` se propagan automáticamente a las instancias futuras que sigan `pending` (no afecta instancias ya completadas o pasadas).
+
+#### Completar subtareas en cascada (spec-024)
+
+- Al hacer `update()` sobre una actividad y su `status` **transiciona** hacia
+  `completed` (el status anterior no era `completed`), `ActivitiesService`
+  completa automáticamente **todo el árbol de subtareas** de esa actividad:
+  hijas directas y sus propias subtareas, recursivamente, sin límite de
+  profundidad.
+- Se completan **todas** las subtareas sin excepción, incluidas las que
+  estuvieran en `cancelled`.
+- La propagación es de **un solo sentido**: si luego el padre se desmarca (pasa
+  de `completed` a otro status), las subtareas ya completadas **no revierten**.
+- No se dispara si la actividad ya estaba en `completed` (evita re-propagar
+  sobre subtareas que el usuario haya reabierto manualmente después), ni si el
+  `update()` no toca el campo `status`.
+- Al vivir en el servicio, aplica igual desde REST (`PATCH /activities/:id`),
+  MCP (`update_activity`) y la UI — sin lógica duplicada en el frontend.
 
 #### Deudas (`debts.service.ts`)
 
@@ -509,6 +553,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `get_tomorrow_activities` | Actividades de mañana |
 | `get_this_week_activities` | Actividades de la semana actual |
 | `get_overdue_activities` | Actividades vencidas |
+| `get_activities_by_month` | Actividades del cronograma mensual (mes + relleno Lun–Dom), por `dueDate`/`instanceDate`; incluye completadas (spec-025) |
 | `get_activities_without_project` | Actividades sin proyecto asociado |
 | `get_activities_by_project` | Por proyecto |
 | `get_activities_by_type` | Por tipo |
@@ -520,6 +565,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `get_activity_instances` | Instancias generadas por una plantilla |
 | `cancel_future_instances` | Cancela instancias futuras pendientes de una plantilla |
 | `list_expenses` / `get_expense` / `create_expense` / `update_expense` / `delete_expense` | CRUD de gastos (sin `creditCardId` expuesto) |
+| `duplicate_expense` | Duplica un gasto individual a otro mes/año (con desplazamiento y clamp de fechas, preservando tarjeta de crédito) |
 | `list_incomes` / `get_income` / `create_income` / `update_income` / `delete_income` | CRUD de ingresos |
 | `list_purchases` / `get_purchase` / `create_purchase` / `update_purchase` / `delete_purchase` | CRUD de lista de deseos |
 | `list_accounts` / `get_account` / `create_account` / `update_account` / `delete_account` | CRUD de cuentas |
@@ -565,9 +611,8 @@ los system prompts: ver sección "MCPs del proyecto" en el `CLAUDE.md` raíz.
 ## Specs de funcionalidades
 
 Ubicación, nomenclatura, estados y estructura mínima: ver `CLAUDE.md` raíz.
-Los specs que impactan el backend se diseñan con `@architect` de
-`backend/.agents/` y se revisan con `@reviewer` de la misma carpeta antes de
-marcarlos `[DONE]`.
+Los specs que impactan el backend se diseñan con `@architect` y se revisan
+con `@reviewer` (`/.claude/agents/`) antes de marcarlos `[DONE]`.
 
 ---
 

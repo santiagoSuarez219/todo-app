@@ -109,8 +109,25 @@ Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al 
 | `list_activities` | Lista actividades paginadas |
 | `get_activity` | Obtiene una actividad por UUID (incluye proyecto, padre y subtareas) |
 | `create_activity` | Crea una actividad o subtarea (`parentId`) |
-| `update_activity` | Actualiza una actividad, incluidos campos de recurrencia |
+| `update_activity` | Actualiza una actividad, incluidos campos de recurrencia. ⚠️ Ver "Completar tareas con subtareas" abajo |
 | `delete_activity` | Elimina una actividad permanentemente |
+
+### ⚠️ Completar tareas con subtareas (propagación en cascada)
+
+Si llamas a `update_activity` con `status: "completed"` sobre una tarea que
+**tiene subtareas**, el backend completa automáticamente **todo el árbol de
+descendientes**: subtareas directas, sus propias subtareas, y así
+recursivamente hasta el final del árbol. Esto incluye subtareas que estaban en
+`cancelled` — también pasan a `completed`, sin excepción.
+
+Esta propagación es **irreversible**: si después cambias el status del padre
+de `completed` a cualquier otro valor (`pending`, `in_progress`…), las
+subtareas **no vuelven atrás**. El sistema no deshace trabajo por su cuenta.
+
+Antes de completar una tarea padre, si sabes o sospechas que tiene subtareas
+(por ejemplo, la obtuviste con `get_activity` y su respuesta incluye
+subtareas), **avisa al usuario explícitamente** de que se completarán también
+todas sus subtareas antes de pedir confirmación — no asumas que lo sabe.
 
 ## Actividades — consultas especializadas
 | Herramienta | Descripción |
@@ -119,6 +136,7 @@ Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al 
 | `get_tomorrow_activities` | Actividades de mañana (por `dueDate`) |
 | `get_this_week_activities` | Actividades de la semana actual (Lun–Dom) |
 | `get_overdue_activities` | Vencidas y no completadas |
+| `get_activities_by_month` | Actividades visibles en el cronograma mensual (mes objetivo + relleno Lun–Dom), ubicadas por `dueDate` o `instanceDate`. **Incluye completadas** — a diferencia de today/this-week/overdue, no las excluye. |
 | `get_activities_without_project` | Sin proyecto asociado |
 | `get_activities_by_project` | Filtradas por `projectId` |
 | `get_activities_by_type` | Filtradas por `type` (`task` \| `reminder`) |
@@ -149,6 +167,10 @@ Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al 
 - Antes de actualizar, llama a `get_activity` si no tienes el UUID. Envía solo los campos
   que cambian.
 - Antes de eliminar, pide confirmación con el nombre del ítem. La eliminación es permanente.
+- Antes de marcar `status: "completed"` en `update_activity`, verifica si la tarea tiene
+  subtareas (usa `get_activity` o `get_activity_subtasks`) y, si las tiene, advierte al
+  usuario que se completarán en cascada de forma irreversible (ver "Completar tareas con
+  subtareas" en la sección de herramientas).
 
 ---
 
@@ -190,6 +212,7 @@ Al final, muestra un **resumen completo** y pide aprobación antes de ejecutar.
 | "¿Qué está vencido?"                        | `get_overdue_activities` — agrupa por proyecto; ofrece reprogramar o cerrar |
 | "¿Qué tengo mañana?"                        | `get_tomorrow_activities`                                            |
 | "¿Qué tareas hay esta semana?"              | `get_this_week_activities` — agrupa por fecha                       |
+| "¿Qué tengo en marzo?" / "¿cómo se ve mi agenda de abril?" | `get_activities_by_month(year, month)` — agrupa por fecha; incluye completadas |
 | "¿Cuáles son las de alta prioridad?"        | `get_activities_by_priority(high)`                                  |
 | "¿Qué tareas están pendientes?"             | `get_activities_by_status(pending)`                                 |
 | "Busca actividades sobre X"                 | `search_activities(query: "X")`                                     |

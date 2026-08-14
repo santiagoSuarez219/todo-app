@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Activity } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -14,6 +14,7 @@ import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { ActivityType } from '../common/enums/activity-type.enum';
 import { Priority } from '../common/enums/priority.enum';
 import { RecurrenceFrequency } from '../common/enums/recurrence-frequency.enum';
+import { ScheduleQueryDto } from './dto/schedule-query.dto';
 
 @Injectable()
 export class ActivitiesService {
@@ -223,6 +224,7 @@ export class ActivitiesService {
 
   async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
     const activity = await this.findOne(id);
+    const previousStatus = activity.status;
     const effectiveDto = { ...dto, type: dto.type ?? activity.type } as CreateActivityDto;
     const {
       projectId,
@@ -264,7 +266,22 @@ export class ActivitiesService {
       }
     }
 
-    const saved = await this.activitiesRepository.save(activity);
+    let saved = await this.activitiesRepository.save(activity);
+
+    // spec-024: completing the parent completes its whole subtask tree.
+    // Only fires on the transition into "completed" — resaving an already
+    // completed activity (or updating without touching status) must not
+    // re-run the cascade over subtasks the user may have reopened since.
+    if (
+      previousStatus !== ActivityStatus.COMPLETED &&
+      saved.status === ActivityStatus.COMPLETED
+    ) {
+      await this.completeSubtaskTree(saved.id);
+      // `saved.subtasks` was loaded before the cascade ran, so it still
+      // holds the pre-cascade statuses. Re-fetch so the response — read
+      // directly by REST/MCP callers, not just the UI — reflects reality.
+      saved = await this.findOne(saved.id);
+    }
 
     // Propagate inheritable fields to future pending instances
     if (saved.isTemplate) {
@@ -288,6 +305,42 @@ export class ActivitiesService {
     }
 
     return saved;
+  }
+
+  /**
+   * spec-024: recursively completes every descendant of `rootId`, level by
+   * level, regardless of their current status (including `cancelled`).
+   * Guards against cycles by never revisiting an id already completed.
+   */
+  private async completeSubtaskTree(rootId: string): Promise<void> {
+    const visited = new Set<string>();
+    let parentIds = [rootId];
+
+    while (parentIds.length > 0) {
+      const children = await this.activitiesRepository.find({
+        where: { parent: { id: In(parentIds) } },
+        select: ['id'],
+      });
+
+      const childIds = children
+        .map((child) => child.id)
+        .filter((childId) => !visited.has(childId));
+
+      if (childIds.length === 0) {
+        break;
+      }
+
+      childIds.forEach((childId) => visited.add(childId));
+
+      await this.activitiesRepository
+        .createQueryBuilder()
+        .update(Activity)
+        .set({ status: ActivityStatus.COMPLETED })
+        .where('id IN (:...ids)', { ids: childIds })
+        .execute();
+
+      parentIds = childIds;
+    }
   }
 
   async remove(id: string): Promise<void> {
@@ -409,6 +462,78 @@ export class ActivitiesService {
         .andWhere('activity.status != :status', { status: ActivityStatus.COMPLETED }),
       pagination,
     ).getMany();
+  }
+
+  /**
+   * spec-025: visible grid range of a monthly calendar — the Monday of the
+   * week containing the 1st of `month` through the Sunday of the week
+   * containing its last day. Mirrors the Mon–Sun convention already used by
+   * `findThisWeek()`.
+   */
+  private getVisibleGridRange(year: number, month: number): { start: Date; end: Date } {
+    const firstDay = new Date(year, month - 1, 1);
+    const firstDayOfWeek = firstDay.getDay();
+    const diffToMonday = firstDayOfWeek === 0 ? -6 : 1 - firstDayOfWeek;
+    const start = new Date(year, month - 1, 1 + diffToMonday);
+    start.setHours(0, 0, 0, 0);
+
+    const lastDay = new Date(year, month, 0);
+    const lastDayOfWeek = lastDay.getDay();
+    const diffToSunday = lastDayOfWeek === 0 ? 0 : 7 - lastDayOfWeek;
+    const end = new Date(year, month, 0 + diffToSunday);
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
+  }
+
+  /**
+   * Formats a Date as a plain `YYYY-MM-DD` calendar-date string using its
+   * LOCAL fields (never `toISOString()`, which is UTC and would shift the
+   * day near a timezone boundary). Used to compare against `instanceDate`
+   * (a `date` column) without going through timestamptz — see `findByMonth`.
+   */
+  private toDateOnlyString(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  /**
+   * spec-025: activities for the "Cronograma" monthly calendar view. Only
+   * top-level, non-template activities within the visible grid range,
+   * located by dueDate or, if absent, instanceDate — so recurring task
+   * instances (which only get `instanceDate`, not `dueDate`) show up too.
+   * Unlike findToday/findThisWeek/findOverdue, completed activities are NOT
+   * filtered out — the calendar shows them attenuated instead of hiding them.
+   *
+   * Bug fixed after code review: originally this used
+   * `COALESCE(activity.dueDate, activity.instanceDate) BETWEEN :start AND :end`.
+   * `instanceDate` is a plain `date` column; COALESCE-ing it with a
+   * `timestamptz` forces Postgres to promote it to timestamptz using the
+   * **session timezone** (UTC here), while `:start`/`:end` are JS Dates
+   * built from local wall-clock midnight (server TZ, UTC-5). That mismatch
+   * silently excluded instances landing on the grid's first visible day and
+   * included ones a day past its last visible day. Comparing `instanceDate`
+   * against plain `YYYY-MM-DD` strings (`toDateOnlyString`, local fields)
+   * instead keeps the comparison a pure calendar-date comparison, immune to
+   * timezone promotion.
+   */
+  findByMonth(query: ScheduleQueryDto): Promise<Activity[]> {
+    const { start, end } = this.getVisibleGridRange(query.year, query.month);
+    const startDateOnly = this.toDateOnlyString(start);
+    const endDateOnly = this.toDateOnlyString(end);
+    return this.baseQuery()
+      .where('activity.isTemplate = false')
+      .andWhere('activity.parent IS NULL')
+      .andWhere(
+        `(
+          (activity.dueDate BETWEEN :start AND :end)
+          OR
+          (activity.dueDate IS NULL AND activity.instanceDate BETWEEN :startDateOnly AND :endDateOnly)
+        )`,
+        { start, end, startDateOnly, endDateOnly },
+      )
+      .take(500)
+      .getMany();
   }
 
   findByType(type: ActivityType, pagination: PaginationDto): Promise<Activity[]> {

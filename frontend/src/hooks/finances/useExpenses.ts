@@ -5,8 +5,9 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
+  duplicateExpense,
 } from '../../services/finances/expenses.service';
-import type { CreateExpenseDto, UpdateExpenseDto, PaginationParams } from '../../types';
+import type { CreateExpenseDto, UpdateExpenseDto, DuplicateExpenseDto, PaginationParams } from '../../types';
 
 export function useExpenses(params?: PaginationParams, year?: number, month?: number, search?: string) {
   return useQuery({
@@ -47,5 +48,16 @@ export function useDeleteExpense() {
   return useMutation({
     mutationFn: (id: string) => deleteExpense(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
+  });
+}
+
+export function useDuplicateExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: DuplicateExpenseDto }) => duplicateExpense(id, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+      qc.invalidateQueries({ queryKey: ['budgets'] });
+    },
   });
 }

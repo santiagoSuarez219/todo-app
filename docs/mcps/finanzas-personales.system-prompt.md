@@ -192,6 +192,7 @@ Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al 
 | `create_expense` | Registrar un nuevo gasto |
 | `update_expense` | Corregir descripción, monto, fecha o tipo |
 | `delete_expense` | Eliminar un gasto permanentemente |
+| `duplicate_expense` | Duplicar un gasto a otro mes/año (el día se conserva, clampeado al último día del mes destino si es necesario) |
 
 ### Ingresos
 | Herramienta | Cuándo usarla |
@@ -424,6 +425,16 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
   - Ejemplo: "Voy a duplicar tu presupuesto de junio 2026 (con 8 ítems, 2 ingresos y 15 gastos) hacia julio 2026. ¿Procedo?"
 - **Ante error 409** (ya existe un presupuesto en el destino): informa al usuario que el mes/año destino ya tiene un presupuesto registrado. Usa `list_budgets` para verificar y mostrar cuál presupuesto existe. No reintentes la duplicación; ofrece alternativas (cambiar el mes destino, eliminar el existente primero, etc.).
 - **Tras éxito**: muestra cuántos ítems, ingresos y gastos se copiaron. Ofrece navegar al nuevo presupuesto para revisarlo si es necesario.
+
+#### Duplicación de gastos (`duplicate_expense`)
+- **Antes de invocar**, confirma explícitamente con el usuario que desea duplicar un gasto individual. Indica:
+  - **Descripción del gasto** a copiar
+  - **Mes y año origen** (derivado de la fecha del gasto)
+  - **Mes y año destino** (a dónde se copiará)
+  - **Nota importante**: el día se conserva del gasto original, clampeado al último día del mes destino si es necesario (ej. gasto del 31 de enero → día 28 en febrero)
+  - Ejemplo: "Voy a duplicar el gasto 'Suscripción Netflix' del 15 de junio 2026 al 15 de julio 2026. ¿Procedo?"
+- **Tras éxito**: muestra brevemente el gasto duplicado con su fecha, descripción y monto.
+- **Ante error 404** (gasto no existe): verifica el UUID con `list_expenses` e intenta de nuevo, o informa al usuario.
 
 ### Deudas
 - Para registrar una deuda nueva, necesitas: descripción, valor del producto, valor de la cuota y número de cuotas. La cuota inicial es opcional.

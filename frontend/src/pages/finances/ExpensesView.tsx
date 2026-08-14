@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from '../../hooks/finances/useExpenses';
+import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, useDuplicateExpense } from '../../hooks/finances/useExpenses';
 import { useCreditCards } from '../../hooks/finances/useCreditCards';
 import { useDebounce } from '../../hooks/useDebounce';
 import ExpenseCard from '../../components/finances/ExpenseCard';
 import ExpenseForm from '../../components/finances/ExpenseForm';
+import DuplicateExpenseForm from '../../components/finances/DuplicateExpenseForm';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import EmptyState from '../../components/EmptyState';
 import { SearchBar } from '../../components/SearchBar';
-import type { Expense, CreateExpenseDto, ExpenseType, UpdateExpenseDto } from '../../types';
+import type { Expense, CreateExpenseDto, ExpenseType, UpdateExpenseDto, DuplicateExpenseDto } from '../../types';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -47,6 +48,7 @@ export default function ExpensesView() {
   const { mutateAsync: create, isPending: isCreating } = useCreateExpense();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateExpense();
   const { mutate: remove, isPending: isDeleting } = useDeleteExpense();
+  const { mutateAsync: duplicate, isPending: isDuplicating } = useDuplicateExpense();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Expense | null>(null);
@@ -58,6 +60,10 @@ export default function ExpensesView() {
     type: 'basico' as ExpenseType,
     creditCardId: '',
   });
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [toDuplicate, setToDuplicate] = useState<Expense | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [duplicateSuccess, setDuplicateSuccess] = useState<string | null>(null);
 
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 1 + i);
 
@@ -103,6 +109,32 @@ export default function ExpensesView() {
   async function handleSubmit(dto: CreateExpenseDto) {
     await create(dto);
     closeModal();
+  }
+
+  function openDuplicate(expense: Expense) {
+    setToDuplicate(expense);
+    setDuplicateError(null);
+    setDuplicateSuccess(null);
+    setDuplicateModalOpen(true);
+  }
+
+  function closeDuplicateModal() {
+    setDuplicateModalOpen(false);
+    setToDuplicate(null);
+    setDuplicateError(null);
+    setDuplicateSuccess(null);
+  }
+
+  async function handleDuplicate(dto: DuplicateExpenseDto) {
+    if (!toDuplicate) return;
+    try {
+      setDuplicateError(null);
+      await duplicate({ id: toDuplicate.id, dto });
+      setDuplicateSuccess(`Gasto duplicado a ${MONTHS[dto.month - 1]} ${dto.year}`);
+      setTimeout(() => closeDuplicateModal(), 2000);
+    } catch (err: any) {
+      setDuplicateError(err.message || 'Error al duplicar el gasto');
+    }
   }
 
   return (
@@ -181,6 +213,7 @@ export default function ExpensesView() {
             onSaveEdit={saveEditing}
             onCancelEdit={cancelEditing}
             onDelete={setToDelete}
+            onDuplicate={openDuplicate}
             isSaving={isUpdating && editingExpenseId === expense.id}
           />
         ))}
@@ -193,6 +226,29 @@ export default function ExpensesView() {
             onCancel={closeModal}
             loading={isCreating}
           />
+        </Modal>
+      )}
+
+      {duplicateModalOpen && toDuplicate && (
+        <Modal title="Duplicar gasto" onClose={closeDuplicateModal}>
+          <div className="space-y-4">
+            {duplicateSuccess && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3 text-sm text-green-700 dark:text-green-400">
+                ✓ {duplicateSuccess}
+              </div>
+            )}
+            {duplicateError && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 text-sm text-red-700 dark:text-red-400">
+                ✗ {duplicateError}
+              </div>
+            )}
+            <DuplicateExpenseForm
+              origin={toDuplicate}
+              onSubmit={handleDuplicate}
+              onCancel={closeDuplicateModal}
+              loading={isDuplicating}
+            />
+          </div>
         </Modal>
       )}
 

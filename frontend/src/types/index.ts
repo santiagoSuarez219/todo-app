@@ -135,6 +135,11 @@ export interface ActivitySearchParams extends PaginationParams {
   projectId?: string;
 }
 
+export interface ScheduleParams {
+  year: number;
+  month: number;
+}
+
 // ─── Finances — Enums ────────────────────────────────────────────────────────
 
 export const ExpenseType = {
@@ -194,6 +199,11 @@ export interface Expense {
   creditCard: CreditCard | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DuplicateExpenseDto {
+  month: number;
+  year: number;
 }
 
 export interface Account {

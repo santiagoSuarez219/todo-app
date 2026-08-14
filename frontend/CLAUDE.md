@@ -26,14 +26,16 @@ leer `DESIGN.md` antes de escribir código de UI, etc.).
 
 ## Agentes especializados
 
-Viven en `frontend/.agents/`. Leer el archivo del agente antes de invocarlo.
+Viven en `/.claude/agents/` (raíz del monorepo, compartidos con backend).
+Leer el archivo del agente antes de invocarlo. Las skills de apoyo
+(accesibilidad, React, Tailwind, formularios, etc.) viven en `/.claude/skills/`.
 
 | Agente        | Cuándo invocarlo                                                          |
 |---------------|-----------------------------------------------------------------------------|
 | `@architect`  | Diseño de specs que impactan el frontend: fases, archivos, sin código     |
 | `@reviewer`   | Revisión de código frontend antes de marcar un spec como `[DONE]`        |
 | `@tester`     | Preparación de casos de prueba manuales en `docs/testing/`                |
-| `@mcp-builder`| Coordina con el `@mcp-builder` de `backend/.agents/` cuando un cambio de UI requiere actualizar un system prompt |
+| `@mcp-builder`| Coordina el ajuste de un system prompt en `docs/mcps/` cuando un cambio de UI lo requiere — la modificación real de `mcp.service.ts` la hace sobre `backend/` |
 
 ---
 
@@ -54,7 +56,7 @@ del backend (`backend/`). Estado actual: MVP en desarrollo activo.
 | Routing | React Router 7 |
 | Estado servidor | TanStack React Query v5 (`staleTime: 1min`, `retry: 1`) |
 | Formularios | React Hook Form 7 + Zod |
-| HTTP | Axios — baseURL: `/api/v1` (proxy a `http://localhost:3002`) |
+| HTTP | Axios — baseURL: `/api/v1` (proxy a `http://localhost:3003`) |
 | Estilos | Tailwind CSS 4 vía `@tailwindcss/vite` |
 | Fuente | JetBrains Mono (toda la UI) |
 
@@ -82,7 +84,7 @@ específicas de este repo.
 Archivo real (nunca commitear): `frontend/.env.local`
 
 ```
-VITE_API_URL=http://localhost:3002/api/v1
+VITE_API_URL=http://localhost:3003/api/v1
 ```
 
 El `api-client.ts` usa `baseURL: '/api/v1'` — Vite hace proxy al backend en desarrollo.
@@ -101,7 +103,7 @@ través de la API REST del backend.
 Backend propio (NestJS) del mismo proyecto, en `backend/`. Detalle completo
 de rutas y lógica de negocio: ver `backend/CLAUDE.md`.
 
-- Base URL desarrollo: `http://localhost:3002/api/v1`
+- Base URL desarrollo: `http://localhost:3003/api/v1`
 - Base URL producción: `{{url de producción — ver Despliegue en CLAUDE.md raíz}}`
 - Autenticación: no implementada — app de uso personal, sin token.
 - Todas las respuestas vienen envueltas: `{ statusCode, message, data }` — el
@@ -200,6 +202,7 @@ Pages
 | `/activities/this-week` | `WeekView` | Actividades de la semana |
 | `/activities/overdue` | `OverdueView` | Actividades vencidas |
 | `/activities/backlog` | `BacklogView` | Actividades sin fecha |
+| `/activities/schedule` | `ScheduleView` | Cronograma — calendario mensual |
 | `/finances` | `FinancesDashboard` | Overview financiero |
 | `/finances/expenses` | `ExpensesView` | Gastos |
 | `/finances/incomes` | `IncomesView` | Ingresos |
@@ -278,6 +281,19 @@ asumir un shape, no reproducirlo aquí para evitar que ambos se desincronicen.
 - `ConfirmDialog.tsx`, `EmptyState.tsx`, `Modal.tsx`, `Pagination.tsx`
 - `PriorityBadge.tsx`, `StatusBadge.tsx`, `EnergyIndicator.tsx`
 
+### Cronograma (`components/schedule/`)
+- `MonthNavigator.tsx`, `MonthCalendar.tsx`, `CalendarDayCell.tsx`,
+  `ActivityChip.tsx`, `DayActivitiesModal.tsx` — vista de calendario mensual
+  (spec-025), consumidos por `pages/ScheduleView.tsx`. Lógica pura de fechas
+  en `lib/calendar.ts`.
+- `ProjectFilter.tsx` — selector único de proyecto (ampliación spec-025),
+  100% client-side sobre los datos ya cargados del mes. El tipo
+  `ProjectFilterValue` y el predicado `matchesProjectFilter` viven en
+  `lib/scheduleFilters.ts` (no en `ProjectFilter.tsx`, para no romper Fast
+  Refresh — `react-refresh/only-export-components` exige que un archivo de
+  componente solo exporte el componente; tampoco en `types/index.ts` por ser
+  estado de UI sin contraparte en el backend).
+
 ### Finanzas (`components/finances/`)
 - Un `*Card.tsx` + `*Form.tsx` por recurso: `Account`, `CreditCard`, `Cdt`,
   `Debt`, `Expense`, `Income`, `Purchase`, más `BudgetForm.tsx` /
@@ -320,7 +336,7 @@ correspondiente en `docs/mcps/` — reglas completas en el `CLAUDE.md` raíz.
 
 - No hay tests automatizados en frontend actualmente.
 - Validación por casos manuales en `docs/testing/test-NNN.md`, preparados con
-  `@tester` de `frontend/.agents/` y ejecutados por el usuario.
+  `@tester` (`/.claude/agents/`) y ejecutados por el usuario.
 - Antes de cerrar una tarea de UI, verificar manualmente el golden path y los
   casos borde relevantes (ver skill `/verify` si aplica).
 
@@ -329,9 +345,8 @@ correspondiente en `docs/mcps/` — reglas completas en el `CLAUDE.md` raíz.
 ## Specs de funcionalidades
 
 Ubicación, nomenclatura, estados y estructura mínima: ver `CLAUDE.md` raíz.
-Los specs que impactan el frontend se diseñan con `@architect` de
-`frontend/.agents/` y se revisan con `@reviewer` de la misma carpeta antes de
-marcarlos `[DONE]`.
+Los specs que impactan el frontend se diseñan con `@architect` y se revisan
+con `@reviewer` (`/.claude/agents/`) antes de marcarlos `[DONE]`.
 
 ---
 
