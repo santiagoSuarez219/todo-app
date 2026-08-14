@@ -1,24 +1,27 @@
 import { useState } from 'react';
 import { useScheduleActivities } from '../hooks/useActivities';
-import { groupActivitiesByDate } from '../lib/calendar';
+import { groupActivitiesByDate, toLocalDateKey } from '../lib/calendar';
 import MonthNavigator from '../components/schedule/MonthNavigator';
 import MonthCalendar from '../components/schedule/MonthCalendar';
 import DayActivitiesModal from '../components/schedule/DayActivitiesModal';
-import type { Activity } from '../types';
-
-interface SelectedDay {
-  date: Date;
-  activities: Activity[];
-}
+import EmptyState from '../components/EmptyState';
 
 export default function ScheduleView() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null);
+  // Solo la fecha seleccionada vive en estado — las actividades de ese día se
+  // derivan en cada render desde `activitiesByDate` (bug fix: guardar el
+  // array de actividades junto con la fecha lo dejaba congelado en el
+  // momento del clic, así que una edición inline dentro del modal no se
+  // reflejaba aunque el backend sí la persistiera).
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const { data, isLoading, isError } = useScheduleActivities(year, month);
   const activitiesByDate = groupActivitiesByDate(data ?? []);
+  const selectedDayActivities = selectedDate
+    ? activitiesByDate.get(toLocalDateKey(selectedDate)) ?? []
+    : [];
 
   return (
     <div className="space-y-4">
@@ -30,20 +33,26 @@ export default function ScheduleView() {
       {isLoading && !data && <p className="text-sm text-gray-400">Cargando…</p>}
       {isError && <p className="text-sm text-red-500">Error al cargar el cronograma.</p>}
 
-      {!isError && (
+      {/* spec-025 (TC-025-007): mes sin actividades — EmptyState en vez de la
+          grilla, mismo patrón que TodayView/WeekView/OverdueView. */}
+      {!isLoading && !isError && (data?.length ?? 0) === 0 && (
+        <EmptyState message="No tienes actividades este mes." />
+      )}
+
+      {!isError && (data?.length ?? 0) > 0 && (
         <MonthCalendar
           year={year}
           month={month}
           activitiesByDate={activitiesByDate}
-          onSelectDay={(date, activities) => setSelectedDay({ date, activities })}
+          onSelectDay={setSelectedDate}
         />
       )}
 
-      {selectedDay && (
+      {selectedDate && (
         <DayActivitiesModal
-          date={selectedDay.date}
-          activities={selectedDay.activities}
-          onClose={() => setSelectedDay(null)}
+          date={selectedDate}
+          activities={selectedDayActivities}
+          onClose={() => setSelectedDate(null)}
         />
       )}
     </div>

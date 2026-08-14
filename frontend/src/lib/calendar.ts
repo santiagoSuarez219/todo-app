@@ -48,7 +48,11 @@ export function buildMonthGrid(year: number, month: number): Date[][] {
   const lastDay = new Date(year, month, 0);
   const lastDayOfWeek = lastDay.getDay();
   const diffToSunday = lastDayOfWeek === 0 ? 0 : 7 - lastDayOfWeek;
-  const end = new Date(year, month, lastDay.getDate() + diffToSunday);
+  // Igual que getVisibleGridRange() en el backend: el offset se aplica sobre
+  // "día 0 del mes siguiente" (= último día del mes objetivo), no sobre
+  // lastDay.getDate() — sumarle el número de día (ej. 31) volvía a desplazar
+  // el mes completo, generando casi el doble de semanas de las debidas.
+  const end = new Date(year, month, 0 + diffToSunday);
 
   const days: Date[] = [];
   const cursor = new Date(start);

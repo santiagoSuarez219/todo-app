@@ -171,10 +171,27 @@ Sin cambios de esquema. Sin migración.
 - [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` con la nueva capacidad (tabla de consultas especializadas + tabla de "Consultas y flujos frecuentes").
 - [ ] Verificar con una llamada real al MCP que la tool responde el set esperado (`TC-MCP-025-001`) — pendiente de la ronda de pruebas manuales (Fase 5).
 
-### Fase 5 — Pruebas
-- [ ] `@tester` ejecuta unitarios + e2e y confirma verde.
-- [ ] El usuario ejecuta `docs/testing/test-025-cronograma-calendario-mensual.md`; Claude prepara datos vía API, guía paso a paso y registra hallazgos.
-- [ ] Limpieza de datos de prueba y cierre del resumen de la ronda.
+### Fase 5 — Pruebas ✅ Completada
+- [x] `@tester` ejecuta unitarios + e2e y confirma verde: 29/29 unitarios, 44/46 e2e (2 fallas preexistentes, ajenas a spec-025), 6/6 e2e y 6/6 unitarios específicos de spec-025 en verde, sin regresiones de los 3 fixes de frontend.
+- [x] El usuario ejecuta `docs/testing/test-025-cronograma-calendario-mensual.md`; Claude prepara datos vía API, guía paso a paso y registra hallazgos. **9/9 casos manuales aprobados (`TC-025-001`–`009`)**; `TC-MCP-025-001` diferido a post-despliegue (MCP de la sesión apunta a producción).
+- [x] Limpieza de datos de prueba y cierre del resumen de la ronda — 0 registros huérfanos verificados.
+
+**Bug encontrado y corregido durante la ronda manual (`TC-025-007`):**
+`ScheduleView` no mostraba ningún `EmptyState` cuando el mes no tenía
+actividades — solo la grilla vacía. Corregido: se agregó
+`<EmptyState message="No tienes actividades este mes." />` cuando
+`data.length === 0`, sin ocultar la grilla. `npm run build`/`npm run lint`
+verificados.
+
+**Bug encontrado y corregido durante la ronda manual (`TC-025-003`):**
+`DayActivitiesModal` mostraba un snapshot congelado de las actividades del día
+(capturado en `ScheduleView` al hacer clic en la celda), por lo que una
+edición inline dentro del modal se persistía correctamente en el backend pero
+no se reflejaba visualmente. Corregido: `ScheduleView` ahora solo guarda la
+fecha seleccionada en estado y deriva las actividades del día en cada render
+desde los datos vivos de `useScheduleActivities` — ver
+`frontend/src/pages/ScheduleView.tsx`, `CalendarDayCell.tsx`,
+`MonthCalendar.tsx`. `npm run build`/`npm run lint` verificados tras el fix.
 
 ### Fase 6 — Revisión y cierre
 - [ ] `@reviewer` audita el diff completo contra `development`.

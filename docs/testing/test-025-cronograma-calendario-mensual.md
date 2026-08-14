@@ -9,34 +9,47 @@
 > registran en ese momento, siguiendo "Pruebas manuales asistidas por Claude"
 > del `CLAUDE.md` raíz.
 
-| Recurso | Endpoint de creación | Identificador | Usado en | Eliminado |
-|---|---|---|---|---|
-| Actividad "{{nombre}}" — nivel superior, `dueDate` dentro del mes objetivo | `POST /activities` | `{{id}}` | TC-025-001 | ⬜ |
-| Actividad "{{nombre}}" — `dueDate` en día de relleno (mes anterior) | `POST /activities` | `{{id}}` | TC-025-001 | ⬜ |
-| Actividad "{{nombre}}" — `dueDate` en día de relleno (mes siguiente) | `POST /activities` | `{{id}}` | TC-025-001 | ⬜ |
-| Actividad "{{nombre}}" — mes A (para navegar a mes B) | `POST /activities` | `{{id}}` | TC-025-002 | ⬜ |
-| Actividad "{{nombre}}" — mes B (destino de la navegación) | `POST /activities` | `{{id}}` | TC-025-002 | ⬜ |
-| Actividad "{{nombre}}" — con subtareas propias, para abrir su `ActivityCard` desde el modal de día | `POST /activities` | `{{id}}` | TC-025-003 | ⬜ |
-| Subtarea "{{nombre}}" — hija de la actividad anterior | `POST /activities` | `{{id}}` | TC-025-003 | ⬜ |
-| Actividad "{{nombre}}" — `status: completed`, `dueDate` dentro del mes objetivo | `POST /activities` | `{{id}}` | TC-025-004 | ⬜ |
-| Actividad "{{nombre}}" — `status: pending`, mismo día que la anterior (para comparar contraste) | `POST /activities` | `{{id}}` | TC-025-004 | ⬜ |
-| Actividad "{{nombre}}" — cualquier `dueDate` visible, usada solo para tener contenido en pantalla al revisar dark mode | `POST /activities` | `{{id}}` | TC-025-005 | ⬜ |
-| Mes sin ninguna actividad (no requiere creación — se navega a un mes vacío, ej. varios años en el futuro) | — | — | TC-025-007 | — |
-| Actividad "{{nombre}}" — `dueDate` con hora cercana a medianoche en UTC (ej. `23:30 UTC`), para validar que no "salta" de día según timezone local | `POST /activities` | `{{id}}` | TC-025-009 | ⬜ |
-| Actividad "[TEST spec-025] MCP — {{nombre}}" — `dueDate` dentro de un mes de prueba, creada vía `create_activity` MCP | MCP `create_activity` | `{{id}}` | TC-MCP-025-001 | ⬜ |
+| Recurso | Endpoint de creación | Identificador | Día efectivo (local, ver nota TZ) | Usado en | Eliminado |
+|---|---|---|---|---|---|
+| "[TEST spec-025] TC-001 - dentro del mes" | `POST /activities` | `decbe16c-722e-4994-a751-32824fcc8522` | 2026-10-14 | TC-025-001, TC-025-005, TC-025-008 | ✅ |
+| "[TEST spec-025] TC-001 - relleno mes anterior" | `POST /activities` | `e186fc85-8f8f-412f-af45-8e0b4d7885bf` | 2026-09-28 (Lun, primer día de grilla) | TC-025-001 | ✅ |
+| "[TEST spec-025] TC-001 - relleno mes siguiente" | `POST /activities` | `17f92645-2938-4ab6-aefc-1bbacc1a88c5` | 2026-11-01 (Dom, último día de grilla) | TC-025-001 | ✅ |
+| "[TEST spec-025] TC-002 - mes A (octubre)" | `POST /activities` | `d9d16cda-d7db-4701-963d-c30c07218ac9` | 2026-10-19 | TC-025-002 | ✅ |
+| "[TEST spec-025] TC-002 - mes B (noviembre)" | `POST /activities` | `b9950a9c-942d-4e08-9d2a-36908c53ac48` | 2026-11-14 | TC-025-002 | ✅ |
+| "[TEST spec-025] TC-003 - con subtareas" (padre) | `POST /activities` | `69ab2e85-3d3e-4816-8959-76dfe0199389` | 2026-10-04 | TC-025-003 | ✅ |
+| "[TEST spec-025] TC-003 - subtarea hija" | `POST /activities` | `08e90c81-b2ae-4a19-9998-124d83b7ca42` | — (sin `dueDate` propio, hija de la anterior) | TC-025-003 | ✅ |
+| "[TEST spec-025] TC-004 - completada" (`status: completed`) | `POST /activities` | `07c57935-57ad-496b-a925-068e828498d2` | 2026-10-07 | TC-025-004 | ✅ |
+| "[TEST spec-025] TC-004 - pendiente" (`status: pending`, mismo día) | `POST /activities` | `c8d5bd4d-2510-49ed-b1c0-d652c608dd16` | 2026-10-07 | TC-025-004 | ✅ |
+| "[TEST spec-025] TC-009 - zona horaria 00:30 UTC" (`type: reminder`, `dueDate: 2026-10-13T00:30:00.000Z`) | `POST /activities` | `77eed130-663a-43a4-baf2-8b42a00bd7a9` | 2026-10-12 (local UTC-5, no 10-13 — ese es justamente el punto a validar) | TC-025-009 | ✅ |
+| Mes sin ninguna actividad — se navega a un mes vacío (año 2040) | — | — | — | TC-025-007 | — |
+| Actividad MCP vía `create_activity` | MCP `create_activity` | — | — | TC-MCP-025-001 | **diferido** |
 
 **Notas de uso:**
-- Elegir un mes objetivo donde el día 1 **no** caiga en Lunes y el último día
-  **no** caiga en Domingo, para que TC-025-001 pueda verificar relleno tanto
-  al inicio como al final de la grilla en la misma corrida.
-- Para TC-025-002, usar dos meses consecutivos con al menos una actividad cada
-  uno, de forma que el cambio de contenido al navegar sea visualmente
-  verificable.
-- Todas las actividades de esta ronda deben quedar **sin proyecto** asociado,
-  salvo que un caso puntual requiera lo contrario.
+- Mes objetivo elegido: **octubre 2026** (día 1 = jueves, día 31 = sábado —
+  ninguno cae en el borde de semana, así TC-025-001 puede verificar relleno
+  tanto al inicio como al final de la grilla). Rango visible de grilla:
+  **2026-09-28 (Lun) → 2026-11-01 (Dom)**.
+- **Hallazgo durante la preparación de datos:** `ActivitiesService.sanitizeByType()`
+  trunca el `dueDate` de las actividades `type: task` a medianoche usando la
+  **hora local del servidor** (`America/Bogota`, UTC-5), no la hora UTC. Un
+  `dueDate` enviado como `T00:00:00.000Z` se recalcula a las 05:00 UTC del
+  **día calendario anterior** en la respuesta. No es un bug de spec-025 (es
+  comportamiento preexistente de `sanitizeByType`, fuera de su alcance) — pero
+  obligó a ajustar los payloads enviados para que el **día efectivo
+  resultante** fuera el que cada caso necesita. La columna "Día efectivo"
+  de esta tabla es la que hay que usar al ejecutar los casos, no la fecha que
+  aparenta el payload original.
+- Todas las actividades de esta ronda quedan **sin proyecto** asociado.
+- Todas las actividades llevan el prefijo `[TEST spec-025]` en el nombre para
+  distinguirlas fácilmente de datos reales durante la limpieza.
+- **TC-MCP-025-001 diferido:** el MCP conectado en esta sesión apunta a
+  producción (`https://steadfast-ambition-production.up.railway.app/mcp`),
+  donde spec-025 aún no está desplegado — `get_activities_by_month` no existe
+  ahí todavía. Se re-ejecutará después del despliegue, mismo criterio que
+  `TC-MCP-024-001` en la ronda de spec-024.
 
-**Entorno de pruebas:** {{desarrollo / staging}}
-**Fecha de la ronda:** {{fecha}}
+**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`, backend local tras el cambio de puerto)
+**Fecha de la ronda:** 2026-08-13
 
 ## Casos de prueba
 
@@ -57,8 +70,13 @@ mes objetivo, (b) un día de relleno del mes anterior visible en la grilla, y
 **Resultado esperado:** La grilla completa Lunes–Domingo en ambos extremos,
 los días fuera del mes objetivo se distinguen visualmente (atenuados), y las
 tres actividades aparecen en el día correcto según su `dueDate`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado (reconfirmado tras fix de TC-025-007)
+**Hallazgos:** Aprobado en el primer paso. Reconfirmado luego de corregir el
+bug de `buildMonthGrid()` encontrado durante TC-025-007 (ver ese caso) — el
+bug generaba semanas de más al final de la grilla en **todos** los meses, no
+solo en el vacío, así que este caso se volvió a validar explícitamente tras
+el fix: la grilla de octubre 2026 muestra exactamente 6 semanas (28-sep →
+1-nov), sin filas extra.
 
 ---
 
@@ -76,8 +94,9 @@ a la vista) y en el mes B (adyacente, anterior o siguiente).
 por un estado de carga vacío/skeleton completo) mientras se resuelve la
 petición del mes B; al llegar la respuesta, el contenido se reemplaza por el
 del mes B sin parpadeo perceptible.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — `keepPreviousData` funcionó como se esperaba,
+sin parpadeo al navegar de octubre a noviembre.
 
 ---
 
@@ -100,8 +119,31 @@ propias.
 que el resto de la app), la edición inline funciona igual que en otras
 vistas, y el borrado elimina la actividad de la grilla sin recargar la
 página.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ❌ Fallido
+**Hallazgos:** La edición inline de prioridad (`InlinePriorityEditor`) entra
+en modo edición pero visualmente no parece guardar dentro del modal. Verificado
+por API (`GET /activities/69ab2e85-...`): el cambio **sí se persiste** en el
+backend (`priority: "high"`, `updatedAt` actualizado) — la mutation funciona.
+El defecto era que `DayActivitiesModal` recibía `selectedDay.activities`, un
+snapshot capturado en `ScheduleView` en el momento del clic sobre la celda del
+día. Cuando la mutation invalidaba `['activities']`, la grilla de fondo se
+re-renderizaba con datos frescos, pero el snapshot del modal seguía
+apuntando al array viejo.
+
+**Corregido en esta misma ronda** (aprobado por el usuario): `ScheduleView`
+ahora solo guarda la **fecha** seleccionada en estado; las actividades del día
+se derivan en cada render desde `activitiesByDate` (que a su vez viene de
+`useScheduleActivities`, reactivo a la invalidación de query). `onSelectDay`
+se simplificó a `(date: Date) => void` en `CalendarDayCell`/`MonthCalendar`.
+`npm run build` y `npm run lint` verificados sin errores nuevos tras el fix.
+
+**Reintento:** ✅ Aprobado — la edición inline (prioridad/status/dueDate,
+acumulados de los intentos previos: `priority: high`, `status: in_progress`,
+`dueDate: 22-oct-2026`) ahora se refleja en vivo dentro del modal sin
+cerrarlo/reabrirlo. El paso de borrado del punto 6 no quedó confirmado
+explícitamente (verificado por API: la actividad `69ab2e85-...` sigue
+existiendo) — no bloquea el caso porque lo esperado ya se validó; el recurso
+se elimina de todas formas en la limpieza final de la ronda.
 
 ---
 
@@ -117,8 +159,9 @@ página.
 está oculto, a diferencia de Hoy/Semana/Vencidas) pero con estilo atenuado
 (opacidad reducida u otro tratamiento visual equivalente) respecto al chip de
 la actividad pendiente.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — ambos chips visibles el 7-oct, la
+completada claramente atenuada respecto a la pendiente.
 
 ---
 
@@ -135,8 +178,9 @@ la actividad pendiente.
 **Resultado esperado:** Todos los elementos de la vista usan los tokens
 semánticos de `DESIGN.md` — sin contrastes rotos, textos ilegibles ni colores
 hardcodeados que ignoren el tema activo.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones en modo claro ni oscuro, incluyendo el modal
+de día.
 
 ---
 
@@ -151,8 +195,9 @@ hardcodeados que ignoren el tema activo.
 **Resultado esperado:** La entrada existe, tiene un ícono propio
 (`CalendarIcon`), y navega correctamente. No debe existir una entrada
 equivalente en la Tabbar móvil (fuera de alcance de este spec).
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — entrada visible después de "Backlog",
+navega correctamente, sin equivalente en la Tabbar móvil.
 
 ---
 
@@ -167,8 +212,15 @@ lejano (ej. varios años en el futuro), para garantizar que esté vacío.
 **Resultado esperado:** La vista muestra el `EmptyState` existente de la app
 (no una grilla vacía sin mensaje ni un error), manteniendo la grilla de días
 del mes visible o reemplazándola según el patrón ya usado en otras vistas.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado (tras corrección)
+**Hallazgos:** Falló en el primer intento — `ScheduleView.tsx` no tenía
+ninguna rama para mes vacío, solo renderizaba `MonthCalendar` siempre
+(criterio no exigido explícitamente por los criterios de aceptación
+originales del spec, pero sí por consistencia con el resto de la app, según
+lo agregó `@tester`). Corregido en esta misma ronda, aprobado por el usuario:
+se agregó `<EmptyState message="No tienes actividades este mes." />` cuando
+`data.length === 0`, sin ocultar la grilla (sigue sirviendo para navegar).
+`npm run build`/`npm run lint` verificados tras el fix.
 
 ---
 
@@ -185,8 +237,9 @@ del mes visible o reemplazándola según el patrón ya usado en otras vistas.
 **Resultado esperado:** La vista es utilizable en mobile aunque no tenga
 entrada directa en la Tabbar — accesible solo por URL o, si aplica, desde un
 menú lateral colapsable.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones — grilla, navegador de mes y modal
+utilizables en ancho mobile, sin overflow horizontal roto.
 
 ---
 
@@ -211,8 +264,13 @@ esperado según el offset del navegador.
 la hora local del navegador, sin saltos de día causados por conversión de
 zona horaria — tanto en el endpoint (rango de grilla) como en la agrupación
 del frontend (`lib/calendar.ts`).
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ✅ Aprobado
+**Hallazgos:** El chip apareció el 12 de octubre (día calendario local,
+UTC-5), no el 13 — confirma que `activityLocationDate()`/`toLocalDateKey()`
+agrupan por fecha local del navegador y no por el instante UTC crudo. No se
+repitió la verificación con un segundo offset de zona horaria (paso 4,
+opcional/best-effort) — no bloquea el caso, el resultado del offset por
+defecto ya confirma el comportamiento esperado.
 
 ---
 
@@ -238,11 +296,36 @@ del frontend (`lib/calendar.ts`).
    `get_this_week_activities`, etc.) — sin campos inventados.
 3. Una llamada con `year`/`month` fuera de rango (ej. `month: 13`) devuelve un
    error de validación claro, sin datos parciales.
-**Estado:** ⬜ Pendiente
-**Hallazgos:** {{a completar durante la ronda}}
+**Estado:** ⏸️ Diferido — el MCP de esta sesión apunta a producción, donde
+spec-025 aún no está desplegado (`get_activities_by_month` no existe todavía
+en ese entorno). Se re-ejecuta tras el despliegue, mismo criterio que
+`TC-MCP-024-001`.
+**Hallazgos:** Ninguno aún — pendiente de ejecución post-despliegue.
 
 ## Resumen de la ronda
-- Aprobados: {{n}} — Fallidos: {{n}} — Pendientes: 10 (todos, ronda aún no
-  ejecutada)
-- Hallazgos escalados a `spec/backlog.md`: {{lista o "ninguno"}}
-- Limpieza de datos de prueba: ⬜ Pendiente
+- Aprobados: 9 (`TC-025-001` a `TC-025-009`) — Fallidos: 0 — Pendientes: 1
+  (`TC-MCP-025-001`, diferido a post-despliegue).
+- Bugs encontrados y corregidos **dentro de esta misma ronda** (con
+  aprobación explícita del usuario en cada caso):
+  1. `DayActivitiesModal` mostraba un snapshot congelado de las actividades
+     del día — una edición inline se persistía en el backend pero no se
+     reflejaba en el modal (hallado en TC-025-003). Corregido en
+     `ScheduleView.tsx`/`CalendarDayCell.tsx`/`MonthCalendar.tsx`.
+  2. `ScheduleView` no mostraba `EmptyState` en meses sin actividades, solo
+     grilla vacía (hallado en TC-025-007). Corregido agregando `EmptyState`
+     y ocultando la grilla cuando `data.length === 0`.
+  3. `buildMonthGrid()` calculaba mal el límite de fin de grilla
+     (`lastDay.getDate() + diffToSunday` en vez de `0 + diffToSunday`),
+     generando casi el doble de semanas en **todos** los meses, no solo el
+     vacío (hallado junto con el bug #2). Corregido en `lib/calendar.ts`;
+     `TC-025-001` se reconfirmó explícitamente después del fix.
+- Los tres fixes fueron verificados con `npm run build` + `npm run lint`
+  (sin errores nuevos) tras cada corrección, y quedan documentados en
+  `spec/spec-025-cronograma-calendario-mensual.md` (Fase 5).
+- Hallazgos escalados a `spec/backlog.md`: ninguno — los tres se corrigieron
+  en esta misma ronda, no quedó deuda técnica pendiente.
+- Limpieza de datos de prueba: ✅ Completada — las 10 actividades creadas
+  fueron eliminadas vía API en orden inverso a su creación (una ya no
+  existía, borrada durante las pruebas de la UI — confirmado con `404`).
+  Verificado con `GET /activities/search/TEST%20spec-025`: 0 registros
+  restantes.

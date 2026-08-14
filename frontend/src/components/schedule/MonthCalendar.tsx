@@ -8,7 +8,7 @@ interface Props {
   year: number;
   month: number;
   activitiesByDate: Map<string, Activity[]>;
-  onSelectDay: (date: Date, activities: Activity[]) => void;
+  onSelectDay: (date: Date) => void;
 }
 
 export default function MonthCalendar({ year, month, activitiesByDate, onSelectDay }: Props) {

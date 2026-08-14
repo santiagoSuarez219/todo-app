@@ -8,13 +8,13 @@ interface Props {
   isCurrentMonth: boolean;
   isToday: boolean;
   activities: Activity[];
-  onSelectDay: (date: Date, activities: Activity[]) => void;
+  onSelectDay: (date: Date) => void;
 }
 
 export default function CalendarDayCell({ date, isCurrentMonth, isToday, activities, onSelectDay }: Props) {
   const visible = activities.slice(0, MAX_VISIBLE_CHIPS);
   const extra = activities.length - visible.length;
-  const openDay = () => onSelectDay(date, activities);
+  const openDay = () => onSelectDay(date);
 
   return (
     <div
