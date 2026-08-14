@@ -1,4 +1,4 @@
-# spec-026 — [NOT STARTED] Deudas con cuotas materializadas en presupuestos
+# spec-026 — [IN PROGRESS] Deudas con cuotas materializadas en presupuestos
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -514,5 +514,5 @@ genérico del `ValidationPipe` con whitelist, no porque la lógica exista.
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{pendiente}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-14
