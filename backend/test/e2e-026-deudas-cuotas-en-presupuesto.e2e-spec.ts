@@ -509,7 +509,11 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         .set('Cookie', authCookies)
         .send({ installmentValue: newValue })
         .expect(200);
-      expect(patchResponse.body.data.installmentValue).toBe(newValue);
+      // installmentValue es una columna `decimal`: Postgres/TypeORM la
+      // devuelven como string, igual que plannedAmount/amount en el resto
+      // del proyecto (ver los `Number(...)` de este mismo archivo) — no es
+      // un comportamiento nuevo de spec-026.
+      expect(Number(patchResponse.body.data.installmentValue)).toBe(newValue);
 
       // Elapsed (past) months keep the original value.
       for (let k = 0; k < 3; k++) {

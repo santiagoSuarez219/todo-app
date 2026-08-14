@@ -5,7 +5,8 @@ import {
   createDebt,
   updateDebt,
   deleteDebt,
-  payInstallment,
+  payOffDebt,
+  syncDebtBudgetItems,
 } from '../../services/finances/debts.service';
 import type { CreateDebtDto, UpdateDebtDto, DebtStatus } from '../../types';
 
@@ -25,11 +26,16 @@ export function useDebt(id: string) {
   });
 }
 
+function invalidateDebtRelated(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['debts'] });
+  qc.invalidateQueries({ queryKey: ['budgets'] });
+}
+
 export function useCreateDebt() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateDebtDto) => createDebt(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => invalidateDebtRelated(qc),
   });
 }
 
@@ -37,7 +43,7 @@ export function useUpdateDebt() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateDebtDto }) => updateDebt(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => invalidateDebtRelated(qc),
   });
 }
 
@@ -45,17 +51,25 @@ export function useDeleteDebt() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteDebt(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => invalidateDebtRelated(qc),
   });
 }
 
-export function usePayInstallment() {
+export function usePayOffDebt() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => payInstallment(id),
+    mutationFn: (id: string) => payOffDebt(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['debts'] });
+      invalidateDebtRelated(qc);
       qc.invalidateQueries({ queryKey: ['expenses'] });
     },
+  });
+}
+
+export function useSyncBudgetItems() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => syncDebtBudgetItems(id),
+    onSuccess: () => invalidateDebtRelated(qc),
   });
 }

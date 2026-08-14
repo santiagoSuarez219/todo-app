@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -37,4 +38,22 @@ export class CreateDebtDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   initialPayment?: number;
+
+  @ApiProperty({
+    example: 9,
+    description:
+      'Mes (1-12) en el que cae la primera cuota. Determina el calendario completo de cuotas materializadas en presupuestos.',
+  })
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  startMonth: number;
+
+  @ApiProperty({
+    example: 2026,
+    description: 'Año en el que cae la primera cuota.',
+  })
+  @IsInt()
+  @Min(2000)
+  startYear: number;
 }

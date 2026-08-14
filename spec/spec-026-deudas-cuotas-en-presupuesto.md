@@ -1,4 +1,4 @@
-# spec-026 — [IN PROGRESS] Deudas con cuotas materializadas en presupuestos
+# spec-026 — [TESTING] Deudas con cuotas materializadas en presupuestos
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -276,26 +276,33 @@ Consecuencias asumidas, que deben quedar cubiertas por las pruebas:
 
 ## Fases de implementación
 
-### Fase 1 — Esquema y migración de datos
+### Fase 1 — Esquema y migración de datos ✅ Completada
 
-- [ ] `entities/debt.entity.ts`: agregar `startMonth` (`int`), `startYear` (`int`),
-      `paidOffAt` (`timestamptz`, nullable). **Mantener aún** `paidInstallments`
-      (se elimina en Fase 7).
-- [ ] `entities/budget-item.entity.ts`: agregar
-      `@ManyToOne(() => Debt, { nullable: true, onDelete: 'CASCADE' }) debt` y
-      `@Column({ type: 'int', nullable: true }) installmentNumber`.
-- [ ] Generar la migración `AddDebtScheduleAndBudgetItemLink` con
-      `npx typeorm migration:generate src/migrations/AddDebtScheduleAndBudgetItemLink -d src/data-source.ts`.
-- [ ] Editar la migración a mano para añadir: índice único parcial
-      `(debtId, installmentNumber) WHERE "debtId" IS NOT NULL`, índice único
-      `(month, year)` en `budgets` con guard previo de duplicados, y el backfill de
-      `startMonth` / `startYear` / `paidOffAt` de la decisión 4.
-- [ ] Verificar el `down()`: debe revertir columnas e índices sin perder
-      `paidInstallments`.
-- [ ] Ejecutar `npx typeorm migration:run -d src/data-source.ts` en local y
-      verificar el backfill contra los datos existentes.
+- [x] `entities/debt.entity.ts`: agregadas `startMonth` (`int`), `startYear`
+      (`int`), `paidOffAt` (`timestamptz`, nullable). Se mantiene
+      `paidInstallments` (se elimina en Fase 7).
+- [x] `entities/budget-item.entity.ts`: agregada relación `debt` (`ManyToOne`,
+      nullable, `onDelete: 'CASCADE'`) + `installmentNumber` (`int`, nullable) +
+      índice único parcial `(debtId, installmentNumber)`.
+- [x] `entities/budget.entity.ts`: agregado índice único `(month, year)`.
+- [x] Migración `AddDebtScheduleAndBudgetItemLink1786714977098` escrita a mano
+      (el `migration:generate` automático arrastraba ruido no relacionado —
+      renombraba el enum compartido `expenses_type_enum` y recreaba FKs de
+      `activities`/`expenses` por diferencias de estrategia de nombres; se
+      descartó ese diff y se escribió la migración quirúrgica): guard previo que
+      aborta si hay `(month, year)` duplicados en `budgets` (no se encontraron en
+      local), columnas nullable → backfill → `NOT NULL`, backfill de
+      `startMonth`/`startYear` preservando el progreso (`start = mesActual −
+      paidInstallments + 1`) y de `paidOffAt = updatedAt` en deudas `pagada`, FK +
+      índices nuevos.
+- [x] `down()` revierte columnas e índices sin tocar `paidInstallments`.
+- [x] Ejecutada en local (`npm run migration:run`) y verificado el backfill: la
+      deuda existente (`Nevera Samsung`, 12 cuotas, 1 pagada) quedó con
+      `startMonth=8`, `startYear=2026` — coherente con el mes actual (agosto 2026)
+      y con su progreso previo.
+- [x] `npm run build` compila sin errores tras los cambios de entidades.
 
-### Fase 2 — Servicio de deudas: calendario y creación
+### Fase 2 — Servicio de deudas: calendario y creación ✅ Completada
 
 - [ ] `create-debt.dto.ts`: agregar `startMonth` (`@IsInt() @Min(1) @Max(12)`) y
       `startYear` (`@IsInt() @Min(2000)`), ambos requeridos.
@@ -318,81 +325,81 @@ Consecuencias asumidas, que deben quedar cubiertas por las pruebas:
 - [ ] Normalización perezosa de `status` en `findAll()` / `findOne()` (decisión 3) y
       filtrado por estado efectivo.
 
-### Fase 3 — Pago total, edición, borrado y sincronización
+### Fase 3 — Pago total, edición, borrado y sincronización ✅ Completada
 
-- [ ] `debts.service.ts`: eliminar `payInstallment()` por completo.
-- [ ] Agregar `payOff(id)` transaccional: validar que no esté `pagada` y que
+- [x] `debts.service.ts`: eliminar `payInstallment()` por completo.
+- [x] Agregar `payOff(id)` transaccional: validar que no esté `pagada` y que
       `remainingValue > 0`; borrar los `BudgetItem` de la deuda en meses
       estrictamente futuros; crear `Expense`
       (`description: "Pago total: <descripción>"`, `amount: remainingValue`,
       `date: hoy`, `type: PAGO_DEUDA`); setear `status = 'pagada'` y
       `paidOffAt = now()`. Devolver `{ debt, expenseId, itemsRemoved }`.
-- [ ] Agregar `syncBudgetItems(id)` idempotente: recrear solo las cuotas futuras
+- [x] Agregar `syncBudgetItems(id)` idempotente: recrear solo las cuotas futuras
       faltantes (creando presupuestos si hace falta). No toca vencidas ni deudas
       `pagada`. Devolver `{ itemsCreated, budgetsCreated }`.
-- [ ] Reescribir `update()` con la política de regeneración de la decisión 6.
-- [ ] Reescribir `remove()` con la política de la decisión 7.
-- [ ] `debts.controller.ts`: eliminar `POST :id/pay`; agregar `POST :id/pay-off` y
+- [x] Reescribir `update()` con la política de regeneración de la decisión 6.
+- [x] Reescribir `remove()` con la política de la decisión 7.
+- [x] `debts.controller.ts`: eliminar `POST :id/pay`; agregar `POST :id/pay-off` y
       `POST :id/sync-budget-items`, con decoradores Swagger equivalentes a los
       existentes.
 
-### Fase 4 — Presupuestos: exclusión en duplicado y exposición del vínculo
+### Fase 4 — Presupuestos: exclusión en duplicado y exposición del vínculo ✅ Completada
 
-- [ ] `budgets.service.ts → duplicate()`: filtrar los ítems con `debt != null` antes
+- [x] `budgets.service.ts → duplicate()`: filtrar los ítems con `debt != null` antes
       de clonar; ajustar `itemsCopied` y la lista pasada a `computeTypeSummary`.
-- [ ] Verificar que `findOne()` y `findAll()` devuelvan `debtId` e
-      `installmentNumber` en los ítems (revisar si el
-      `leftJoinAndSelect('budget.items', 'items')` los expone sin join adicional;
-      si no, seleccionar explícitamente la columna FK).
-- [ ] **No** añadir guards en `updateItem()` / `removeItem()`: los ítems de cuota
+- [x] `findOne()`/`findAll()` de `budgets.service.ts` ahora encadenan
+      `.leftJoinAndSelect('items.debt', 'itemsDebt')` — el ítem expone la
+      relación `debt` completa (no un `debtId` plano; el frontend deriva
+      presencia con `item.debt`), más `installmentNumber` como columna directa.
+- [x] **No** añadir guards en `updateItem()` / `removeItem()`: los ítems de cuota
       siguen siendo editables y borrables (decisión 10).
 
-### Fase 5 — Frontend
+### Fase 5 — Frontend ✅ Completada
 
-- [ ] Leer `frontend/DESIGN.md` antes de tocar UI.
-- [ ] `types/index.ts`: actualizar `Debt`, `CreateDebtDto`, `BudgetItem`; agregar
+- [x] Leer `frontend/DESIGN.md` antes de tocar UI.
+- [x] `types/index.ts`: actualizar `Debt`, `CreateDebtDto`, `BudgetItem`; agregar
       `PayOffDebtResult` y `SyncBudgetItemsResult`; eliminar `PayInstallmentResult`.
       Los tipos deben coincidir exactamente con los DTOs de las Fases 2-4.
-- [ ] `services/finances/debts.service.ts`: eliminar `payInstallment`; agregar
+- [x] `services/finances/debts.service.ts`: eliminar `payInstallment`; agregar
       `payOffDebt(id)` y `syncDebtBudgetItems(id)`.
-- [ ] `hooks/finances/useDebts.ts`: eliminar `usePayInstallment`; agregar
+- [x] `hooks/finances/useDebts.ts`: eliminar `usePayInstallment`; agregar
       `usePayOffDebt` y `useSyncDebtBudgetItems`, ambos invalidando `['debts']`,
       `['budgets']` y `['expenses']`. `useCreateDebt`, `useUpdateDebt` y
       `useDeleteDebt` pasan a invalidar además `['budgets']`.
-- [ ] `components/finances/DebtForm.tsx`: agregar "Mes de inicio" y "Año de inicio"
+- [x] `components/finances/DebtForm.tsx`: agregar "Mes de inicio" y "Año de inicio"
       al schema Zod y al formulario, con default mes siguiente al actual; mostrar
       aviso de regeneración de cuotas futuras cuando `initial` está presente y
       cambian plazo, valor de cuota o mes de inicio.
-- [ ] `components/finances/DebtCard.tsx`: eliminar el botón "Pagar cuota" y las
+- [x] `components/finances/DebtCard.tsx`: eliminar el botón "Pagar cuota" y las
       props `onPay` / `isPaying`; agregar "Pagar deuda completa" (oculto si
       `status === 'pagada'`) y "Sincronizar presupuestos"; mostrar mes de inicio y
       próxima cuota junto al progreso.
-- [ ] `pages/finances/DebtsView.tsx`: reemplazar `usePayInstallment` por
+- [x] `pages/finances/DebtsView.tsx`: reemplazar `usePayInstallment` por
       `usePayOffDebt`; agregar `ConfirmDialog` que explique el efecto (borra las
       cuotas futuras y registra el saldo como gasto del mes en curso) con el monto
       exacto.
-- [ ] `pages/finances/BudgetDetailView.tsx`: badge "Deuda" en los ítems con
+- [x] `pages/finances/BudgetDetailView.tsx`: badge "Deuda" en los ítems con
       `debtId`, conservando su edición y borrado.
 
-### Fase 6 — MCP: actualizar `todo-api`
+### Fase 6 — MCP: actualizar `todo-api` ✅ Completada
 
-- [ ] En `mcp.service.ts`, eliminar el bloque `server.tool('pay_debt_installment', …)`
-      (líneas 1430-1443 actuales) de `registerDebtTools()`.
-- [ ] Actualizar `create_debt`: agregar al schema Zod
-      `startMonth: z.number().int().min(1).max(12).optional()` y
-      `startYear: z.number().int().min(2000).optional()`, documentando el default
-      (mes siguiente al actual). Actualizar la descripción para advertir que **crea
-      automáticamente** un `BudgetItem` de tipo `pago_deuda` por cada cuota y que
-      **crea el `Budget` del mes si no existe** — para que un agente no repita esa
-      acción con `add_budget_item`.
-- [ ] Agregar la tool `pay_debt_full`: input `{ debtId: z.string().uuid() }`;
+- [x] En `mcp.service.ts`, eliminado el bloque `server.tool('pay_debt_installment', …)`
+      de `registerDebtTools()`.
+- [x] Actualizado `create_debt`: agregados al schema Zod `startMonth` y
+      `startYear` — **requeridos** (no opcionales, ajuste respecto al borrador
+      original de esta fase: `CreateDebtDto` los exige en el DTO real de la
+      Fase 2, así que el schema MCP debe reflejarlo exactamente — la regla del
+      `CLAUDE.md` raíz es "declarar en su schema Zod exactamente los mismos
+      campos que el DTO real"). Descripción actualizada advirtiendo el efecto
+      colateral de creación automática de presupuestos/ítems.
+- [x] Agregar la tool `pay_debt_full`: input `{ debtId: z.string().uuid() }`;
       descripción del efecto (borra cuotas futuras, registra el saldo restante como
       `pago_deuda` del mes en curso, marca la deuda como `pagada`); handler sobre
       `DebtsService.payOff`; errores de negocio con el mismo patrón `ok(…)` / `err(…)`
       del resto de tools de deudas.
-- [ ] Revisar `list_debts`: actualizar descripción y shape si `DebtWithRemaining`
+- [x] Revisar `list_debts`: actualizar descripción y shape si `DebtWithRemaining`
       incorpora `startMonth` / `startYear` / `nextInstallment` y cuotas derivadas.
-- [ ] Actualizar `docs/mcps/finanzas-personales.system-prompt.md`:
+- [x] Actualizar `docs/mcps/finanzas-personales.system-prompt.md`:
   - Tabla de tools de deudas (líneas 260-262): quitar la fila de
     `pay_debt_installment`, ajustar `create_debt` (línea 261) con
     `startMonth`/`startYear` y su efecto sobre presupuestos, agregar fila de
@@ -407,26 +414,32 @@ Consecuencias asumidas, que deben quedar cubiertas por las pruebas:
   - Documentar que `duplicate_budget` **no** arrastra cuotas de deuda.
   - Verificar que `grep -n "pay_debt_installment" docs/mcps/finanzas-personales.system-prompt.md`
     devuelve 0 resultados.
-- [ ] Verificar/actualizar `docs/mcps/README.md` (fila `todo-api`, línea 11).
-- [ ] Verificar que el MCP responde: `create_debt` con y sin `startMonth`/`startYear`,
+- [x] Verificar/actualizar `docs/mcps/README.md` (fila `todo-api`, línea 11).
+- [x] Verificar que el MCP responde: `create_debt` con y sin `startMonth`/`startYear`,
       `pay_debt_full` sobre deuda activa y sobre pagada, `list_debts` con el shape
       nuevo, y que `pay_debt_installment` ya no aparece en el listado de tools.
 
-### Fase 7 — Limpieza del modelo antiguo
+### Fase 7 — Limpieza del modelo antiguo ✅ Completada
 
-- [ ] Eliminar la columna `paidInstallments` de `debt.entity.ts` y generar la
-      migración `DropPaidInstallmentsFromDebts` (ejecutar solo tras verificar el
-      backfill de la Fase 1).
-- [ ] Verificar por `grep` que no queda ninguna referencia a `payInstallment`,
-      `pay_debt_installment` ni `PayInstallmentResult` en backend, frontend ni docs.
-- [ ] Actualizar `backend/CLAUDE.md`: entidad `Debt`, tabla de rutas de `debts`,
-      sección "Lógica de Negocio — Deudas" y sección "Presupuestos" (exclusión en
-      `duplicate`).
-- [ ] Actualizar `frontend/CLAUDE.md` donde menciona `POST /debts/:id/pay`.
-- [ ] Registrar en `spec/backlog.md` cualquier deuda técnica detectada fuera de
-      alcance.
+- [x] Eliminada la columna `paidInstallments` de `debt.entity.ts`; migración
+      `DropPaidInstallmentsFromDebts1786715738000` ejecutada en local tras
+      verificar el backfill de la Fase 1.
+- [x] `grep` confirma cero referencias activas a `payInstallment`,
+      `pay_debt_installment` ni `PayInstallmentResult` (la única mención
+      restante es la nota histórica en `backend/CLAUDE.md` documentando que se
+      eliminó).
+- [x] `backend/CLAUDE.md` actualizado: entidad `Debt`, `BudgetItem`/`Budget`
+      (FK e índices nuevos), tabla de rutas de `debts`, sección "Lógica de
+      Negocio — Deudas", tools MCP, árbol de migraciones y archivos clave.
+- [x] `frontend/CLAUDE.md` actualizado (`POST /debts/:id/pay-off` y
+      `/sync-budget-items` en vez de `POST /debts/:id/pay`).
+- [x] `docs/mcps/finanzas-personales.system-prompt.md` actualizado: tabla de
+      campos de `debts`, reglas de negocio, tabla de tools, restricciones y
+      ejemplos de conversación — sin menciones a `pay_debt_installment`.
+- No se detectó deuda técnica fuera de alcance que registrar en
+  `spec/backlog.md`.
 
-### Fase 8 — Pruebas
+### Fase 8 — Pruebas — automáticas en verde, manuales pendientes del usuario
 
 > Los archivos de esta fase se escriben **junto con el spec**, antes de la
 > aprobación de implementación. Su posición al final indica cuándo se ponen en
@@ -434,7 +447,18 @@ Consecuencias asumidas, que deben quedar cubiertas por las pruebas:
 
 - [ ] Casos manuales de `docs/testing/test-026-deudas-cuotas-en-presupuesto.md`
       ejecutados y aprobados por el usuario.
-- [ ] `backend/test/e2e-026-deudas-cuotas-en-presupuesto.spec.ts` en verde.
+- [x] `backend/test/e2e-026-deudas-cuotas-en-presupuesto.e2e-spec.ts` en verde
+      (13/13; el ajuste de `Number(...)` en `installmentValue` de AC-8 sigue la
+      convención existente del proyecto para columnas `decimal`, no cambia
+      ningún criterio de aceptación).
+- [x] `backend/src/finances/debts.service.spec.ts` en verde (20/20).
+- [x] Resto de la suite backend intacta: `npm run test` 49/49; `npm run
+      test:e2e` 58/60 — las 2 fallas (`app.e2e-spec.ts`, `auth.e2e-spec.ts`)
+      son preexistentes y no relacionadas con este spec (confirmado
+      reproduciéndolas con `git stash` sobre el código previo a spec-026).
+- [ ] Ejecutar `@tester` como fase final antes del merge a `development` (tras
+      aprobar los casos manuales), por disciplina del proceso — las pruebas ya
+      están en verde.
 - [ ] `backend/src/finances/debts.service.spec.ts` (helpers de calendario) en verde.
 - [ ] Ejecutar `npm run test` y `npm run test:e2e` vía `@tester` antes del merge.
 

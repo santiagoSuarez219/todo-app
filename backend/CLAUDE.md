@@ -205,9 +205,9 @@ Todos siguen el mismo patrón CRUD base (`POST`, `GET` paginado, `GET /:id`, `PA
 | `cdts` | `GET /cdts/active` | CDTs con `endDate >= hoy` |
 | `budgets` | `GET /budgets/monthly-summary?year=&month=` | `budgetTotal` + `expensesTotal` + `combinedTotal` + `cardTotals` |
 | `budgets` | `POST /:id/items`, `PATCH /:budgetId/items/:itemId`, `DELETE /:budgetId/items/:itemId` | Gestión de `BudgetItem` |
-| `debts` | `POST /:id/pay` | Paga una cuota (ver lógica de negocio abajo) |
+| `debts` | `POST /:id/pay-off`, `POST /:id/sync-budget-items` | Pago total anticipado y sincronización del calendario de cuotas (ver lógica de negocio abajo) |
 
-`debts` sí tiene `PATCH /:id` y `DELETE /:id` a nivel REST (usados por el frontend en `/finances/debts`), pero **no están expuestos como tools MCP** — el agente de finanzas no puede editar ni eliminar deudas.
+`debts` sí tiene `PATCH /:id` y `DELETE /:id` a nivel REST (usados por el frontend en `/finances/debts`), pero **no están expuestos como tools MCP** — el agente de finanzas no puede editar ni eliminar deudas. El antiguo `POST /:id/pay` (pago de cuota individual) ya no existe (spec-026).
 
 ---
 
@@ -244,7 +244,7 @@ src/
 │   ├── credit-cards.service.ts / .controller.ts
 │   ├── cdts.service.ts / .controller.ts
 │   ├── budgets.service.ts / .controller.ts    incluye items y getMonthlySummary
-│   ├── debts.service.ts / .controller.ts      pagos de cuota con side-effects
+│   ├── debts.service.ts / .controller.ts      calendario de cuotas en presupuestos, pago total (spec-026)
 │   └── finances.module.ts
 │
 ├── mcp/
@@ -271,7 +271,9 @@ src/
     ├── 1782200000002-CreateBudgets.ts
     ├── 1782743385300-AddTypeToBudgetItems.ts
     ├── 1782749715235-CreateDebts.ts
-    └── 1782908224127-AddCreditCardToExpenses.ts
+    ├── 1782908224127-AddCreditCardToExpenses.ts
+    ├── 1786714977098-AddDebtScheduleAndBudgetItemLink.ts   spec-026: startMonth/startYear/paidOffAt, budget_items.debtId
+    └── 1786715738000-DropPaidInstallmentsFromDebts.ts      spec-026: columna reemplazada por cálculo derivado
 ```
 
 ### Entidades
@@ -409,6 +411,9 @@ Activo si `endDate >= hoy` (calculado en `findActive()`, no persistido).
 
 #### Debt (`debts`)
 
+> spec-026 reemplazó el pago manual de cuotas por un calendario materializado
+> en presupuestos — ver "Lógica de Negocio Importante → Deudas" más abajo.
+
 | Campo | Tipo DB | Notas |
 |-------|---------|-------|
 | `id` | `uuid` PK | generado |
@@ -417,11 +422,24 @@ Activo si `endDate >= hoy` (calculado en `findActive()`, no persistido).
 | `installmentValue` | `decimal(12,2)` | COP |
 | `totalInstallments` | `int` | requerido |
 | `initialPayment` | `decimal(12,2)` | nullable |
-| `paidInstallments` | `int` | default `0`, gestionado por el sistema |
-| `status` | `enum` | default `activa` |
+| `startMonth` | `int` | 1–12, mes de la primera cuota |
+| `startYear` | `int` | año de la primera cuota |
+| `paidOffAt` | `timestamptz` | nullable, fecha del pago total anticipado (`pay-off`) |
+| `status` | `enum` | default `activa`; se persiste `pagada` solo por pago total o normalización perezosa (ver abajo) |
 | `createdAt` / `updatedAt` | `timestamptz` | auto |
 
-`remainingValue` no es columna — se calcula como `(totalInstallments − paidInstallments) × installmentValue`.
+`paidInstallments` **no es columna** (se eliminó en spec-026, Fase 7) — se
+deriva en cada lectura a partir de `startMonth`/`startYear`, `totalInstallments`
+y la fecha actual (`computePaidInstallments()` en `debts.service.ts`).
+`remainingValue` tampoco es columna: `(totalInstallments − paidInstallments) ×
+installmentValue`. `nextInstallment` (`{number, month, year} | null`) también se
+deriva, para uso de la UI.
+
+`BudgetItem` gana en spec-026 una FK opcional `debt` (`ManyToOne`, nullable,
+`onDelete: CASCADE`) + `installmentNumber` (`int`, nullable) — presente cuando
+el ítem es una cuota generada automáticamente por una deuda. Índice único
+parcial `(debtId, installmentNumber) WHERE "debtId" IS NOT NULL`. `Budget`
+tiene además un índice único `(month, year)`.
 
 ### Enums
 
@@ -507,10 +525,41 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
 - Al vivir en el servicio, aplica igual desde REST (`PATCH /activities/:id`),
   MCP (`update_activity`) y la UI — sin lógica duplicada en el frontend.
 
-#### Deudas (`debts.service.ts`)
+#### Deudas (`debts.service.ts`, spec-026)
 
-- `payInstallment(debtId)`: crea automáticamente un `Expense` de tipo `pago_deuda` con `description: "Cuota: <descripción de la deuda>"`, incrementa `paidInstallments`, recalcula `remainingValue` y, si `paidInstallments === totalInstallments`, cambia `status` a `pagada`.
-- Rechaza el pago si la deuda ya está en `pagada`.
+- `create(dto)`: transacción atómica que guarda la deuda y materializa un
+  `BudgetItem` (`type: pago_deuda`, `description: "Cuota k/N — <descripción>"`)
+  por cada cuota, uno en cada mes consecutivo desde `startMonth`/`startYear`.
+  Reutiliza el `Budget` del mes si existe; si no, lo crea con nombre
+  autogenerado `"Presupuesto <Mes> <Año>"`.
+- **Derivación de progreso** (sin pago manual): `paidInstallments` = cuotas
+  vencidas según el calendario, comparado contra la fecha del servidor — la
+  cuota del **mes en curso cuenta como vencida**. `findAll()`/`findOne()`
+  normalizan de forma perezosa: si el calendario ya completó todas las cuotas
+  pero `status` seguía en `activa`, lo persisten como `pagada` antes de
+  devolver la deuda.
+- `payOff(debtId)` (`POST /:id/pay-off`): pago total anticipado — elimina los
+  `BudgetItem` de la deuda en meses **estrictamente futuros**, crea un
+  `Expense` (`description: "Pago total: <descripción>"`) por el saldo
+  restante con fecha de hoy, y marca `status: pagada` + `paidOffAt`. Rechaza
+  si la deuda ya está pagada o no tiene saldo pendiente.
+- `syncBudgetItems(debtId)` (`POST /:id/sync-budget-items`): idempotente,
+  recrea únicamente las cuotas futuras que falten (p. ej. tras borrar un ítem
+  manualmente, o para materializar las cuotas de una deuda creada antes de
+  spec-026). No toca cuotas vencidas ni deudas pagadas.
+- `update(id, dto)`: si el cambio toca `installmentValue`, `totalInstallments`,
+  `startMonth` o `startYear`, se **regeneran solo los ítems futuros** (se
+  borran y se recrean); los vencidos, incluido el del mes en curso, no se
+  tocan. Rechaza editar el calendario de una deuda ya `pagada`. Si cambia
+  `description`, se propaga a todos los ítems (vencidos y futuros).
+- `remove(id)`: los ítems **vencidos** quedan en el presupuesto histórico
+  desasociados (`debtId`/`installmentNumber` a `null`); los **futuros** se
+  eliminan. Luego se borra la deuda.
+- `budgets.service.ts → duplicate()` excluye los ítems con `debt != null` al
+  clonar un mes — las cuotas de deuda no se duplican, ya están (o estarán)
+  puestas por la propia deuda en el mes destino.
+- No existe pago de cuota individual — el antiguo `payInstallment()` /
+  `POST /:id/pay` se eliminó por completo en spec-026.
 
 #### Presupuestos (`budgets.service.ts`)
 
@@ -575,7 +624,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `add_budget_item` / `update_budget_item` / `delete_budget_item` | Gestión de ítems de presupuesto |
 | `get_monthly_expense_summary` | Resumen combinado presupuesto + gastos variables + `cardTotals` |
 | `duplicate_budget` | Duplica un presupuesto completo (ítems + ingresos + gastos, con desplazamiento y clamp de fechas) a otro mes/año; 409 si el destino ya tiene presupuesto |
-| `list_debts` / `create_debt` / `pay_debt_installment` | Deudas — **sin** `update_debt` ni `delete_debt` (solo disponibles vía REST) |
+| `list_debts` / `create_debt` / `pay_debt_full` | Deudas — `create_debt` materializa automáticamente las cuotas en presupuestos; `pay_debt_full` reemplaza al antiguo pago de cuota individual (eliminado en spec-026). **Sin** `update_debt` ni `delete_debt` (solo disponibles vía REST) |
 
 Reglas de gestión de MCPs, criterios para agregar tools nuevas y estructura de
 los system prompts: ver sección "MCPs del proyecto" en el `CLAUDE.md` raíz.
@@ -643,7 +692,7 @@ Ver "Acciones prohibidas" del `CLAUDE.md` raíz — aplican sin cambios aquí.
 | `src/activities/recurrence-scheduler.service.ts` | Cron de generación de instancias recurrentes |
 | `src/projects/projects.service.ts` | CRUD de proyectos |
 | `src/finances/finances.module.ts` | Módulo de finanzas (8 subdominios) |
-| `src/finances/debts.service.ts` | Lógica de pago de cuotas y cierre de deuda |
+| `src/finances/debts.service.ts` | Calendario de cuotas materializado en presupuestos, pago total y sincronización (spec-026) |
 | `src/finances/budgets.service.ts` | Presupuestos, ítems y resumen mensual combinado |
 | `src/mcp/mcp.service.ts` | Definición de tools MCP |
 | `src/common/interceptors/transform.interceptor.ts` | Wrapper de respuestas |

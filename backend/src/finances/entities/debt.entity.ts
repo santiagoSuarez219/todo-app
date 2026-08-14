@@ -27,11 +27,17 @@ export class Debt {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   initialPayment: number | null;
 
-  @Column({ type: 'int', default: 0 })
-  paidInstallments: number;
-
   @Column({ type: 'enum', enum: DebtStatus, default: DebtStatus.ACTIVE })
   status: DebtStatus;
+
+  @Column({ type: 'int' })
+  startMonth: number;
+
+  @Column({ type: 'int' })
+  startYear: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  paidOffAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;
