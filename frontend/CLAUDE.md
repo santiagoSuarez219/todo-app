@@ -286,6 +286,13 @@ asumir un shape, no reproducirlo aquí para evitar que ambos se desincronicen.
   `ActivityChip.tsx`, `DayActivitiesModal.tsx` — vista de calendario mensual
   (spec-025), consumidos por `pages/ScheduleView.tsx`. Lógica pura de fechas
   en `lib/calendar.ts`.
+- `ProjectFilter.tsx` — selector único de proyecto (ampliación spec-025),
+  100% client-side sobre los datos ya cargados del mes. El tipo
+  `ProjectFilterValue` y el predicado `matchesProjectFilter` viven en
+  `lib/scheduleFilters.ts` (no en `ProjectFilter.tsx`, para no romper Fast
+  Refresh — `react-refresh/only-export-components` exige que un archivo de
+  componente solo exporte el componente; tampoco en `types/index.ts` por ser
+  estado de UI sin contraparte en el backend).
 
 ### Finanzas (`components/finances/`)
 - Un `*Card.tsx` + `*Form.tsx` por recurso: `Account`, `CreditCard`, `Cdt`,

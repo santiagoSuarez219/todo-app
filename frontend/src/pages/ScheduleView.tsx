@@ -4,6 +4,8 @@ import { groupActivitiesByDate, toLocalDateKey } from '../lib/calendar';
 import MonthNavigator from '../components/schedule/MonthNavigator';
 import MonthCalendar from '../components/schedule/MonthCalendar';
 import DayActivitiesModal from '../components/schedule/DayActivitiesModal';
+import ProjectFilter from '../components/schedule/ProjectFilter';
+import { matchesProjectFilter, type ProjectFilterValue } from '../lib/scheduleFilters';
 import EmptyState from '../components/EmptyState';
 
 export default function ScheduleView() {
@@ -16,12 +18,21 @@ export default function ScheduleView() {
   // momento del clic, así que una edición inline dentro del modal no se
   // reflejaba aunque el backend sí la persistiera).
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  // spec-025 (ampliación): filtro de proyecto — se mantiene al navegar entre
+  // meses (no se resetea en el onChange del MonthNavigator).
+  const [projectFilter, setProjectFilter] = useState<ProjectFilterValue>(null);
 
   const { data, isLoading, isError } = useScheduleActivities(year, month);
-  const activitiesByDate = groupActivitiesByDate(data ?? []);
+  const monthActivities = data ?? [];
+  const filteredActivities = monthActivities.filter((a) => matchesProjectFilter(a, projectFilter));
+  const activitiesByDate = groupActivitiesByDate(filteredActivities);
   const selectedDayActivities = selectedDate
     ? activitiesByDate.get(toLocalDateKey(selectedDate)) ?? []
     : [];
+
+  const monthIsEmpty = !isLoading && !isError && monthActivities.length === 0;
+  const filterHasNoResults =
+    !isLoading && !isError && monthActivities.length > 0 && filteredActivities.length === 0;
 
   return (
     <div className="space-y-4">
@@ -30,16 +41,33 @@ export default function ScheduleView() {
         <MonthNavigator year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m); }} />
       </div>
 
+      <div className="flex items-center flex-wrap gap-3">
+        <ProjectFilter value={projectFilter} onChange={setProjectFilter} />
+      </div>
+
       {isLoading && !data && <p className="text-sm text-gray-400">Cargando…</p>}
       {isError && <p className="text-sm text-red-500">Error al cargar el cronograma.</p>}
 
       {/* spec-025 (TC-025-007): mes sin actividades — EmptyState en vez de la
           grilla, mismo patrón que TodayView/WeekView/OverdueView. */}
-      {!isLoading && !isError && (data?.length ?? 0) === 0 && (
-        <EmptyState message="No tienes actividades este mes." />
+      {monthIsEmpty && <EmptyState message="No tienes actividades este mes." />}
+
+      {/* spec-025 (ampliación, TC-025-013): el mes tiene actividades pero el
+          filtro de proyecto no deja ninguna — empty state distinto, con
+          acción para volver a "Todos". */}
+      {filterHasNoResults && (
+        <div className="flex flex-col items-center gap-3">
+          <EmptyState message="No hay actividades de este proyecto en este mes." />
+          <button
+            onClick={() => setProjectFilter(null)}
+            className="text-sm font-medium text-blue-700 dark:text-blue-400 hover:underline"
+          >
+            Ver todas
+          </button>
+        </div>
       )}
 
-      {!isError && (data?.length ?? 0) > 0 && (
+      {!isError && filteredActivities.length > 0 && (
         <MonthCalendar
           year={year}
           month={month}

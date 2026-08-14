@@ -1,4 +1,4 @@
-# spec-025 — [TESTING] Cronograma — vista de calendario mensual de actividades
+# spec-025 — [IN PROGRESS] Cronograma — vista de calendario mensual de actividades
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -83,6 +83,60 @@ ambos casos.
   existente, que ya trae su propia edición inline — no se duplica lógica).
 - Librerías nuevas de fechas/calendario (`date-fns` u otras): la grilla se
   calcula con `Date` nativo.
+
+## Ampliación — filtro por proyecto (post-ronda 1)
+
+> Agregada después de que la Fase 5 (ronda manual 1) cerrara con 9/9 casos
+> aprobados. El paquete original quedaba en `[TESTING]`; esta ampliación lo
+> devuelve a `[IN PROGRESS]` hasta cerrar la Fase 9. Diseñada con `@architect`.
+
+El usuario pidió agregar un **filtro por proyecto** a `/activities/schedule`.
+
+### Decisiones tomadas con el usuario para la ampliación
+
+- **Tipo de filtro:** selector único (`<select>` nativo) — "Todos" / un
+  proyecto concreto / "Sin proyecto". No hay multi-selección.
+- **Dónde se filtra:** **100% client-side**, sobre los datos que ya trae
+  `GET /activities/schedule` para el mes visible (el endpoint no pagina, ya
+  trae todo el mes). **No se toca el backend ni la tool MCP
+  `get_activities_by_month`** — ni su DTO, ni su servicio, ni su schema Zod.
+- **Proyectos listados:** todos, incluidos `completed`/`inactive`/`paused` —
+  el Cronograma muestra actividades históricas, y ocultar proyectos ya
+  completados dejaría esas actividades sin poder filtrarse.
+- **Persistencia:** el filtro **se mantiene** al navegar entre meses con el
+  `MonthNavigator` (no se resetea a "Todos" en cada cambio de mes).
+- **Ubicación del tipo `ProjectFilterValue`/constante `NO_PROJECT`:** viven en
+  `components/schedule/ProjectFilter.tsx`, no en `types/index.ts` — es un tipo
+  de estado de UI sin contraparte en el backend/DTOs, a diferencia del resto
+  de tipos centralizados en `types/index.ts` (dominio + DTOs espejo del
+  backend).
+
+### Evaluación MCP de la ampliación
+
+**¿Aplica MCP?** No. `get_activities_by_month` ya devuelve el set completo
+del mes con `project` embebido en cada actividad — un agente puede filtrar
+por proyecto sobre ese resultado sin ninguna llamada ni campo nuevo. Agregar
+un `projectId` opcional al endpoint/tool sería redundante con el filtrado
+trivial que ya es posible sobre la respuesta, y contradice la decisión de no
+tocar backend. `docs/mcps/` no se modifica.
+
+### Impacto en el sistema — ampliación (solo frontend)
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/src/lib/scheduleFilters.ts` | **Nuevo, función pura.** Constante centinela `NO_PROJECT = '__no_project__'` (no colisiona con UUIDs reales), tipo `ProjectFilterValue = string \| typeof NO_PROJECT \| null` (`null` = "Todos"), predicado `matchesProjectFilter()`. Separado de `ProjectFilter.tsx` para no romper Fast Refresh (`react-refresh/only-export-components`: un archivo de componente solo puede exportar el componente) — ajuste sobre el plan original de `@architect`, que los ubicaba dentro de `ProjectFilter.tsx`. |
+| `frontend/src/components/schedule/ProjectFilter.tsx` | **Nuevo.** `<select>` nativo (no el dropdown custom de `InlineProjectEditor`) consumiendo `useProjects()` y los tipos/constante de `lib/scheduleFilters.ts`, estilos derivados de `inputCls` de `ActivityForm.tsx`. |
+| `frontend/src/pages/ScheduleView.tsx` | Estado `projectFilter`; nueva fila de filtros (debajo del header, no dentro de la fila del `MonthNavigator`) con `<ProjectFilter />`; `filteredActivities` aplicado **antes** de `groupActivitiesByDate`; condición de render de `MonthCalendar` sobre `filteredActivities.length > 0`; empty state diferenciado ("sin actividades de este proyecto en este mes" + botón "Ver todas" que limpia el filtro), distinto del de "mes sin actividades" de `TC-025-007`. |
+| `frontend/CLAUDE.md` | Agregar `ProjectFilter.tsx`/`scheduleFilters.ts` al inventario de `components/schedule/`. |
+
+**Se reutilizan sin modificar:** `lib/calendar.ts` (el filtro se aplica antes
+de agrupar, no dentro del agrupador), `MonthCalendar.tsx`,
+`CalendarDayCell.tsx`, `ActivityChip.tsx`, `DayActivitiesModal.tsx` (sigue
+derivando del array ya filtrado, conserva el fix de datos vivos de
+`TC-025-003`), `MonthNavigator.tsx`, `hooks/useActivities.ts`,
+`services/activities.service.ts`.
+
+Sin cambios de backend, sin migración, sin cambios en `docs/mcps/`.
 
 ## Impacto en el sistema
 
@@ -193,9 +247,30 @@ desde los datos vivos de `useScheduleActivities` — ver
 `frontend/src/pages/ScheduleView.tsx`, `CalendarDayCell.tsx`,
 `MonthCalendar.tsx`. `npm run build`/`npm run lint` verificados tras el fix.
 
-### Fase 6 — Revisión y cierre
+### Fase 6 — Revisión y cierre de la implementación original
+> Reemplazada por la Fase 9 tras la ampliación — se deja el checklist original
+> sin marcar; la revisión de código final cubre implementación + ampliación
+> juntas.
 - [ ] `@reviewer` audita el diff completo contra `development`.
 - [ ] Marcar el spec como `[DONE]` solo si todos los criterios están verificados.
+
+### Fase 7 — Frontend: filtro por proyecto en el Cronograma ✅ Completada
+- [x] Releer `frontend/DESIGN.md` antes de escribir UI.
+- [x] `lib/scheduleFilters.ts` (nuevo): `NO_PROJECT`, `ProjectFilterValue`, `matchesProjectFilter()`. Movido acá desde `ProjectFilter.tsx` (plan original) porque `react-refresh/only-export-components` no permite que un archivo de componente exporte también constantes/tipos/funciones — lint lo detectó al primer intento.
+- [x] `components/schedule/ProjectFilter.tsx`: `<select>` nativo con opciones Todos/Sin proyecto/proyectos.
+- [x] `pages/ScheduleView.tsx`: estado `projectFilter`, fila de filtros, `filteredActivities` antes de `groupActivitiesByDate`, empty state diferenciado con botón "Ver todas".
+- [x] Verificado que `DayActivitiesModal` refleja el filtro (deriva de `activitiesByDate`, ya filtrado) y que el fix de datos vivos de `TC-025-003` sigue intacto.
+- [x] `frontend/CLAUDE.md`: agregado `ProjectFilter.tsx`/`scheduleFilters.ts` al inventario.
+- [x] `npm run build` y `npm run lint` sin errores nuevos (4 preexistentes ajenos).
+
+### Fase 8 — Pruebas de la ampliación (ronda manual 2)
+- [ ] `docs/testing/test-025-cronograma-calendario-mensual.md`: sección "Ronda 2 — filtro por proyecto", casos `TC-025-010`–`013` (ver "Pruebas asociadas" más abajo), redactados junto con esta ampliación (test-first).
+- [ ] El usuario ejecuta la ronda 2; Claude prepara datos vía API, guía y registra hallazgos.
+- [ ] Limpieza de los datos de la ronda 2.
+
+### Fase 9 — Revisión y cierre final
+- [ ] `@reviewer` audita el diff completo contra `development` (implementación original + ampliación juntas).
+- [ ] Marcar el spec como `[DONE]` solo si AC-1 a AC-16 están verificados, ambas rondas manuales aprobadas, y `TC-MCP-025-001` resuelto (hoy diferido a post-despliegue — su resolución no bloquea el `[DONE]` si se documenta como deuda de verificación post-deploy, a decidir con el usuario en esa fase).
 
 ## Criterios de aceptación
 
@@ -224,6 +299,20 @@ desde los datos vivos de `useScheduleActivities` — ver
 12. El agente puede invocar `get_activities_by_month` y obtener el mismo
     conjunto de actividades que el endpoint REST para el mismo mes/año.
 
+### Criterios de aceptación — ampliación (filtro por proyecto)
+
+13. La vista ofrece un selector único de proyecto con las opciones "Todos",
+    cada proyecto existente y "Sin proyecto"; el valor por defecto es "Todos".
+14. Al seleccionar un proyecto, la grilla, los chips, el contador "+X más" y
+    el modal del día muestran únicamente actividades de ese proyecto; al
+    seleccionar "Sin proyecto", únicamente actividades con `project: null`.
+15. El filtrado no dispara ninguna petición nueva al backend (la query key
+    `['activities','schedule',year,month]` no cambia) y el filtro se
+    conserva al navegar entre meses.
+16. Si el filtro no arroja resultados en el mes visible, se muestra un estado
+    vacío específico que permite volver a "Todos", distinto del estado vacío
+    de "mes sin actividades" (`TC-025-007`).
+
 ## Pruebas asociadas
 
 > Estos archivos se crean junto con el spec (ver "Artefactos que acompañan al
@@ -237,6 +326,10 @@ desde los datos vivos de `useScheduleActivities` — ver
   - `backend/src/activities/activities.service.spec.ts` — casos unitarios de
     `findByMonth()`: cálculo del rango visible, filtros de plantilla/
     subtarea, `COALESCE`, no-filtrado de `status`.
+  - La ampliación (filtro por proyecto, AC-13 a AC-16) es 100% frontend, sin
+    tocar backend — no agrega pruebas automáticas; se cubre solo con la ronda
+    manual 2 (`TC-025-010`–`013`), consistente con que el frontend no tiene
+    suite automatizada.
 
 ## Aprobación de implementación
 
@@ -244,3 +337,16 @@ desde los datos vivos de `useScheduleActivities` — ver
 
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-13
+
+### Aprobación de la ampliación (filtro por proyecto)
+
+- [x] Paquete de la ampliación (spec + casos `TC-025-010`–`013`) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-14
+- **Decisión de diseño confirmada:** el empty state de "filtro sin resultados"
+  reutiliza el componente `EmptyState` (mensaje distinto al de `TC-025-007`)
+  con un botón que limpia el filtro a "Todos" — no un mensaje inline junto al
+  selector.
+- **Sin caso de prueba dedicado** para proyectos `completed`/`inactive`/
+  `paused` listados en el selector — queda cubierto implícitamente por
+  `useProjects()` sin filtro de status; se deja como nota en `TC-025-010`, no
+  como caso aparte.

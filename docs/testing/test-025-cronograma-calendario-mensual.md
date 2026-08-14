@@ -302,7 +302,7 @@ en ese entorno). Se re-ejecuta tras el despliegue, mismo criterio que
 `TC-MCP-024-001`.
 **Hallazgos:** Ninguno aún — pendiente de ejecución post-despliegue.
 
-## Resumen de la ronda
+## Resumen de la ronda 1
 - Aprobados: 9 (`TC-025-001` a `TC-025-009`) — Fallidos: 0 — Pendientes: 1
   (`TC-MCP-025-001`, diferido a post-despliegue).
 - Bugs encontrados y corregidos **dentro de esta misma ronda** (con
@@ -329,3 +329,157 @@ en ese entorno). Se re-ejecuta tras el despliegue, mismo criterio que
   existía, borrada durante las pruebas de la UI — confirmado con `404`).
   Verificado con `GET /activities/search/TEST%20spec-025`: 0 registros
   restantes.
+- **Ronda 2 pendiente:** la ampliación de filtro por proyecto (AC-13 a AC-16,
+  `spec-025` § "Ampliación — filtro por proyecto") todavía no está
+  implementada (Fase 7 sin iniciar) — los casos `TC-025-010` a `TC-025-013`
+  de la sección siguiente están redactados en modo test-first y quedan en
+  `⬜ Pendiente` hasta que la implementación esté lista y el usuario los
+  ejecute.
+
+---
+
+## Ronda 2 — Filtro por proyecto (ampliación)
+
+> Casos redactados junto con la ampliación descrita en `spec-025` §
+> "Ampliación — filtro por proyecto (post-ronda 1)" (Fase 8), **antes** de
+> implementar `ProjectFilter.tsx` — enfoque test-first. Cubren AC-13 a AC-16.
+> No hay fase de MCP en esta ampliación (ver "Evaluación MCP de la ampliación"
+> en el spec), por lo que no hay casos `TC-MCP` nuevos en esta ronda.
+
+### Datos de prueba
+
+> Se completa al **ejecutar** la ronda, igual que la tabla de la Ronda 1. Los
+> identificadores reales, endpoints y estado de eliminación se registran en
+> ese momento.
+>
+> **Nota:** se pueden crear 2 proyectos nuevos de prueba (recomendado, para no
+> interferir con proyectos reales del usuario) o reutilizar 2 proyectos ya
+> existentes si el usuario lo prefiere al momento de ejecutar — a confirmar
+> en ese momento, dejando registrada la decisión aquí.
+
+| Recurso | Endpoint de creación | Identificador | Día efectivo (mes visible) | Usado en | Eliminado |
+|---|---|---|---|---|---|
+| "[TEST spec-025] Proyecto A" | `POST /projects` | `{{id-proyecto-a}}` | — | TC-025-011, TC-025-012, TC-025-013 | ⬜ |
+| "[TEST spec-025] Proyecto B" | `POST /projects` | `{{id-proyecto-b}}` | — | TC-025-011, TC-025-012 | ⬜ |
+| "[TEST spec-025] R2 - proyecto A, pendiente" (`project: {{id-proyecto-a}}`) | `POST /activities` | `{{id-act-a1}}` | `{{fecha dentro del mes visible}}` | TC-025-010, TC-025-011 | ⬜ |
+| "[TEST spec-025] R2 - proyecto A, completada" (`project: {{id-proyecto-a}}`, `status: completed`) | `POST /activities` | `{{id-act-a2}}` | `{{mismo mes}}` | TC-025-011 (combinación con TC-025-004) | ⬜ |
+| "[TEST spec-025] R2 - proyecto B, pendiente" (`project: {{id-proyecto-b}}`) | `POST /activities` | `{{id-act-b1}}` | `{{mismo mes}}` | TC-025-010, TC-025-011 | ⬜ |
+| "[TEST spec-025] R2 - sin proyecto" (sin `project`) | `POST /activities` | `{{id-act-sin-proyecto}}` | `{{mismo mes}}` | TC-025-010, TC-025-012 | ⬜ |
+| "[TEST spec-025] R2 - proyecto A, mes siguiente" (`project: {{id-proyecto-a}}`) | `POST /activities` | `{{id-act-a3}}` | `{{mes siguiente al visible, para TC-025-013}}` | TC-025-013 | ⬜ |
+
+**Notas de uso:**
+- Reutilizar, si es posible, el mismo mes objetivo de la Ronda 1 (octubre
+  2026) para las actividades `{{id-act-a1}}`, `{{id-act-a2}}`, `{{id-act-b1}}`
+  y `{{id-act-sin-proyecto}}` — así hay al menos 3 actividades distinguibles
+  por proyecto en un mismo mes visible.
+- `{{id-act-a3}}` debe quedar en un mes **distinto** al resto (ej. el mes
+  siguiente al objetivo) para poder ejecutar TC-025-013: se navega a un mes
+  donde solo existan actividades de un proyecto que **no** es el filtrado,
+  de forma que el filtro combinado con ese mes arroje cero resultados.
+- Todas las actividades y proyectos de esta ronda llevan el prefijo
+  `[TEST spec-025]` para distinguirlos de datos reales durante la limpieza.
+
+**Entorno de pruebas:** `{{a confirmar al ejecutar — por defecto desarrollo}}`
+**Fecha de la ronda:** `{{a completar al ejecutar}}`
+
+### Casos de prueba
+
+### TC-025-010 — "Todos" es el valor por defecto y el comportamiento es idéntico al previo a la ampliación (AC-13)
+**Precondición:** Existen actividades del mes visible repartidas entre
+proyecto A, proyecto B y sin proyecto.
+**Datos de prueba usados:** `{{id-act-a1}}`, `{{id-act-b1}}`, `{{id-act-sin-proyecto}}`
+**Pasos:**
+1. Navegar a `/activities/schedule` (sin haber tocado el filtro antes).
+2. Verificar que el selector `ProjectFilter` muestra "Todos" seleccionado por
+   defecto.
+3. Verificar que la grilla, los chips y el contador "+X más" muestran **todas**
+   las actividades del mes, sin distinción de proyecto — proyecto A, proyecto
+   B y sin proyecto visibles simultáneamente.
+**Resultado esperado:** El valor por defecto del selector es "Todos" y el
+comportamiento de la grilla es idéntico al de antes de esta ampliación (mismo
+resultado que se validó en la Ronda 1, `TC-025-001`/`TC-025-004`).
+**Estado:** ⬜ Pendiente
+**Hallazgos:** {{a completar}}
+
+---
+
+### TC-025-011 — Seleccionar un proyecto concreto deja solo sus actividades visibles en grilla/chips/contador/modal (AC-14)
+**Precondición:** Existen actividades del mismo mes en proyecto A (una
+pendiente y una `completed`) y en proyecto B.
+**Datos de prueba usados:** `{{id-proyecto-a}}`, `{{id-act-a1}}`, `{{id-act-a2}}`, `{{id-act-b1}}`
+**Pasos:**
+1. Navegar a `/activities/schedule` y ubicar el mes objetivo.
+2. Seleccionar "[TEST spec-025] Proyecto A" en `ProjectFilter`.
+3. Verificar que la grilla y los chips solo muestran actividades del proyecto
+   A (`{{id-act-a1}}` y `{{id-act-a2}}`) — ninguna del proyecto B ni sin
+   proyecto.
+4. Si el día tiene más chips de los visibles, verificar que el contador
+   "+X más" recalcula solo sobre las actividades del proyecto A (no cuenta las
+   ocultas de otros proyectos).
+5. Abrir el modal de un día con actividades de proyecto A: verificar que solo
+   lista las de ese proyecto.
+6. Verificar que `{{id-act-a2}}` (la `completed`) sigue mostrándose atenuada
+   dentro del resultado filtrado, sin desaparecer (confirma que el filtro no
+   rompe el tratamiento de completadas de `TC-025-004`).
+**Resultado esperado:** Grilla, chips, contador y modal muestran únicamente
+actividades del proyecto A; el estilo atenuado de la actividad completada se
+mantiene sin cambios respecto a lo validado en `TC-025-004`.
+**Estado:** ⬜ Pendiente
+**Hallazgos:** {{a completar}}
+
+---
+
+### TC-025-012 — Seleccionar "Sin proyecto" muestra únicamente actividades con `project: null` (AC-14)
+**Precondición:** Existen, en el mismo mes, actividades con proyecto asignado
+y al menos una sin proyecto.
+**Datos de prueba usados:** `{{id-act-sin-proyecto}}`, `{{id-act-a1}}`, `{{id-act-b1}}`
+**Pasos:**
+1. Navegar a `/activities/schedule` y ubicar el mes objetivo.
+2. Seleccionar la opción "Sin proyecto" en `ProjectFilter`.
+3. Verificar que la grilla y los chips solo muestran `{{id-act-sin-proyecto}}`
+   — ninguna actividad de proyecto A ni B.
+4. Abrir el modal del día correspondiente y confirmar que solo lista la
+   actividad sin proyecto.
+**Resultado esperado:** Solo se muestran actividades con `project: null` en
+grilla, chips y modal; ninguna actividad con proyecto asignado aparece.
+**Estado:** ⬜ Pendiente
+**Hallazgos:** {{a completar}}
+
+---
+
+### TC-025-013 — Empty state específico cuando el filtro no arroja resultados, y persistencia del filtro entre meses (AC-15, AC-16)
+**Precondición:** El mes objetivo (con datos de la Ronda 2) tiene actividades
+de proyecto A y B; existe un mes adyacente (ej. el siguiente) donde solo hay
+actividades de un proyecto distinto al que se va a filtrar.
+**Datos de prueba usados:** `{{id-proyecto-b}}`, `{{id-act-a3}}` (mes
+siguiente, proyecto A)
+**Pasos:**
+1. Navegar a `/activities/schedule` y ubicar el mes objetivo.
+2. Seleccionar "[TEST spec-025] Proyecto B" en `ProjectFilter` y confirmar que
+   se ven resultados (comportamiento ya cubierto por `TC-025-011`, no repetir
+   verificación exhaustiva aquí).
+3. Usando el `MonthNavigator`, avanzar al mes siguiente (donde solo existe
+   `{{id-act-a3}}`, de proyecto A).
+4. Verificar que el filtro **sigue en "Proyecto B"** (no se reseteó a
+   "Todos" al cambiar de mes) y que la grilla no muestra `{{id-act-a3}}`.
+5. Verificar que se muestra un estado vacío específico de "sin resultados
+   para este filtro" — distinto en texto/forma del `EmptyState` de "mes sin
+   actividades" validado en `TC-025-007` — con una acción visible para volver
+   a "Todos".
+6. Usar esa acción (botón/enlace) para volver a "Todos" y confirmar que
+   `{{id-act-a3}}` reaparece en la grilla.
+**Resultado esperado:** El filtro persiste al navegar de mes en mes sin
+resetearse; cuando el filtro no tiene coincidencias en el mes visible se
+muestra un empty state distinguible del de "mes vacío" y con forma explícita
+de volver a "Todos"; al usarla, la grilla vuelve a mostrar todas las
+actividades del mes.
+**Estado:** ⬜ Pendiente
+**Hallazgos:** {{a completar}}
+
+### Resumen de la ronda 2
+- Aprobados: {{n}} — Fallidos: {{n}} — Pendientes: 4
+  (`TC-025-010` a `TC-025-013`, no ejecutados aún — implementación de la
+  Fase 7 no iniciada).
+- Bugs encontrados y corregidos: {{a completar al ejecutar}}
+- Hallazgos escalados a `spec/backlog.md`: {{a completar}}
+- Limpieza de datos de prueba: ⬜ Pendiente
