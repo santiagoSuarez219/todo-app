@@ -59,9 +59,9 @@ de IA. Estado actual: MVP en desarrollo activo.
 | MCP | `@modelcontextprotocol/sdk` (JSON-RPC sobre HTTP en `/mcp`) |
 | Tareas programadas | `@nestjs/schedule` (cron de recurrencia) |
 
-**Puerto:** `3000`
+**Puerto:** `3003`
 **Prefijo global:** `/api/v1` (excepto `/mcp`)
-**Swagger UI:** `http://localhost:3000/api/v1/docs`
+**Swagger UI:** `http://localhost:3003/api/v1/docs`
 
 ### Comandos
 
@@ -97,7 +97,7 @@ DB_PASSWORD=todo_password
 # Environment
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
-PORT=3000
+PORT=3003
 
 # Authentication (spec-021)
 AUTH_EMAIL=user@example.com
@@ -143,7 +143,7 @@ ni `MCP_API_KEY`.
 Este archivo describe la API que este mismo servicio expone (no consume APIs
 externas). Autenticación: no implementada — app de uso personal, un solo usuario.
 
-- Base URL desarrollo: `http://localhost:3000/api/v1`
+- Base URL desarrollo: `http://localhost:3003/api/v1`
 - Base URL producción: `{{url de producción — ver Despliegue en CLAUDE.md raíz}}`
 
 ### Formato de respuesta

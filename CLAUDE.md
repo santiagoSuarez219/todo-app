@@ -219,7 +219,7 @@ cd frontend && npm run lint
 | `JWT_SECRET` | `.env` | Secret para firmar JWT (spec-021) — mín. 32 caracteres |
 | `JWT_EXPIRES_IN` | `.env` | Expiración del JWT (spec-021) — ej. `30d`, default `30d` |
 | `MCP_API_KEY` | `.env` | Token estático para autenticar `/mcp` (spec-021) |
-| `VITE_API_URL` | `frontend/.env.local` | URL base de la API (`http://localhost:3000/api/v1`) |
+| `VITE_API_URL` | `frontend/.env.local` | URL base de la API (`http://localhost:3003/api/v1`) |
 
 > ⚠️ Nunca escribas valores reales de variables de entorno en este archivo
 > ni en ningún archivo rastreado por git.
@@ -256,7 +256,7 @@ API REST propia (NestJS), sin dependencias de APIs externas de terceros.
   (`AUTH_EMAIL` / `AUTH_PASSWORD_HASH`), token vía `Authorization: Bearer`.
   `/mcp` se autentica aparte con `MCP_API_KEY`.
 
-- Base URL desarrollo: `http://localhost:3002/api/v1`
+- Base URL desarrollo: `http://localhost:3003/api/v1`
 - Base URL producción: `{{url de producción del backend}}`
 
 | Método | Ruta                    | Descripción                      |
@@ -709,7 +709,7 @@ inesperado, lentitud, detalle visual… o "sin observaciones"}}
 - Leer el archivo `test-NNN-slug.md` completo e identificar las precondiciones
   de cada caso antes de crear nada.
 - Confirmar con el usuario el **entorno** contra el que se trabajará. Por
-  defecto, desarrollo (`http://localhost:3002/api/v1`). **Nunca crear datos de
+  defecto, desarrollo (`http://localhost:3003/api/v1`). **Nunca crear datos de
   prueba en producción** sin confirmación explícita en esa misma sesión.
 - Crear **todo lo necesario para ejecutar las pruebas vía API**: registros
   base, estados intermedios, relaciones y cualquier precondición del caso.
