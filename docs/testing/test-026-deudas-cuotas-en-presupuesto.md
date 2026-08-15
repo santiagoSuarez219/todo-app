@@ -33,10 +33,10 @@
 | "[TEST spec-026] DEBT-E — Plazo de 1 cuota futura" (`startMonth: 9, startYear: 2026, totalInstallments: 1, installmentValue: 200000, productValue: 200000`) | `POST /finances/debts` | `{{id}}` | TC-026-014, TC-026-015 | ⬜ |
 | "[TEST spec-026] DEBT-F — Inicio futuro lejano" (`startMonth: 1, startYear: 2028, totalInstallments: 6, installmentValue: 50000, productValue: 300000`) | `POST /finances/debts` | `{{id}}` | TC-026-014 | ⬜ |
 | "[TEST spec-026] DEBT-G — Edición regenera futuras" (`startMonth: 6, startYear: 2026, totalInstallments: 6, installmentValue: 90000→120000, productValue: 540000`) | `POST /finances/debts` (creada vía UI) | `ee15a840-bc54-4080-b067-2d5e935d0cb1` | TC-026-007, TC-026-008 | ⬜ |
-| "[TEST spec-026] DEBT-H — Eliminar deuda" (`startMonth: 7, startYear: 2026, totalInstallments: 4, installmentValue: 70000, productValue: 280000`) | `POST /finances/debts` | `{{id}}` | TC-026-009 | ⬜ |
-| "[TEST spec-026] DEBT-I — Sincronizar presupuestos" (`startMonth: 8, startYear: 2026, totalInstallments: 3, installmentValue: 110000, productValue: 330000`) | `POST /finances/debts` | `{{id}}` | TC-026-010 | ⬜ |
+| "[TEST spec-026] DEBT-H — Eliminar deuda" (`startMonth: 7, startYear: 2026, totalInstallments: 4, installmentValue: 70000, productValue: 280000`) | `POST /finances/debts` (creada y eliminada vía UI) | deuda ya no existe; quedaron 2 ítems desasociados ("Cuota 1/4"/"Cuota 2/4 — ... DEBT-H") en los presupuestos de jul/ago 2026 (comportamiento esperado por diseño — spec-026 decisión 7), pendientes de limpieza individual como cualquier ítem `[TEST spec-026]` de esta ronda | TC-026-009 | ⬜ (limpiar los 2 ítems desasociados al cerrar la ronda) |
+| "[TEST spec-026] DEBT-I — Sincronizar presupuestos" (`startMonth: 8, startYear: 2026, totalInstallments: 3, installmentValue: 110000, productValue: 330000`) | `POST /finances/debts` (creada vía UI) | deuda visible en `/finances/debts`; ítem de septiembre recreado: `15fadf49-ffb8-404d-80d8-bd533fb54d80` | TC-026-010 | ⬜ |
 | Deuda legacy pre-existente (creada **antes** del deploy de spec-026, con `paidInstallments` real distinto de 0) | — (recurso preexistente, no se crea en esta ronda) | `{{id-legacy}}` | TC-026-016 | — (no se elimina, es un dato real) |
-| Presupuesto manual mes destino de duplicado (agosto 2026 → diciembre 2026, o el mes que corresponda al ejecutar) | `POST /finances/budgets/:id/duplicate` sobre el presupuesto de septiembre 2026 (contiene la cuota 2/3 de DEBT-A) | `{{id-presupuesto-duplicado}}` | TC-026-011 | ⬜ |
+| Presupuesto duplicado destino (septiembre 2026 → mayo 2026, mes sin presupuesto previo) | `POST /finances/budgets/:id/duplicate` sobre `sdsad` (septiembre 2026) | `4091ead9-036d-4f4d-92f9-ea21c105a283` | TC-026-011 | ⬜ |
 
 **Notas de uso:**
 - Todas las deudas de esta ronda llevan el prefijo `[TEST spec-026]` en la
@@ -224,8 +224,8 @@ montados.
 2. Eliminar la deuda desde la card (papelera + confirmación).
 3. Revisar los presupuestos de julio, agosto, septiembre y octubre de 2026.
 **Resultado esperado:** La deuda desaparece de `/finances/debts`. Los ítems de septiembre y octubre 2026 (futuros) fueron eliminados. Los ítems de julio y agosto 2026 (vencidos) **siguen existiendo** en sus presupuestos con el mismo `plannedAmount` y descripción, pero ya no muestran el badge "Deuda" (quedaron desasociados: `debtId`/`installmentNumber` nulos) — el presupuesto histórico no pierde ese gasto planeado.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado en el navegador (autorización explícita del usuario). El `ConfirmDialog` de eliminación describió correctamente el efecto antes de confirmar. DEBT-H desaparece de `/finances/debts`. Verificado por API: jul/ago 2026 conservan `"Cuota 1/4 — ..."`/`"Cuota 2/4 — ..."` con `plannedAmount: 70000.00`, pero `debt: null` e `installmentNumber: null`; sep/oct 2026 ya no tienen ítem de DEBT-H. Confirmado también visualmente en `BudgetDetailView` (julio 2026): la fila de DEBT-H ya no muestra el badge "Deuda", a diferencia de las filas de DEBT-C y DEBT-G en el mismo presupuesto. Sin observaciones.
 
 ---
 
@@ -239,8 +239,8 @@ montados.
 4. Revisar el presupuesto de septiembre 2026.
 5. Hacer clic en "Sincronizar presupuestos" una segunda vez sin haber borrado nada.
 **Resultado esperado:** Tras el paso 3, el presupuesto de septiembre 2026 vuelve a tener el ítem de cuota de DEBT-I (`"Cuota 2/3 — ..."`, `plannedAmount: 110000`). El ítem de agosto 2026 (vencido) no se tocó en ningún momento. Tras el paso 5, no aparece un ítem duplicado — sigue habiendo exactamente un ítem de cuota de DEBT-I por mes futuro.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado en el navegador (autorización explícita del usuario), borrado manual del ítem incluido (`ConfirmDialog` estándar, sin advertencia especial por ser ítem de deuda — correcto, decisión 10). Tras "Sincronizar presupuestos": ítem recreado en septiembre (`15fadf49-...`, `"Cuota 2/3 — ..."`, `$110.000`, `installmentNumber: 2`). Agosto (vencido) permaneció intacto en todo momento. Segunda ejecución de "Sincronizar presupuestos" no creó duplicado (verificado por API: sigue habiendo exactamente 1 ítem con el mismo `id`). Sin observaciones.
 
 ---
 
@@ -252,8 +252,10 @@ montados.
 2. Duplicar ese presupuesto a un mes destino sin presupuesto previo (ej. diciembre 2026).
 3. Revisar el `itemsCopied` devuelto y el contenido del presupuesto destino.
 **Resultado esperado:** `itemsCopied` refleja únicamente los ítems que **no** son de deuda (ej. si septiembre tenía 2 ítems totales — 1 de deuda + 1 normal — `itemsCopied` es `1`). El presupuesto destino no contiene ningún ítem con badge "Deuda" ni asociado a DEBT-A.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado en el navegador (autorización explícita del usuario). Septiembre 2026 (`sdsad`) tenía 14 ítems totales (3 de deuda: DEBT-A, DEBT-G, DEBT-I; 11 normales, ya existentes — no fue necesario agregar uno manual). Duplicado a mayo 2026 (mes sin presupuesto previo): el modal de éxito reportó **"11 items copiados"**, coincidiendo exactamente con 14−3. El presupuesto destino (`4091ead9-...`) tiene 11 ítems, ninguno con badge "Deuda". Sin observaciones sobre el criterio de aceptación.
+
+**Hallazgo secundario (cosmético, no bloqueante):** el texto de vista previa del modal antes de confirmar (`"Se copiarán: 14 items, todos los ingresos y gastos del mes."`) sigue mostrando el conteo **total** de ítems del mes origen, sin excluir los de deuda — es preexistente a spec-026 (no forma parte del código tocado por este spec) y no afecta el resultado real (`itemsCopied` sí es correcto), pero podría confundir al usuario antes de confirmar. No se corrige en esta sesión; queda para `spec/backlog.md` si el usuario lo confirma como deuda técnica a registrar.
 
 ---
 
