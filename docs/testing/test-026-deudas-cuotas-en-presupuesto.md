@@ -26,13 +26,13 @@
 
 | Recurso | Endpoint de creación | Identificador | Usado en | Eliminado |
 |---|---|---|---|---|
-| "[TEST spec-026] DEBT-A — Nevera" (`startMonth: 8, startYear: 2026, totalInstallments: 3, installmentValue: 100000, productValue: 300000`) | `POST /finances/debts` | `{{id}}` | TC-026-001, TC-026-002, TC-026-003, TC-026-011, TC-026-012, TC-026-013 | ⬜ |
-| "[TEST spec-026] DEBT-B — TV (vencida completa)" (`startMonth: 6, startYear: 2026, totalInstallments: 1, installmentValue: 150000, productValue: 150000`) | `POST /finances/debts` | `{{id}}` | TC-026-004, TC-026-005 (pay-off rechazado), TC-026-014 (inicio pasado) | ⬜ |
-| "[TEST spec-026] DEBT-C — Compra pay-off" (`startMonth: 7, startYear: 2026, totalInstallments: 4, installmentValue: 80000, productValue: 320000`) | `POST /finances/debts` | `{{id}}` | TC-026-005 | ⬜ |
-| "[TEST spec-026] DEBT-D — Cruce de año" (`startMonth: 11, startYear: 2026, totalInstallments: 5, installmentValue: 60000, productValue: 300000`) | `POST /finances/debts` | `{{id}}` | TC-026-002 (autogeneración), TC-026-014 | ⬜ |
+| "[TEST spec-026] DEBT-A — Nevera" (`startMonth: 8, startYear: 2026, totalInstallments: 3, installmentValue: 100000, productValue: 300000`) | `POST /finances/debts` | `613097c4-e988-4c4b-b527-7fe328ffa24a` | TC-026-001, TC-026-002, TC-026-003, TC-026-011, TC-026-012, TC-026-013 | ⬜ |
+| "[TEST spec-026] DEBT-B — TV (vencida completa)" (`startMonth: 6, startYear: 2026, totalInstallments: 1, installmentValue: 150000, productValue: 150000`) | `POST /finances/debts` (creada vía UI) | `51e81e41-eb16-4132-92b3-497a3f5705be` | TC-026-004, TC-026-006 (pay-off rechazado), TC-026-015 (inicio pasado) | ⬜ |
+| "[TEST spec-026] DEBT-C — Compra pay-off" (`startMonth: 7, startYear: 2026, totalInstallments: 4, installmentValue: 80000, productValue: 320000`) | `POST /finances/debts` (creada y pagada vía UI) | `c2d50ec0-f9f5-4d8c-98d1-e08b7cc067ad`; gasto de pago total: `dec5962b-f7d8-4dd1-92b0-cc48970e2456` | TC-026-005 | ⬜ |
+| "[TEST spec-026] DEBT-D — Cruce de año" (`startMonth: 11, startYear: 2026, totalInstallments: 5, installmentValue: 60000, productValue: 300000`) | `POST /finances/debts` (creada vía UI) | deuda visible en `/finances/debts`, presupuestos autogenerados: `ac654f81-b284-4b5e-b8e1-e4dc8a852515` (Ene 2027), `b453e64e-1833-4312-8e9a-d0f65a77af01` (Feb 2027), `5b8886cc-2e50-4bc0-acbe-948bfc9b94f2` (Mar 2027), + Nov/Dic 2026 | TC-026-002 (autogeneración), TC-026-014, TC-026-015 | ⬜ |
 | "[TEST spec-026] DEBT-E — Plazo de 1 cuota futura" (`startMonth: 9, startYear: 2026, totalInstallments: 1, installmentValue: 200000, productValue: 200000`) | `POST /finances/debts` | `{{id}}` | TC-026-014, TC-026-015 | ⬜ |
 | "[TEST spec-026] DEBT-F — Inicio futuro lejano" (`startMonth: 1, startYear: 2028, totalInstallments: 6, installmentValue: 50000, productValue: 300000`) | `POST /finances/debts` | `{{id}}` | TC-026-014 | ⬜ |
-| "[TEST spec-026] DEBT-G — Edición regenera futuras" (`startMonth: 6, startYear: 2026, totalInstallments: 6, installmentValue: 90000, productValue: 540000`) | `POST /finances/debts` | `{{id}}` | TC-026-007, TC-026-008 | ⬜ |
+| "[TEST spec-026] DEBT-G — Edición regenera futuras" (`startMonth: 6, startYear: 2026, totalInstallments: 6, installmentValue: 90000→120000, productValue: 540000`) | `POST /finances/debts` (creada vía UI) | `ee15a840-bc54-4080-b067-2d5e935d0cb1` | TC-026-007, TC-026-008 | ⬜ |
 | "[TEST spec-026] DEBT-H — Eliminar deuda" (`startMonth: 7, startYear: 2026, totalInstallments: 4, installmentValue: 70000, productValue: 280000`) | `POST /finances/debts` | `{{id}}` | TC-026-009 | ⬜ |
 | "[TEST spec-026] DEBT-I — Sincronizar presupuestos" (`startMonth: 8, startYear: 2026, totalInstallments: 3, installmentValue: 110000, productValue: 330000`) | `POST /finances/debts` | `{{id}}` | TC-026-010 | ⬜ |
 | Deuda legacy pre-existente (creada **antes** del deploy de spec-026, con `paidInstallments` real distinto de 0) | — (recurso preexistente, no se crea en esta ronda) | `{{id-legacy}}` | TC-026-016 | — (no se elimina, es un dato real) |
@@ -61,9 +61,38 @@
   ítems ajenos a esta ronda — se pueden borrar completos
   (`DELETE /finances/budgets/:id`).
 
-**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`) — a
-confirmar al ejecutar; nunca producción sin autorización explícita.
-**Fecha de la ronda:** pendiente de ejecución (redactado 2026-08-14).
+**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`) —
+**confirmado** el 2026-08-14: el MCP `todo-api` conectado a esta sesión apunta
+a producción (devolvió deudas reales), así que **no se usó para esta ronda**;
+toda la preparación e interacción con la API se hizo vía REST directo contra
+`localhost:3003` con login local. El backend local corría con código anterior
+a spec-026 en memoria (`nest start --watch` no había recargado) — se
+reinició antes de esta ronda para confirmar el shape nuevo (`startMonth`,
+`startYear`, `paidOffAt`, `nextInstallment`, `paidInstallments` derivado).
+**Fecha de la ronda:** 2026-08-14 (mes en curso = agosto 2026, sin necesidad de
+recalcular meses relativos).
+
+**Reconocimiento previo (2026-08-14, antes de crear cualquier deuda de prueba):**
+
+| Mes | Presupuesto existente | Notas |
+|---|---|---|
+| Junio 2026 | `Presupuesto Junio 2026` (0 ítems) | Se **reutilizará**; queda con el ítem de cuota agregado — no borrar el presupuesto completo al limpiar, solo el ítem. |
+| Julio 2026 | `Presupuesto - Julio 2026` (11 ítems reales) | Se **reutilizará**; limpiar solo los ítems de cuota que agreguemos. |
+| Agosto 2026 | `Presupuesto - Agosto 2026` (11 ítems reales, incluye la cuota de "Nevera Samsung" preexistente) | Se **reutilizará**. |
+| Septiembre 2026 | `sdsad` (11 ítems reales) | Se **reutilizará** — nombre real del usuario, no autogenerado. |
+| Octubre 2026 | `Presupuesto Octubre 2026` (0 ítems) | Se **reutilizará**. |
+| Noviembre 2026 – Marzo 2027 | Ninguno | Se **autogenerarán** al crear DEBT-D — verificar nombre `"Presupuesto <Mes> <Año>"` y que solo tengan el ítem de cuota. Seguros de borrar completos al limpiar. |
+| Enero – Junio 2028 | Ninguno | Se **autogenerarán** al crear DEBT-F — mismo criterio que arriba. |
+
+- Deudas de prueba con prefijo `[TEST spec-026]` existentes antes de la ronda: **ninguna** (solo existe "Nevera Samsung", deuda real preexistente no relacionada con esta ronda — no tocar).
+- Gastos existentes antes de la ronda (línea base para TC-026-005): **28** (primera página, límite 100).
+
+**Aclaración sobre esta tabla:** a diferencia de otros archivos `test-NNN`, las
+deudas DEBT-A a DEBT-I **no se pre-crean vía API** — su creación es el propio
+paso de acción de cada caso (`TC-026-001`, `002`, `004`, `005`, `007`, `009`,
+`010`, `014`), ejecutado por el usuario en la UI. Esta tabla documenta sus
+payloads como referencia para verificar el formulario, no como datos ya
+montados.
 
 ---
 
@@ -78,8 +107,8 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 3. Guardar.
 4. Ir a `/finances/budgets` y abrir el presupuesto de agosto 2026, luego septiembre 2026, luego octubre 2026.
 **Resultado esperado:** La card de la deuda aparece con "1 / 3 cuotas" (el mes en curso cuenta como vencida) y muestra el mes de inicio y la próxima cuota. Cada uno de los tres presupuestos (ago/sep/oct 2026) tiene un ítem con descripción `"Cuota 1/3 — [TEST spec-026] DEBT-A — Nevera"`, `"Cuota 2/3 — ..."`, `"Cuota 3/3 — ..."` respectivamente, cada uno con `plannedAmount: 100000` y marcado con el badge "Deuda".
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones. Verificado vía API: `id=613097c4-e988-4c4b-b527-7fe328ffa24a`, `paidInstallments: 1`, `remainingValue: 200000`, `nextInstallment: {number: 2, month: 9, year: 2026}` — consistente con lo reportado por el usuario en la UI.
 
 ---
 
@@ -93,8 +122,8 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 **Resultado esperado:**
 - Se crearon exactamente 5 presupuestos nuevos (nov-2026, dic-2026, ene-2027, feb-2027, mar-2027), cada uno con nombre `"Presupuesto <Mes> <Año>"` (ej. `"Presupuesto Noviembre 2026"`) y un único ítem de cuota.
 - Por separado, al confirmar el estado de agosto 2026 (mes de DEBT-A, TC-026-001): sigue existiendo **un solo** presupuesto para ese mes (no se duplicó al crear DEBT-A sobre un mes ya existente), con el ítem de cuota agregado a los ítems que ya tuviera.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado en el navegador (autorización explícita del usuario para este caso). Nov/Dic 2026 se autogeneraron correctamente (`"Presupuesto Noviembre 2026"`, `"Presupuesto Diciembre 2026"`, 1 ítem, $60.000 c/u) — confirmado en UI. Ene–Mar 2027 confirmados vía API por una limitación de la automatización con el `<select>` nativo de año en `BudgetsView` (no es un bug del producto — el filtro funciona normalmente con interacción real de mouse). Agosto 2026 no se duplicó: sigue siendo `"Presupuesto - Agosto 2026"`, ahora con 12 ítems (11 reales + 1 cuota de DEBT-A).
 
 ---
 
@@ -106,8 +135,8 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 2. Verificar el contador de cuotas y el valor restante en la card.
 3. Verificar vía `GET /finances/debts/{{id-debt-a}}` los mismos valores.
 **Resultado esperado:** La card muestra "1 / 3 cuotas" y `remainingValue = 200000` (2 cuotas × 100000) sin que el usuario haya pagado nada manualmente — el valor surge de comparar el mes en curso contra el calendario de la deuda.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Sin observaciones.
 
 ---
 
@@ -119,8 +148,8 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 2. Ir a `/finances/debts` y ubicar la card sin haber pagado nada.
 3. Cambiar al tab "Pagadas".
 **Resultado esperado:** La card aparece directamente con badge "Pagada", "1 / 1 cuotas" y `remainingValue: 0`, y se lista en el tab "Pagadas" sin que el usuario haya pulsado ningún botón de pago — la normalización ocurre sola al consultar la deuda.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado en el navegador (autorización explícita del usuario). Confirmado en UI y por API: `status: "pagada"`, `paidInstallments: 1`, `remainingValue: 0`, y además `paidOffAt` quedó backfilleado automáticamente por la normalización perezosa (aproximación esperada por diseño — no es un pago real, sino la primera vez que se consultó la deuda tras completarse el calendario). Sin observaciones.
 
 ---
 
@@ -140,8 +169,8 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 - El nuevo gasto tiene descripción `"Pago total: [TEST spec-026] DEBT-C — Compra pay-off"`, monto `160000`, tipo `pago_deuda`, fecha de hoy.
 - Los presupuestos de julio y agosto 2026 **conservan** su ítem de cuota de DEBT-C sin cambios (incluye el del mes en curso).
 - Los presupuestos de septiembre y octubre 2026 **ya no tienen** el ítem de cuota de DEBT-C (fue eliminado).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado en el navegador (autorización explícita del usuario). El `ConfirmDialog` mostró exactamente "$160.000" y el texto de advertencia correcto antes de confirmar. Verificado por API: gasto `dec5962b-...` (`amount: 160000.00`, `type: pago_deuda`, `date: 2026-08-15`), deuda `status: pagada`, `paidOffAt` seteado, `4/4 cuotas`, `remainingValue: 0`. Julio y agosto 2026 conservan sus ítems (`Cuota 1/4`, `Cuota 2/4`); septiembre y octubre 2026 ya no tienen ítem de DEBT-C. Sin observaciones.
 
 ---
 
@@ -153,8 +182,8 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 2. Verificar si el botón "Pagar deuda completa" está deshabilitado o ausente.
 3. Si es posible forzar la llamada (o vía API, `POST /finances/debts/{{id-debt-b}}/pay-off`), confirmar el resultado.
 **Resultado esperado:** La UI no permite pagar una deuda ya pagada (botón deshabilitado/ausente); la llamada directa al endpoint responde `400` con un mensaje claro de que la deuda no tiene saldo pendiente. No se crea ningún gasto adicional ni cambia `paidOffAt`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado por el usuario: el botón "Pagar deuda completa" está ausente en la card de DEBT-B (Pagada). Verificado además por API: `POST /finances/debts/51e81e41-.../pay-off` → `400 "Debt ... has no remaining balance to pay off"`; `paidOffAt` no cambió (`2026-08-15T15:05:02.747Z` antes y después) y el conteo de gastos se mantuvo en 29 (no se creó un segundo gasto).
 
 ---
 
@@ -167,8 +196,8 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 3. Guardar.
 4. Revisar de nuevo los presupuestos de junio, julio, agosto (vencidas) y septiembre, octubre, noviembre 2026 (futuras).
 **Resultado esperado:** Los ítems de junio, julio y agosto **conservan** `plannedAmount: 90000` sin cambios. Los ítems de septiembre, octubre y noviembre pasan a `plannedAmount: 120000`, siguen siendo exactamente 3 ítems (no se duplican ni sobran), y conservan su `installmentNumber` (4/6, 5/6, 6/6).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Pasos 1-2 ejecutados en el navegador por Claude (autorización puntual del usuario); pasos 3-5 ejecutados por el usuario, quien confirmó el aviso de regeneración antes de guardar. Verificado por API: jun/jul/ago 2026 conservan `plannedAmount: 90000` (`installmentNumber` 1/2/3); sep/oct/nov 2026 pasaron a `120000` (`installmentNumber` 4/5/6), sin duplicados. `remainingValue` de la deuda: `360000` (3 × 120000). Sin observaciones.
 
 ---
 
@@ -180,8 +209,10 @@ confirmar al ejecutar; nunca producción sin autorización explícita.
 2. Guardar.
 3. Revisar los 6 presupuestos involucrados (junio 2026 a noviembre 2026).
 **Resultado esperado:** Los 6 ítems (vencidos **y** futuros) actualizan su descripción a `"Cuota k/6 — [TEST spec-026] DEBT-G — Edición regenera futuras (renombrada)"`, sin alterar `plannedAmount` ni `installmentNumber`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado en el navegador (autorización explícita del usuario). Verificado por API: los 6 ítems (jun-nov 2026) propagaron la descripción sin alterar `plannedAmount` (90000/90000/90000/120000/120000/120000) ni `installmentNumber` (1-6).
+
+**Bug encontrado y corregido en este caso (fuera del criterio de aceptación, pero dentro del alcance de spec-026):** al abrir el modal de edición de CUALQUIER deuda activa, `DebtForm.tsx` mostraba el aviso "Este cambio regenerará las cuotas futuras..." **sin que el usuario hubiera cambiado nada**. Causa: `willRegenerate` comparaba `Number(installmentValue)` (del formulario) contra `initial.installmentValue` sin convertir — y el backend devuelve `installmentValue` (columna `decimal`) como string (`"120000.00"`), no como número, así que la comparación de tipos siempre daba `true`. Corregido envolviendo también `initial.*` en `Number(...)` en las cuatro comparaciones de `willRegenerate` (`frontend/src/components/finances/DebtForm.tsx`). Verificado en el navegador tras el fix, en este mismo caso: se reabrió el modal de edición de DEBT-G sin cambiar ningún valor y el aviso ya no aparece; al cambiar la descripción (paso real de este caso) tampoco aparece, correctamente (no es un campo de calendario). `npx tsc --noEmit` sin errores tras el cambio. Nota: TC-026-007 (editar `installmentValue`) se ejecutó **antes** de este fix — el aviso apareció ahí correctamente, pero no sirve para distinguir si el bug estaba presente, ya que en ese caso el valor sí cambiaba.
 
 ---
 

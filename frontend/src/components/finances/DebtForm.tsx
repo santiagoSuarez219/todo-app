@@ -69,10 +69,13 @@ export default function DebtForm({ initial, onSubmit, onCancel, loading }: Props
   const willRegenerate =
     !!initial &&
     !isPaid &&
-    (Number(installmentValue) !== initial.installmentValue ||
-      Number(totalInstallments) !== initial.totalInstallments ||
-      Number(startMonth) !== initial.startMonth ||
-      Number(startYear) !== initial.startYear);
+    // `installmentValue` es una columna `decimal` en el backend y llega como
+    // string (ej. "120000.00") — normalizar ambos lados con Number(...) para
+    // no disparar un falso positivo por diferencia de tipo.
+    (Number(installmentValue) !== Number(initial.installmentValue) ||
+      Number(totalInstallments) !== Number(initial.totalInstallments) ||
+      Number(startMonth) !== Number(initial.startMonth) ||
+      Number(startYear) !== Number(initial.startYear));
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
