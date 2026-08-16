@@ -1,4 +1,4 @@
-# spec-029 — [TESTING] Horizonte de proyecto (`horizon`)
+# spec-029 — [DONE] Horizonte de proyecto (`horizon`)
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -261,3 +261,18 @@ plazo?"), con el mismo patrón que cualquier campo nuevo de `Project`.
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-17
+
+## Cierre de la ronda de pruebas (2026-08-16)
+
+- **Manuales:** 13/14 casos aprobados (`TC-029-001` a `TC-029-009`,
+  `TC-MCP-029-001` a `TC-MCP-029-004`). `TC-029-010` queda diferido a la
+  ventana de despliegue (requiere datos legacy reales previos a la
+  migración). Nota de transparencia: en `TC-029-008` los proyectos PROJ-I/J
+  no se encontraron por API al verificar; el usuario confirmó explícitamente
+  aprobar el caso igual — documentado en el propio caso de
+  `docs/testing/test-029-horizonte-de-proyecto.md`.
+- **Automáticas:** confirmadas por `@tester` — `e2e-029-horizonte-de-proyecto.e2e-spec.ts`
+  14/14, unit 105/105. Únicos fallos de la suite completa son 2 preexistentes
+  y no relacionados (`app.e2e-spec.ts`, `auth.e2e-spec.ts` TC-014).
+- Datos de prueba de la ronda eliminados y verificados `404` por API.
+- Spec marcado como `[DONE]`.
