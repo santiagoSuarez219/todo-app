@@ -95,7 +95,6 @@ describe('spec-024 — Completar subtareas al completar la tarea padre (e2e)', (
       .set('Cookie', authCookies)
       .send({
         name: 'Actividad de prueba spec-024',
-        type: 'task',
         ...overrides,
       })
       .expect(201);

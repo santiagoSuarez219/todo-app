@@ -9,6 +9,14 @@ function isDateToday(dateStr: string | null): boolean {
   return dateStr.slice(0, 10) === today;
 }
 
+/** `YYYY-MM-DD` local — para comparar contra `scheduledFor`, una columna
+ * `date` pura (nunca `toISOString()`, que es UTC). Mismo criterio que usa
+ * el backend (`toDateOnlyString()` en `activities.service.ts`). */
+function localDateOnly(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 function SectionHeader({ title }: { title: string }) {
   return (
     <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
@@ -26,8 +34,9 @@ export default function TodayView() {
     (a) => isDateToday(a.dueDate),
   );
 
+  const today = localDateOnly(new Date());
   const bySchedule: Activity[] = visible.filter(
-    (a) => a.scheduledForToday && !isDateToday(a.dueDate),
+    (a) => a.scheduledFor === today && !isDateToday(a.dueDate),
   );
 
   return (

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '../hooks/useProjects';
-import { ProjectStatus, type CreateProjectDto, type Project } from '../types';
+import { ProjectStatus, ProjectHorizon, type CreateProjectDto, type Project } from '../types';
 import StatusBadge from '../components/StatusBadge';
+import HorizonBadge from '../components/HorizonBadge';
 import ProjectForm from '../components/ProjectForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
@@ -13,6 +14,13 @@ const STATUS_LABELS: Record<ProjectStatus, string> = {
   inactive:  'Inactivo',
   paused:    'Pausado',
   completed: 'Completado',
+};
+
+const HORIZON_LABELS: Record<ProjectHorizon, string> = {
+  now:     'Ahora',
+  next:    'Siguiente',
+  later:   'Después',
+  someday: 'Algún día',
 };
 
 function EditIcon() {
@@ -33,11 +41,17 @@ function TrashIcon() {
 
 export default function ProjectList() {
   const [filterStatus, setFilterStatus] = useState<ProjectStatus | undefined>();
+  // spec-029: sin filtro por horizonte en la API — se resuelve en cliente,
+  // mismo patrón que el filtro por status ya existente aquí.
+  const [filterHorizon, setFilterHorizon] = useState<ProjectHorizon | undefined>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
 
-  const { data: projects, isLoading, isError } = useProjects(filterStatus);
+  const { data: allFilteredByStatus, isLoading, isError } = useProjects(filterStatus);
+  const projects = filterHorizon
+    ? allFilteredByStatus?.filter((p) => p.horizon === filterHorizon)
+    : allFilteredByStatus;
   const createMutation = useCreateProject();
   const updateMutation = useUpdateProject();
   const deleteMutation = useDeleteProject();
@@ -107,6 +121,34 @@ export default function ProjectList() {
         ))}
       </div>
 
+      {/* ── Horizon filter chips ── */}
+      <div className="flex gap-2 flex-wrap items-center">
+        <span className="text-xs text-gray-500 dark:text-gray-400">Horizonte:</span>
+        <button
+          onClick={() => setFilterHorizon(undefined)}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+            !filterHorizon
+              ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+          }`}
+        >
+          Todos
+        </button>
+        {Object.values(ProjectHorizon).map((h) => (
+          <button
+            key={h}
+            onClick={() => setFilterHorizon(h)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+              filterHorizon === h
+                ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+            }`}
+          >
+            {HORIZON_LABELS[h]}
+          </button>
+        ))}
+      </div>
+
       {/* ── States ── */}
       {isLoading && (
         <div className="space-y-2">
@@ -129,6 +171,9 @@ export default function ProjectList() {
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Estado
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Horizonte
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Inicio
@@ -157,6 +202,9 @@ export default function ProjectList() {
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={project.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <HorizonBadge horizon={project.horizon} />
                   </td>
                   <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                     {new Date(project.startDate).toLocaleDateString('es-CO')}

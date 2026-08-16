@@ -1,14 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   IsUUID,
   Max,
   MaxLength,
@@ -16,7 +14,6 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ActivityStatus } from '../../common/enums/activity-status.enum';
-import { ActivityType } from '../../common/enums/activity-type.enum';
 import { Energy } from '../../common/enums/energy.enum';
 import { Priority } from '../../common/enums/priority.enum';
 import { RecurrenceFrequency } from '../../common/enums/recurrence-frequency.enum';
@@ -39,12 +36,10 @@ export class CreateActivityDto {
   @IsOptional()
   projectId?: string;
 
-  /**
-   * Semántica según tipo:
-   * - TASK: fecha límite (hora truncada a medianoche)
-   * - REMINDER: fecha y hora del recordatorio
-   */
-  @ApiPropertyOptional({ example: '2026-04-13T18:00:00Z' })
+  @ApiPropertyOptional({
+    example: '2026-04-13T18:00:00Z',
+    description: 'Fecha límite de la actividad',
+  })
   @IsDateString()
   @IsOptional()
   dueDate?: string;
@@ -54,7 +49,10 @@ export class CreateActivityDto {
   @IsOptional()
   priority?: Priority;
 
-  @ApiPropertyOptional({ enum: ActivityStatus, default: ActivityStatus.PENDING })
+  @ApiPropertyOptional({
+    enum: ActivityStatus,
+    default: ActivityStatus.PENDING,
+  })
   @IsEnum(ActivityStatus)
   @IsOptional()
   status?: ActivityStatus;
@@ -64,37 +62,56 @@ export class CreateActivityDto {
   @IsOptional()
   energy?: Energy;
 
-  @ApiPropertyOptional({ enum: ActivityType, default: ActivityType.TASK })
-  @IsEnum(ActivityType)
-  @IsOptional()
-  type?: ActivityType;
-
   @ApiPropertyOptional({ description: 'UUID de la actividad padre (subtarea)' })
   @IsUUID()
   @IsOptional()
   parentId?: string;
 
-  @ApiPropertyOptional({ description: 'Schedule this activity to appear in the Today view' })
-  @IsBoolean()
+  @ApiPropertyOptional({
+    example: '2026-04-14',
+    description:
+      'Schedule this activity to appear in the Today view on this date. null clears it — expires on its own the day after, no cleanup job needed.',
+  })
+  @IsDateString()
   @IsOptional()
-  scheduledForToday?: boolean;
+  scheduledFor?: string | null;
 
-  @ApiPropertyOptional({ description: 'URL of an associated Notion page' })
-  @IsString()
-  @IsUrl()
+  @ApiPropertyOptional({
+    example: '2026-04-20',
+    description:
+      'Hide this activity from active views (Today, Tomorrow, This Week, Overdue, Backlog) until this date. null clears it.',
+  })
+  @IsDateString()
   @IsOptional()
-  notionUrl?: string | null;
+  deferUntil?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'Contador',
+    description:
+      "Who/what this activity is blocked on — only meaningful when status is 'waiting'. Ignored (not saved) for any other status.",
+  })
+  @IsString()
+  @MaxLength(255)
+  @IsOptional()
+  waitingFor?: string | null;
+
+  @ApiPropertyOptional({
+    example: '2026-04-10',
+    description:
+      "Date since when this activity has been waiting — only meaningful when status is 'waiting'. Defaults to today if omitted when entering waiting.",
+  })
+  @IsDateString()
+  @IsOptional()
+  waitingSince?: string | null;
 
   // ─── Recurrence ─────────────────────────────────────────────────────────────
 
-  @ApiPropertyOptional({ description: 'Mark this activity as a recurring template' })
-  @IsBoolean()
-  @IsOptional()
-  isRecurring?: boolean;
-
-  @ApiPropertyOptional({ enum: RecurrenceFrequency, description: 'Required when isRecurring is true' })
+  @ApiPropertyOptional({
+    enum: RecurrenceFrequency,
+    description:
+      'Marca esta actividad como plantilla recurrente (isTemplate se deriva de este campo)',
+  })
   @IsEnum(RecurrenceFrequency)
-  @ValidateIf((o) => o.isRecurring === true)
   @IsOptional()
   recurrenceFrequency?: RecurrenceFrequency;
 
@@ -114,7 +131,9 @@ export class CreateActivityDto {
   @IsOptional()
   recurrenceDays?: number[];
 
-  @ApiPropertyOptional({ description: 'Day of month (1-31). Required for monthly frequency.' })
+  @ApiPropertyOptional({
+    description: 'Day of month (1-31). Required for monthly frequency.',
+  })
   @IsInt()
   @Min(1)
   @Max(31)
@@ -122,7 +141,9 @@ export class CreateActivityDto {
   @IsOptional()
   recurrenceDayOfMonth?: number;
 
-  @ApiPropertyOptional({ description: 'Date until which instances are generated (null = indefinite)' })
+  @ApiPropertyOptional({
+    description: 'Date until which instances are generated (null = indefinite)',
+  })
   @IsDateString()
   @IsOptional()
   recurrenceEndDate?: string;

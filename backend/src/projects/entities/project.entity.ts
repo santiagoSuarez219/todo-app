@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ProjectStatus } from '../../common/enums/project-status.enum';
+import { ProjectHorizon } from '../../common/enums/project-horizon.enum';
 import { Activity } from '../../activities/entities/activity.entity';
 
 @Entity('projects')
@@ -23,6 +24,13 @@ export class Project {
     default: ProjectStatus.ACTIVE,
   })
   status: ProjectStatus;
+
+  @Column({
+    type: 'enum',
+    enum: ProjectHorizon,
+    default: ProjectHorizon.NEXT,
+  })
+  horizon: ProjectHorizon;
 
   @Column({ type: 'date' })
   startDate: Date;

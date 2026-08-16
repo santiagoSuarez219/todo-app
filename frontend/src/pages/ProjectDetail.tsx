@@ -5,6 +5,7 @@ import { useActivitiesByProject, useCreateActivity, useDeleteActivity, useSearch
 import { useProjects } from '../hooks/useProjects';
 import { useDebounce } from '../hooks/useDebounce';
 import StatusBadge from '../components/StatusBadge';
+import HorizonBadge from '../components/HorizonBadge';
 import ActivityCard from '../components/ActivityCard';
 import ActivityForm from '../components/ActivityForm';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -193,6 +194,7 @@ export default function ProjectDetail() {
           </h1>
           <div className="mt-2 flex gap-3 items-center text-sm text-gray-500 dark:text-gray-400">
             <StatusBadge status={project.status} />
+            <HorizonBadge horizon={project.horizon} />
             <span>Desde {new Date(project.startDate).toLocaleDateString('es-CO')}</span>
             {project.endDate && (
               <span>hasta {new Date(project.endDate).toLocaleDateString('es-CO')}</span>

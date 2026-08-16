@@ -82,14 +82,6 @@ function SunIcon() {
   );
 }
 
-function NotionIcon() {
-  return (
-    <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
-    </svg>
-  );
-}
-
 function RecurringIcon() {
   return (
     <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -102,6 +94,22 @@ function BanIcon() {
   return (
     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
     </svg>
   );
 }
@@ -122,7 +130,8 @@ const STATUS_OPTIONS: { value: ActivityStatus; label: string; dot: string }[] = 
   { value: 'pending', label: 'Pendiente', dot: 'bg-yellow-400' },
   { value: 'in_progress', label: 'En progreso', dot: 'bg-blue-500' },
   { value: 'completed', label: 'Completada', dot: 'bg-green-500' },
-  { value: 'on_hold', label: 'En espera', dot: 'bg-purple-500' },
+  { value: 'on_hold', label: 'En pausa', dot: 'bg-purple-500' },
+  { value: 'waiting', label: 'Esperando', dot: 'bg-pink-500' },
 ];
 
 // ─── StatusDropdown ───────────────────────────────────────────────────────────
@@ -303,6 +312,38 @@ function fmt(dateStr: string, withTime = false) {
     year: 'numeric',
     ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
   });
+}
+
+/** `YYYY-MM-DD` local (never `toISOString()`, que es UTC) — para comparar
+ * contra `deferUntil`, una columna `date` pura, con el mismo criterio que
+ * usa el backend (ver `toDateOnlyString()` en `activities.service.ts`). */
+function localDateOnly(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Formatea un `YYYY-MM-DD` (columna `date` pura, ej. `deferUntil`) sin pasar
+ * por `new Date(string)`, que lo interpreta como medianoche UTC y corre el
+ * día un lugar atrás en timezones negativos — mismo bug documentado en
+ * `lib/calendar.ts` (spec-025). Construye el `Date` con campos locales. */
+function fmtDateOnly(dateOnly: string) {
+  const [year, month, day] = dateOnly.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/** Días transcurridos desde un `YYYY-MM-DD` (ej. `waitingSince`) hasta hoy,
+ * parseado con campos locales por el mismo motivo que `fmtDateOnly`. */
+function daysSinceDateOnly(dateOnly: string): number {
+  const [year, month, day] = dateOnly.split('-').map(Number);
+  const since = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  since.setHours(0, 0, 0, 0);
+  return Math.round((today.getTime() - since.getTime()) / 86_400_000);
 }
 
 function toInputValue(dateStr: string, withTime: boolean) {
@@ -612,16 +653,17 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   const { mutate: toggleSchedule, isPending: isScheduling } = useUpdateActivity();
   const { mutate: doCancelInstances, isPending: isCancelling } = useCancelFutureInstances();
 
-  const isTask     = activity.type === 'task';
-  const isReminder = activity.type === 'reminder';
-
   const now = new Date();
   const isOverdue =
     activity.status !== 'completed' &&
     activity.dueDate &&
     new Date(activity.dueDate) < now;
+  const isDeferred = !!activity.deferUntil && activity.deferUntil > localDateOnly(now);
+  const todayStr = localDateOnly(now);
+  const isScheduledToday = activity.scheduledFor === todayStr;
+  const isScheduledFuture = !!activity.scheduledFor && activity.scheduledFor > todayStr;
 
-  const totalSubtasks = isTask ? (activity.subtasks?.length ?? 0) : 0;
+  const totalSubtasks = activity.subtasks?.length ?? 0;
   const completedSubtasks =
     activity.subtasks?.filter((s) => s.status === 'completed').length ?? 0;
   const subtaskPercent =
@@ -649,12 +691,15 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() =>
-                toggleSchedule({ id: activity.id, dto: { scheduledForToday: !activity.scheduledForToday } })
+                toggleSchedule({
+                  id: activity.id,
+                  dto: { scheduledFor: isScheduledToday ? null : todayStr },
+                })
               }
               disabled={isScheduling}
-              title={activity.scheduledForToday ? 'Quitar de hoy' : 'Programar para hoy'}
+              title={isScheduledToday ? 'Quitar de hoy' : 'Programar para hoy'}
               className={`flex items-center gap-1 text-xs px-1.5 py-1 rounded transition-colors disabled:opacity-50 ${
-                activity.scheduledForToday
+                isScheduledToday
                   ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
                   : 'text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
               }`}
@@ -718,20 +763,9 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           )}
         </div>
 
-        {/* ── Row 3: project chip + notion chip ── */}
+        {/* ── Row 3: project chip ── */}
         <div className="flex flex-wrap gap-1.5">
           <InlineProjectEditor activity={activity} />
-          {activity.notionUrl && (
-            <a
-              href={activity.notionUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              <NotionIcon />
-              Notion
-            </a>
-          )}
         </div>
 
         {/* ── Separator ── */}
@@ -745,29 +779,54 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           <EnergyIndicator energy={activity.energy} />
         </div>
 
+        {/* ── Row 4.5: chip "Esperando a…" — solo con status: waiting ── */}
+        {activity.status === 'waiting' && (
+          <div className="flex flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800 w-fit">
+              <ClockIcon />
+              {activity.waitingFor
+                ? `Esperando a ${activity.waitingFor}`
+                : 'Esperando'}
+              {activity.waitingSince && (
+                <> · hace {daysSinceDateOnly(activity.waitingSince)} días</>
+              )}
+            </span>
+          </div>
+        )}
+
         {/* ── Row 5: fecha ── */}
-        {activity.dueDate && (
+        {(activity.dueDate || isDeferred || isScheduledFuture) && (
           <div className="flex flex-col gap-1.5">
-            {/* TASK: fecha límite (sin hora) — editable inline */}
-            {isTask && (
+            {activity.dueDate && (
               <InlineDueDateEditor
                 activity={activity}
                 label="Vence"
                 overdue={!!isOverdue}
               />
             )}
-            {/* REMINDER: fecha + hora */}
-            {isReminder && (
-              <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                {isOverdue ? <WarningIcon /> : <CalendarIcon />}
-                <span>Recordatorio: {fmt(activity.dueDate, true)}</span>
-              </div>
+            {isScheduledFuture && (
+              <span
+                title="Programada para aparecer en Hoy ese día"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 w-fit"
+              >
+                <SunIcon />
+                Programada para el {fmtDateOnly(activity.scheduledFor!)}
+              </span>
+            )}
+            {isDeferred && (
+              <span
+                title="No aparece en Hoy, Semana, Vencidas ni Backlog hasta esta fecha"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 w-fit"
+              >
+                <EyeOffIcon />
+                Diferida hasta {fmtDateOnly(activity.deferUntil!)}
+              </span>
             )}
           </div>
         )}
 
-        {/* ── Row 6: subtask area (solo TASK) ── */}
-        {isTask && totalSubtasks > 0 ? (
+        {/* ── Row 6: subtask area ── */}
+        {totalSubtasks > 0 ? (
           <div className="pt-0.5">
             {/* Progress bar */}
             <div className="flex items-center justify-between mb-1.5">
@@ -799,7 +858,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               </div>
             )}
           </div>
-        ) : isTask ? (
+        ) : (
           <button
             onClick={() => setCreateSubtaskOpen(true)}
             className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
@@ -807,9 +866,9 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
             <PlusIcon />
             Agregar subtarea
           </button>
-        ) : null}
+        )}
 
-        {/* Create subtask modal — only for tasks with no existing subtasks */}
+        {/* Create subtask modal */}
         {createSubtaskOpen && (
           <CreateSubtaskModal
             parentId={activity.id}
