@@ -1,4 +1,4 @@
-# spec-027 — [TESTING] Limpieza del modelo de Activity: eliminar `notionUrl`, `isRecurring` y `type`
+# spec-027 — [DONE] Limpieza del modelo de Activity: eliminar `notionUrl`, `isRecurring` y `type`
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
