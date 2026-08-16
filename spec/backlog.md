@@ -48,3 +48,18 @@
   (ej. un campo `truncated: boolean` o un total aparte) evitaría el
   silencio. Detectado en revisión de código de spec-025, no bloqueó el
   `[DONE]`.
+
+## spec-027 — Limpieza del modelo de Activity: eliminar `notionUrl`, `isRecurring` y `type`
+
+- **Aviso "tiene instancias generadas" no comprueba el conteo real.**
+  `ActivityForm.tsx` (`hasInstances = initial?.isTemplate && initial?.id`)
+  muestra el aviso "Este template tiene instancias generadas. Los cambios
+  afectarán las instancias futuras pendientes." con solo comprobar que la
+  actividad es plantilla (`isTemplate`) y tiene `id` — no consulta
+  `GET /activities/:id/instances` ni ningún conteo real. El aviso aparece
+  igual aunque la plantilla no tenga ninguna instancia generada todavía
+  (por ejemplo, recién creada, antes de que corra el cron de medianoche).
+  No es un bug introducido por spec-027 (el componente ya existía así antes),
+  detectado durante la ronda manual de `test-027` (TC-027-006). Corregirlo
+  requeriría cargar el conteo de instancias al abrir el modal de edición —
+  bajo impacto, no bloquea nada.
