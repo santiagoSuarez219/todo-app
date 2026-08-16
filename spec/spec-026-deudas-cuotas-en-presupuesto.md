@@ -1,4 +1,4 @@
-# spec-026 — [TESTING] Deudas con cuotas materializadas en presupuestos
+# spec-026 — [DONE] Deudas con cuotas materializadas en presupuestos
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -439,14 +439,16 @@ Consecuencias asumidas, que deben quedar cubiertas por las pruebas:
 - No se detectó deuda técnica fuera de alcance que registrar en
   `spec/backlog.md`.
 
-### Fase 8 — Pruebas — automáticas en verde, manuales pendientes del usuario
+### Fase 8 — Pruebas ✅ Completada
 
 > Los archivos de esta fase se escriben **junto con el spec**, antes de la
 > aprobación de implementación. Su posición al final indica cuándo se ponen en
 > verde, no cuándo se escriben.
 
-- [ ] Casos manuales de `docs/testing/test-026-deudas-cuotas-en-presupuesto.md`
-      ejecutados y aprobados por el usuario.
+- [x] Casos manuales de `docs/testing/test-026-deudas-cuotas-en-presupuesto.md`
+      ejecutados y aprobados por el usuario: **21/22** (`TC-026-016`, deudas
+      legacy tras la migración, queda diferido por diseño a la ventana de
+      despliegue — no ejecutable de forma fiel en desarrollo local).
 - [x] `backend/test/e2e-026-deudas-cuotas-en-presupuesto.e2e-spec.ts` en verde
       (13/13; el ajuste de `Number(...)` en `installmentValue` de AC-8 sigue la
       convención existente del proyecto para columnas `decimal`, no cambia
@@ -456,10 +458,14 @@ Consecuencias asumidas, que deben quedar cubiertas por las pruebas:
       test:e2e` 58/60 — las 2 fallas (`app.e2e-spec.ts`, `auth.e2e-spec.ts`)
       son preexistentes y no relacionadas con este spec (confirmado
       reproduciéndolas con `git stash` sobre el código previo a spec-026).
-- [ ] Ejecutar `@tester` como fase final antes del merge a `development` (tras
-      aprobar los casos manuales), por disciplina del proceso — las pruebas ya
-      están en verde.
-- [ ] `backend/src/finances/debts.service.spec.ts` (helpers de calendario) en verde.
+- [x] `@tester` ejecutado como fase final antes del merge — confirma 33/33
+      casos automáticos de spec-026 en verde (20 unit + 13 e2e) y reproduce las
+      mismas 2 fallas preexistentes ya identificadas, sin bloquear el spec.
+- [x] Un bug encontrado y corregido durante la ronda manual (falso positivo del
+      aviso de regeneración en `DebtForm.tsx`, commit `79ef769`) — ver
+      hallazgos de `TC-026-008` en `test-026`.
+- [x] Datos de prueba de la ronda manual eliminados y verificados contra la
+      línea base previa a la ronda (commit `9a4a9eb`).
 - [ ] Ejecutar `npm run test` y `npm run test:e2e` vía `@tester` antes del merge.
 
 ## Criterios de aceptación
