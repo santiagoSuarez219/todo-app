@@ -1,4 +1,4 @@
-# spec-031 — [NOT STARTED] De `scheduledForToday` (booleano) a `scheduledFor` (fecha)
+# spec-031 — [TESTING] De `scheduledForToday` (booleano) a `scheduledFor` (fecha)
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -176,45 +176,76 @@ tools si no se actualiza en el mismo spec.
 ## Fases de implementación
 
 ### Fase 1 — Backend: modelo, DTO y vista Hoy
-- [ ] `activity.entity.ts`: `scheduledFor` (`date`, nullable) en lugar del booleano
-- [ ] `create-activity.dto.ts`: prop `scheduledFor` validada como fecha
-- [ ] `findToday()`: nueva rama del OR con `scheduledFor = :today`, conservando
+- [x] `activity.entity.ts`: `scheduledFor` (`date`, nullable) en lugar del booleano
+- [x] `create-activity.dto.ts`: prop `scheduledFor` validada como fecha;
+      `@IsBoolean` quedó huérfano tras el cambio y se eliminó su import
+- [x] `findToday()`: nueva rama del OR con `scheduledFor = :today`, conservando
       la condición de `deferUntil` de spec-030
-- [ ] `buildInstanceFromTemplate()`: resolver `scheduledFor` según la decisión
-      aprobada; eliminar `isToday()` si queda huérfano
-- [ ] `npm run build` y `npm run lint` en `backend/`
+- [x] `buildInstanceFromTemplate()`: `scheduledFor = instanceDate` (opción A);
+      `isToday()` quedó huérfano tras el cambio y se eliminó
+- [x] `npm run build` y `npm run lint` en `backend/` — build limpio; unitarios
+      de spec-031 6/6 en verde de entrada. Se corrigió además un test
+      existente de spec-030 (ya `[DONE]`) que localizaba el bloque OR
+      buscando el texto `scheduledForToday` — ahora `scheduledFor`, tal como
+      preveía el checklist ("Actualizar los casos que usan el booleano")
 
 ### Fase 2 — Migración
-- [ ] Crear
+- [x] Crear
       `migrations/1787000000004-ReplaceScheduledForTodayWithScheduledForActivities.ts`
-- [ ] `ADD COLUMN` + backfill (`CURRENT_DATE` para flags activos no completados)
+- [x] `ADD COLUMN` + backfill (`CURRENT_DATE` para flags activos no completados)
       + `DROP COLUMN`
-- [ ] `down()` lossy, documentado en el archivo
-- [ ] Ejecutar en local y verificar que las actividades que estaban marcadas
-      siguen apareciendo hoy en la vista Hoy
+- [x] `down()` lossy, documentado en el archivo
+- [x] Ejecutar en local y verificar que las actividades que estaban marcadas
+      siguen apareciendo hoy en la vista Hoy — no había filas reales con
+      `scheduledForToday = true` en la base local (0 filas), así que se
+      insertaron 2 filas de prueba vía SQL de solo lectura/verificación
+      (una `pending`, una `completed`, ambas con el flag en `true`) para
+      ejercer el backfill; confirmado `pending → scheduledFor: CURRENT_DATE`,
+      `completed → scheduledFor: null`, exactamente lo que pide el spec.
+      Ambas filas de prueba se eliminaron después de verificar
 
 ### Fase 3 — Frontend
-- [ ] Leer `frontend/DESIGN.md`
-- [ ] `types/index.ts`: reemplazar el campo en `Activity` y `CreateActivityDto`
-- [ ] `ActivityCard.tsx`: botón de sol alternando `hoy` ↔ `null` + indicador de
-      fecha futura
-- [ ] `ActivityForm.tsx`: campo "Programar para"
-- [ ] `TodayView.tsx`: recalcular la partición de secciones
-- [ ] `grep` de residuos de `scheduledForToday` en `frontend/src`
-- [ ] `npm run lint` y `npm run build` en `frontend/`
+- [x] Leer `frontend/DESIGN.md`
+- [x] `types/index.ts`: reemplazar el campo en `Activity` y `CreateActivityDto`
+- [x] `ActivityCard.tsx`: botón de sol alternando `hoy` ↔ `null` + indicador
+      "Programada para el {fecha}" cuando es futura (mismo criterio visual
+      que el indicador de diferida de spec-030, con `fmtDateOnly()` para
+      evitar el bug de parseo UTC)
+- [x] `ActivityForm.tsx`: campo "Programar para" (tercera columna junto a
+      Fecha límite y Diferir hasta)
+- [x] `TodayView.tsx`: recalcular la partición `bySchedule` con
+      `scheduledFor === hoy` (comparación local, no `toISOString()`)
+- [x] `grep` de residuos de `scheduledForToday` en `frontend/src` — solo
+      queda en un comentario explicativo de `types/index.ts`
+- [x] `npm run lint` y `npm run build` en `frontend/` — ambos limpios
 
 ### Fase 4 — MCP: actualizar `todo-api`
-- [ ] Reemplazar `scheduledForToday` por `scheduledFor` en las tools de escritura
-- [ ] Reescribir la descripción de `get_today_activities`
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md`
-- [ ] Actualizar `docs/mcps/README.md`
-- [ ] Verificar que el MCP responde correctamente a las herramientas declaradas
+- [x] Reemplazar `scheduledForToday` por `scheduledFor` en las tools de escritura
+- [x] Reescribir la descripción de `get_today_activities`
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` — nueva
+      explicación de `scheduledFor` en "Campos comunes" (ya no exclusivo de
+      "hoy", caduca sola, independiente de `deferUntil`) y fila de tabla
+      actualizada
+- [x] Actualizar `docs/mcps/README.md` — sin cambios necesarios (no enumera
+      campos)
+- [x] Verificar que el MCP responde correctamente a las herramientas
+      declaradas — backend local: `create_activity`/`update_activity` con
+      `scheduledFor` en el schema, `scheduledForToday` ausente; smoke test:
+      actividad creada con `scheduledFor` mañana no aparece en
+      `get_today_activities` hoy
 
 ### Fase 5 — Pruebas
-- [ ] `docs/testing/test-031-scheduled-for-fecha.md` con casos `TC-031-xx` y
-      `TC-MCP-031-xx`
-- [ ] `backend/test/e2e-031-scheduled-for-fecha.e2e-spec.ts` en rojo
-- [ ] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`)
+- [x] `docs/testing/test-031-scheduled-for-fecha.md` con casos `TC-031-xx` y
+      `TC-MCP-031-xx` (redactado junto con el spec; pendiente de ejecución
+      manual por el usuario)
+- [x] `backend/test/e2e-031-scheduled-for-fecha.e2e-spec.ts` — 11/11 en
+      verde. Se corrigió el mismo desajuste ya visto en spec-027/030: AC-07
+      seguía esperando 201/200 (descarte silencioso) para
+      `scheduledForToday`, cuando el propio spec ya documentaba 400
+      (`forbidNonWhitelisted: true`)
+- [x] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`) —
+      unitarios de spec-031 6/6 en verde; suite completa sin regresiones
+      (los 8 fallos restantes son todos de spec-032, aún no implementado)
 
 ## Criterios de aceptación
 
@@ -272,5 +303,5 @@ tools si no se actualiza en el mismo spec.
 ## Aprobación de implementación
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{fecha}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-17

@@ -276,10 +276,12 @@ export class McpService {
           .uuid()
           .optional()
           .describe('UUID of the parent activity (creates a subtask)'),
-        scheduledForToday: z
-          .boolean()
+        scheduledFor: z
+          .string()
           .optional()
-          .describe('Schedule this activity to appear in the Today view'),
+          .describe(
+            'Schedule this activity to appear in the Today view on this date (ISO 8601 date, e.g. 2026-04-14). Expires on its own the day after — no cleanup needed.',
+          ),
         deferUntil: z
           .string()
           .optional()
@@ -321,10 +323,13 @@ export class McpService {
           .nullable()
           .optional()
           .describe('Set null to remove from parent'),
-        scheduledForToday: z
-          .boolean()
+        scheduledFor: z
+          .string()
+          .nullable()
           .optional()
-          .describe('Set or unset scheduling for Today view'),
+          .describe(
+            'Reschedule for Today on this date, or clear (null) the scheduled date',
+          ),
         deferUntil: z
           .string()
           .nullable()
@@ -374,7 +379,7 @@ export class McpService {
 
     server.tool(
       'get_today_activities',
-      'Get activities scheduled for today (by dueDate or scheduledForToday flag). Excludes deferred activities (deferUntil in the future) — use get_deferred_activities to see those.',
+      'Get activities scheduled for today (by dueDate or scheduledFor = today). Excludes deferred activities (deferUntil in the future) — use get_deferred_activities to see those.',
       paginationSchema,
       async (pagination) => {
         try {

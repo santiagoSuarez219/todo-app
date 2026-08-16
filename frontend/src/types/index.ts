@@ -74,7 +74,8 @@ export interface Activity {
   energy: Energy;
   parent: Activity | null;
   subtasks: Activity[];
-  scheduledForToday: boolean;
+  /** spec-031: reemplaza al booleano `scheduledForToday` — caduca sola. */
+  scheduledFor: string | null;
   isTemplate: boolean;
   templateId: string | null;
   recurrenceFrequency: RecurrenceFrequency | null;
@@ -113,7 +114,7 @@ export interface CreateActivityDto {
   priority?: Priority;
   status?: ActivityStatus;
   energy?: Energy;
-  scheduledForToday?: boolean;
+  scheduledFor?: string | null;
   deferUntil?: string | null;
   recurrenceFrequency?: RecurrenceFrequency | null;
   recurrenceDays?: WeekDay[];

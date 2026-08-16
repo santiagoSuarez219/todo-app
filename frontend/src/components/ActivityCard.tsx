@@ -639,6 +639,9 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
     activity.dueDate &&
     new Date(activity.dueDate) < now;
   const isDeferred = !!activity.deferUntil && activity.deferUntil > localDateOnly(now);
+  const todayStr = localDateOnly(now);
+  const isScheduledToday = activity.scheduledFor === todayStr;
+  const isScheduledFuture = !!activity.scheduledFor && activity.scheduledFor > todayStr;
 
   const totalSubtasks = activity.subtasks?.length ?? 0;
   const completedSubtasks =
@@ -668,12 +671,15 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() =>
-                toggleSchedule({ id: activity.id, dto: { scheduledForToday: !activity.scheduledForToday } })
+                toggleSchedule({
+                  id: activity.id,
+                  dto: { scheduledFor: isScheduledToday ? null : todayStr },
+                })
               }
               disabled={isScheduling}
-              title={activity.scheduledForToday ? 'Quitar de hoy' : 'Programar para hoy'}
+              title={isScheduledToday ? 'Quitar de hoy' : 'Programar para hoy'}
               className={`flex items-center gap-1 text-xs px-1.5 py-1 rounded transition-colors disabled:opacity-50 ${
-                activity.scheduledForToday
+                isScheduledToday
                   ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
                   : 'text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
               }`}
@@ -754,7 +760,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         </div>
 
         {/* ── Row 5: fecha ── */}
-        {(activity.dueDate || isDeferred) && (
+        {(activity.dueDate || isDeferred || isScheduledFuture) && (
           <div className="flex flex-col gap-1.5">
             {activity.dueDate && (
               <InlineDueDateEditor
@@ -762,6 +768,15 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
                 label="Vence"
                 overdue={!!isOverdue}
               />
+            )}
+            {isScheduledFuture && (
+              <span
+                title="Programada para aparecer en Hoy ese día"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 w-fit"
+              >
+                <SunIcon />
+                Programada para el {fmtDateOnly(activity.scheduledFor!)}
+              </span>
             )}
             {isDeferred && (
               <span

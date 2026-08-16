@@ -524,14 +524,16 @@ describe('ActivitiesService - deferUntil filtering (spec-030)', () => {
       expect(text).toMatch(/deferUntil\s*<=\s*:today/i);
     });
 
-    it('applies the deferUntil condition OUTSIDE the dueDate/scheduledForToday OR — it must gate both branches', async () => {
+    it('applies the deferUntil condition OUTSIDE the dueDate/scheduledFor OR — it must gate both branches', async () => {
       await service.findToday({ page: 1, limit: 20 });
       const { calls } = allConditions();
-      // The pre-existing OR of (dueDate BETWEEN…) / (scheduledForToday…) is
+      // The pre-existing OR of (dueDate BETWEEN…) / (scheduledFor…) is
       // its own single condition string; deferUntil must be a SEPARATE
       // andWhere, not folded inside that same parenthesized OR block.
+      // scheduledForToday (boolean) was replaced by scheduledFor (date) in
+      // spec-031 — the locator was updated along with it.
       const orBlockCall = calls.find(([text]: [string]) =>
-        /scheduledForToday/i.test(text),
+        /activity\.scheduledFor\s*=\s*:today/i.test(text),
       );
       expect(orBlockCall).toBeDefined();
       expect(orBlockCall![0]).not.toMatch(/deferUntil/i);

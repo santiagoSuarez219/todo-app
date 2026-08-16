@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -69,11 +68,13 @@ export class CreateActivityDto {
   parentId?: string;
 
   @ApiPropertyOptional({
-    description: 'Schedule this activity to appear in the Today view',
+    example: '2026-04-14',
+    description:
+      'Schedule this activity to appear in the Today view on this date. null clears it — expires on its own the day after, no cleanup job needed.',
   })
-  @IsBoolean()
+  @IsDateString()
   @IsOptional()
-  scheduledForToday?: boolean;
+  scheduledFor?: string | null;
 
   @ApiPropertyOptional({
     example: '2026-04-20',

@@ -60,8 +60,18 @@ de semántica (e.g. `2026-06-10` o, si el usuario da hora, `2026-06-10T09:00:00`
 
 **Campos comunes:** `id`, `name`, `description`, `project`, `status`
 (`pending | in_progress | completed | cancelled | on_hold`), `priority`
-(`high | medium | low`), `energy` (`high | medium | low`),
-`scheduledForToday` (boolean).
+(`high | medium | low`), `energy` (`high | medium | low`).
+
+`scheduledFor` (fecha, opcional) **programa** una actividad para aparecer en
+`get_today_activities` ese día, venza o no por `dueDate`. No es exclusivo de
+"hoy": puedes programar cualquier fecha (`scheduledFor: 2026-06-10`) y esa
+actividad aparecerá en la vista Hoy justo ese día, sin que nadie la toque de
+nuevo. Si la fecha ya pasó y la actividad no se completó, deja de aparecer
+por esa vía al día siguiente — caduca sola, no hace falta limpiarla ni
+"desmarcarla". Para quitarla de Hoy antes de que llegue su fecha, envía
+`scheduledFor: null`. Es independiente de `deferUntil`: si ambas aplican a
+la vez, `deferUntil` manda (una actividad diferida no aparece en Hoy aunque
+esté programada para hoy).
 
 `deferUntil` (fecha, opcional) **difiere** una actividad: mientras
 `deferUntil` sea una fecha futura, la actividad queda oculta de `hoy`,
@@ -176,7 +186,7 @@ todas sus subtareas antes de pedir confirmación — no asumas que lo sabe.
 ## Actividades — consultas especializadas
 | Herramienta | Descripción |
 |-------------|-------------|
-| `get_today_activities` | Actividades de hoy (`dueDate` o `scheduledForToday`). Excluye diferidas |
+| `get_today_activities` | Actividades de hoy (`dueDate` o `scheduledFor = hoy`). Excluye diferidas |
 | `get_tomorrow_activities` | Actividades de mañana (por `dueDate`). Excluye diferidas |
 | `get_this_week_activities` | Actividades de la semana actual (Lun–Dom). Excluye diferidas |
 | `get_overdue_activities` | Vencidas y no completadas. Excluye diferidas — aunque haya vencido, si está diferida no aparece aquí |

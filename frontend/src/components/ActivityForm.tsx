@@ -26,6 +26,7 @@ const schema = z.object({
   energy: z.string().optional(),
   dueDate: z.string().nullish(),
   deferUntil: z.string().nullish(),
+  scheduledFor: z.string().nullish(),
   // ── Recurrence — `isRecurring` es estado local del formulario, no viaja al
   // DTO: al enviar, `true` se traduce en `recurrenceFrequency` y `false` en
   // `recurrenceFrequency: null` (spec-027) ──
@@ -128,6 +129,7 @@ export default function ActivityForm({
         energy: initial?.energy ?? Energy.MEDIUM,
         dueDate: initial?.dueDate ? initial.dueDate.slice(0, 10) : '',
         deferUntil: initial?.deferUntil ? initial.deferUntil.slice(0, 10) : '',
+        scheduledFor: initial?.scheduledFor ? initial.scheduledFor.slice(0, 10) : '',
         isRecurring: initial?.recurrenceFrequency != null,
         recurrenceFrequency: initial?.recurrenceFrequency ?? undefined,
         recurrenceDays: (initial?.recurrenceDays as WeekDay[] | null) ?? [],
@@ -161,6 +163,7 @@ export default function ActivityForm({
       energy: (values.energy as CreateActivityDto['energy']) || undefined,
       dueDate: values.dueDate || null,
       deferUntil: values.deferUntil || null,
+      scheduledFor: values.scheduledFor || null,
     };
 
     if (values.isRecurring) {
@@ -241,8 +244,8 @@ export default function ActivityForm({
         </div>
       </div>
 
-      {/* ── Fecha límite / Diferir hasta ── */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* ── Fecha límite / Programar para / Diferir hasta ── */}
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <label className={labelCls}>Fecha límite</label>
           <input
@@ -250,6 +253,17 @@ export default function ActivityForm({
             {...register('dueDate')}
             className={inputCls}
           />
+        </div>
+        <div>
+          <label className={labelCls}>Programar para</label>
+          <input
+            type="date"
+            {...register('scheduledFor')}
+            className={inputCls}
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Aparece en Hoy ese día, venza o no.
+          </p>
         </div>
         <div>
           <label className={labelCls}>Diferir hasta</label>

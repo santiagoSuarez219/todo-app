@@ -67,6 +67,7 @@ export class ActivitiesService {
   // ─── Recurrence helpers ──────────────────────────────────────────────────────
 
   buildInstanceFromTemplate(template: Activity, date: Date): Activity {
+    const instanceDate = date.toISOString().split('T')[0];
     const instance = this.activitiesRepository.create({
       name: template.name,
       description: template.description,
@@ -76,24 +77,18 @@ export class ActivitiesService {
       status: ActivityStatus.PENDING,
       isTemplate: false,
       templateId: template.id,
-      instanceDate: date.toISOString().split('T')[0],
+      instanceDate,
       dueDate: null,
-      scheduledForToday: this.isToday(date),
+      // spec-031 (opción A): cada instancia queda programada para su propio
+      // día — preserva y mejora el comportamiento anterior (las instancias
+      // futuras también quedaban "para hoy" antes, cosa incoherente).
+      scheduledFor: instanceDate,
       // spec-030: instances never inherit deferUntil from the template —
       // deferring a recurring template affects the template, not instances
       // already materialized.
       deferUntil: null,
     });
     return instance;
-  }
-
-  private isToday(date: Date): boolean {
-    const today = new Date();
-    return (
-      date.getFullYear() === today.getFullYear() &&
-      date.getMonth() === today.getMonth() &&
-      date.getDate() === today.getDate()
-    );
   }
 
   shouldGenerateForDate(template: Activity, date: Date): boolean {
@@ -180,7 +175,7 @@ export class ActivitiesService {
       priority,
       status,
       energy,
-      scheduledForToday,
+      scheduledFor,
       deferUntil,
       recurrenceFrequency,
       recurrenceDays,
@@ -194,7 +189,7 @@ export class ActivitiesService {
       priority,
       status,
       energy,
-      scheduledForToday,
+      scheduledFor,
       deferUntil,
       recurrenceFrequency,
       recurrenceDays,
@@ -261,7 +256,7 @@ export class ActivitiesService {
       priority,
       status,
       energy,
-      scheduledForToday,
+      scheduledFor,
       deferUntil,
       recurrenceFrequency,
       recurrenceDays,
@@ -275,7 +270,9 @@ export class ActivitiesService {
       ...(priority !== undefined && { priority }),
       ...(status !== undefined && { status }),
       ...(energy !== undefined && { energy }),
-      ...(scheduledForToday !== undefined && { scheduledForToday }),
+      // spec-031: programar no es posponer, tampoco toca postponementCount
+      // (mismo criterio ya establecido para deferUntil).
+      ...(scheduledFor !== undefined && { scheduledFor }),
       // spec-030: deferring is never "posponer" — it's excluded from the
       // postponementCount trigger below (which only looks at `dueDate`).
       ...(deferUntil !== undefined && { deferUntil }),
@@ -490,6 +487,7 @@ export class ActivitiesService {
 
   findToday(pagination: PaginationDto): Promise<Activity[]> {
     const { start, end } = this.todayRange();
+    const today = this.toDateOnlyString(new Date());
     return this.paginate(
       this.baseQuery()
         .where('activity.isTemplate = false')
@@ -497,13 +495,11 @@ export class ActivitiesService {
           `(
             (activity.dueDate BETWEEN :start AND :end)
             OR
-            (activity.scheduledForToday = true AND activity.status != :completedStatus)
+            (activity.scheduledFor = :today AND activity.status != :completedStatus)
           )`,
-          { start, end, completedStatus: ActivityStatus.COMPLETED },
+          { start, end, today, completedStatus: ActivityStatus.COMPLETED },
         )
-        .andWhere(this.notDeferredCondition(), {
-          today: this.toDateOnlyString(new Date()),
-        }),
+        .andWhere(this.notDeferredCondition(), { today }),
       pagination,
     ).getMany();
   }

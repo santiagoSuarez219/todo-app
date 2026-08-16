@@ -264,33 +264,31 @@ describe('spec-031 — scheduledForToday (boolean) → scheduledFor (date) (e2e)
     });
   });
 
-  describe('AC-scheduledFor-07: la columna scheduledForToday ya no existe — enviarla no produce error', () => {
-    it('POST con scheduledForToday (nombre viejo) se descarta por whitelist, sin error 400 y sin efecto', async () => {
+  describe('AC-scheduledFor-07: la columna scheduledForToday ya no existe — enviarla responde 400', () => {
+    // Corregido: el criterio original asumía descarte silencioso, pero
+    // main.ts fija forbidNonWhitelisted: true junto con whitelist: true —
+    // una propiedad no declarada en el DTO rechaza toda la petición con 400,
+    // en vez de descartarse (mismo criterio ya corregido en spec-027/030;
+    // ver "Criterios de aceptación" del spec-031).
+    it('POST con scheduledForToday (nombre viejo) responde 400', async () => {
       const createResponse = await createActivity({
         name: '[E2E-031] AC7 — nombre viejo scheduledForToday',
         scheduledForToday: true,
       });
-      expect(createResponse.status).toBe(201);
-      expect(createResponse.body.data.scheduledForToday).toBeUndefined();
-      expect(createResponse.body.data.scheduledFor ?? null).toBeNull();
-
-      // No debe aparecer en Hoy: el flag viejo ya no tiene ningún efecto.
-      const todayList = await getToday();
-      expect(idsIn(todayList)).not.toContain(createResponse.body.data.id);
+      expect(createResponse.status).toBe(400);
     });
 
-    it('PATCH con scheduledForToday (nombre viejo) se descarta por whitelist, sin error y sin efecto', async () => {
+    it('PATCH con scheduledForToday (nombre viejo) responde 400 y no tiene efecto', async () => {
       const createResponse = await createActivity({
         name: '[E2E-031] AC7b — PATCH con nombre viejo',
       });
       const id = createResponse.body.data.id;
 
-      const patchResponse = await api()
+      await api()
         .patch(`/api/v1/activities/${id}`)
         .set('Cookie', authCookies)
         .send({ scheduledForToday: true })
-        .expect(200);
-      expect(patchResponse.body.data.scheduledForToday).toBeUndefined();
+        .expect(400);
 
       const todayList = await getToday();
       expect(idsIn(todayList)).not.toContain(id);

@@ -55,8 +55,11 @@ export class Activity {
   })
   energy: Energy;
 
-  @Column({ type: 'boolean', default: false })
-  scheduledForToday: boolean;
+  // spec-031: reemplaza al booleano scheduledForToday — una fecha caduca
+  // sola (mañana ya no es hoy), el booleano necesitaba un job de limpieza
+  // que nunca existió.
+  @Column({ type: 'date', nullable: true })
+  scheduledFor: string | null;
 
   @ManyToOne(() => Activity, (activity) => activity.subtasks, {
     nullable: true,
