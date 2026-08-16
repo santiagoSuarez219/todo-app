@@ -346,3 +346,22 @@ sorprenda con actividades "desaparecidas".
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-17
+
+## Cierre de la ronda de pruebas (2026-08-16) — spec queda en `[TESTING]`
+
+- **Manuales:** 12/15 casos aprobados. `TC-030-002` diferido (hoy cayó
+  domingo, sin día válido "de esta semana + futuro"). `TC-030-010` diferido
+  (el cron diario no corrió durante la ventana de la ronda). `TC-MCP-030-004`
+  **falló en su criterio 2**: `create_recurring_activity` no rechaza
+  `deferUntil` con error — lo descarta silenciosamente porque su schema Zod
+  no usa `.strict()`. Detalle completo en
+  `docs/testing/test-030-defer-until.md`.
+- **Decisión del usuario:** el spec **permanece en `[TESTING]`**, no pasa a
+  `[DONE]` todavía. Pendiente: agregar `.strict()` (u otro mecanismo
+  equivalente) al schema de `create_recurring_activity` en
+  `backend/src/mcp/mcp.service.ts` y re-ejecutar `TC-MCP-030-004`. Hallazgo
+  registrado en `spec/backlog.md`.
+- Hallazgo adicional (no bloqueante, ya en `spec/backlog.md`): el
+  `EmptyState` de Hoy/Semana/Vencidas/Backlog no distingue "vacío de
+  verdad" de "todo diferido" — es un hallazgo de copy, no de lógica.
+- Datos de prueba de la ronda eliminados y verificados `404` por API.
