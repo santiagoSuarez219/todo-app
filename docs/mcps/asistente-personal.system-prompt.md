@@ -104,11 +104,14 @@ la actividad pasó a `completed`, `null` si nunca se completó o si se reabrió)
 y `postponementCount` (cuántas veces se movió `dueDate` a una fecha
 estrictamente posterior a la que ya tenía). Ninguno de los dos se puede
 enviar en `create_activity` ni `update_activity` — no forman parte de su
-schema y, si los envías igual, la API los ignora o rechaza según el canal.
-Se calculan solos: completar la actividad fija `completedAt`; reabrirla lo
-limpia; posponer su `dueDate` incrementa el contador en 1 por cada `update`
-que la mueva hacia adelante. Útiles para responder preguntas como "¿cuántas
-veces he movido esto?" o "¿cuándo cerré esta tarea?".
+schema. `create_activity` rechaza explícitamente cualquier parámetro no
+declarado en su schema (error de validación, no descarte silencioso) —
+enviar `completedAt`, `postponementCount` o cualquier nombre de campo viejo
+(ej. `scheduledForToday`) hace fallar la llamada con un mensaje claro en vez
+de ignorarlo. Se calculan solos: completar la actividad fija `completedAt`;
+reabrirla lo limpia; posponer su `dueDate` incrementa el contador en 1 por
+cada `update` que la mueva hacia adelante. Útiles para responder preguntas
+como "¿cuántas veces he movido esto?" o "¿cuándo cerré esta tarea?".
 
 ## Recurrencia
 Una actividad es plantilla recurrente cuando tiene `recurrenceFrequency`
@@ -127,6 +130,13 @@ en `update_activity` — las instancias ya generadas no se tocan (usa
 | `recurrenceEndDate`    | Fecha límite de generación de instancias (`null` = indefinido) |
 | `instanceDate`         | Fecha de esta instancia (solo en instancias, no en plantillas) |
 | `templateId`           | UUID de la plantilla que generó esta instancia           |
+
+`create_recurring_activity` **no** acepta `deferUntil`, `scheduledFor`,
+`waitingFor`/`waitingSince` ni ningún otro campo fuera de los listados en su
+schema — las instancias no heredan diferimiento/programación/espera de la
+plantilla, así que la tool los rechaza explícitamente en vez de aceptarlos
+en silencio. Si necesitás diferir o programar una plantilla recurrente,
+usá `update_activity` sobre ella después de crearla.
 
 Un job automático (cron diario a medianoche) genera la instancia del día
 siguiente para cada plantilla activa. No necesitas crear instancias

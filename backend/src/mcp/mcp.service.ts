@@ -243,73 +243,78 @@ export class McpService {
       },
     );
 
-    server.tool(
+    server.registerTool(
       'create_activity',
-      'Create a new activity or subtask, optionally with a due date',
       {
-        name: z.string().min(1).max(255).describe('Activity name'),
-        projectId: z
-          .string()
-          .uuid()
-          .optional()
-          .describe('UUID of the associated project'),
-        dueDate: z
-          .string()
-          .optional()
-          .describe(
-            'Deadline date (ISO 8601, e.g. 2026-04-13 or 2026-04-13T09:00:00Z)',
-          ),
-        priority: z
-          .enum(['high', 'medium', 'low'])
-          .optional()
-          .describe('Priority level (default: medium)'),
-        status: z
-          .enum([
-            'pending',
-            'in_progress',
-            'completed',
-            'cancelled',
-            'on_hold',
-            'waiting',
-          ])
-          .optional()
-          .describe(
-            "Initial status (default: pending). 'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
-          ),
-        energy: z
-          .enum(['high', 'medium', 'low'])
-          .optional()
-          .describe('Energy level required (default: medium)'),
-        parentId: z
-          .string()
-          .uuid()
-          .optional()
-          .describe('UUID of the parent activity (creates a subtask)'),
-        scheduledFor: z
-          .string()
-          .optional()
-          .describe(
-            'Schedule this activity to appear in the Today view on this date (ISO 8601 date, e.g. 2026-04-14). Expires on its own the day after — no cleanup needed.',
-          ),
-        deferUntil: z
-          .string()
-          .optional()
-          .describe(
-            'Defer this activity: hidden from active views (today, tomorrow, this week, overdue, without-project) until this date (ISO 8601 date, e.g. 2026-04-20)',
-          ),
-        waitingFor: z
-          .string()
-          .optional()
-          .describe(
-            "Who/what this is blocked on — only meaningful when status is 'waiting'",
-          ),
-        waitingSince: z
-          .string()
-          .optional()
-          .describe(
-            "Date since when this has been waiting (ISO 8601) — only meaningful when status is 'waiting'. Defaults to today if omitted.",
-          ),
-        description: z.string().optional(),
+        description:
+          'Create a new activity or subtask, optionally with a due date',
+        inputSchema: z
+          .object({
+            name: z.string().min(1).max(255).describe('Activity name'),
+            projectId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe('UUID of the associated project'),
+            dueDate: z
+              .string()
+              .optional()
+              .describe(
+                'Deadline date (ISO 8601, e.g. 2026-04-13 or 2026-04-13T09:00:00Z)',
+              ),
+            priority: z
+              .enum(['high', 'medium', 'low'])
+              .optional()
+              .describe('Priority level (default: medium)'),
+            status: z
+              .enum([
+                'pending',
+                'in_progress',
+                'completed',
+                'cancelled',
+                'on_hold',
+                'waiting',
+              ])
+              .optional()
+              .describe(
+                "Initial status (default: pending). 'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
+              ),
+            energy: z
+              .enum(['high', 'medium', 'low'])
+              .optional()
+              .describe('Energy level required (default: medium)'),
+            parentId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe('UUID of the parent activity (creates a subtask)'),
+            scheduledFor: z
+              .string()
+              .optional()
+              .describe(
+                'Schedule this activity to appear in the Today view on this date (ISO 8601 date, e.g. 2026-04-14). Expires on its own the day after — no cleanup needed.',
+              ),
+            deferUntil: z
+              .string()
+              .optional()
+              .describe(
+                'Defer this activity: hidden from active views (today, tomorrow, this week, overdue, without-project) until this date (ISO 8601 date, e.g. 2026-04-20)',
+              ),
+            waitingFor: z
+              .string()
+              .optional()
+              .describe(
+                "Who/what this is blocked on — only meaningful when status is 'waiting'",
+              ),
+            waitingSince: z
+              .string()
+              .optional()
+              .describe(
+                "Date since when this has been waiting (ISO 8601) — only meaningful when status is 'waiting'. Defaults to today if omitted.",
+              ),
+            description: z.string().optional(),
+          })
+          .strict(),
       },
       async (dto) => {
         try {
@@ -670,47 +675,54 @@ export class McpService {
 
     // ── Recurrence tools ───────────────────────────────────────────────────────
 
-    server.tool(
+    server.registerTool(
       'create_recurring_activity',
-      'Create a recurring activity template that generates instances automatically (daily, weekly, biweekly, monthly or yearly)',
       {
-        name: z.string().min(1).max(255).describe('Activity name'),
-        recurrenceFrequency: z
-          .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
-          .describe('How often the activity repeats'),
-        recurrenceDays: z
-          .array(z.number().int().min(0).max(6))
-          .optional()
-          .describe(
-            'Days of week (0=Sun, 1=Mon … 6=Sat). Required for weekly/biweekly.',
-          ),
-        recurrenceDayOfMonth: z
-          .number()
-          .int()
-          .min(1)
-          .max(31)
-          .optional()
-          .describe('Day of month (1-31). Required for monthly frequency.'),
-        recurrenceEndDate: z
-          .string()
-          .optional()
-          .describe(
-            'ISO 8601 date until which instances are generated (null = indefinite)',
-          ),
-        projectId: z
-          .string()
-          .uuid()
-          .optional()
-          .describe('UUID of the associated project'),
-        dueDate: z
-          .string()
-          .optional()
-          .describe(
-            'Reference date/time for biweekly/yearly cycle calculations (ISO 8601)',
-          ),
-        priority: z.enum(['high', 'medium', 'low']).optional(),
-        energy: z.enum(['high', 'medium', 'low']).optional(),
-        description: z.string().optional(),
+        description:
+          'Create a recurring activity template that generates instances automatically (daily, weekly, biweekly, monthly or yearly)',
+        inputSchema: z
+          .object({
+            name: z.string().min(1).max(255).describe('Activity name'),
+            recurrenceFrequency: z
+              .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
+              .describe('How often the activity repeats'),
+            recurrenceDays: z
+              .array(z.number().int().min(0).max(6))
+              .optional()
+              .describe(
+                'Days of week (0=Sun, 1=Mon … 6=Sat). Required for weekly/biweekly.',
+              ),
+            recurrenceDayOfMonth: z
+              .number()
+              .int()
+              .min(1)
+              .max(31)
+              .optional()
+              .describe(
+                'Day of month (1-31). Required for monthly frequency.',
+              ),
+            recurrenceEndDate: z
+              .string()
+              .optional()
+              .describe(
+                'ISO 8601 date until which instances are generated (null = indefinite)',
+              ),
+            projectId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe('UUID of the associated project'),
+            dueDate: z
+              .string()
+              .optional()
+              .describe(
+                'Reference date/time for biweekly/yearly cycle calculations (ISO 8601)',
+              ),
+            priority: z.enum(['high', 'medium', 'low']).optional(),
+            energy: z.enum(['high', 'medium', 'low']).optional(),
+            description: z.string().optional(),
+          })
+          .strict(),
       },
       async (dto) => {
         try {
