@@ -305,3 +305,20 @@ tools si no se actualiza en el mismo spec.
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-17
+
+## Cierre de la ronda de pruebas (2026-08-16) — spec queda en `[TESTING]`
+
+- **Manuales:** 13/15 casos aprobados (incluye `TC-031-011`, aprobado con
+  corrección de expectativa: `main.ts` con `forbidNonWhitelisted: true`
+  produce `400`, no el `201` que el caso asumía — comportamiento más seguro
+  de lo esperado, texto del spec desactualizado). `TC-031-010` diferido (ya
+  verificado en Fase 2, no repetible sin datos legacy reales). `TC-MCP-031-003`
+  **falló**: `create_activity` no rechaza `scheduledForToday` (nombre viejo)
+  — mismo problema sistémico detectado en `TC-MCP-030-004` (ningún schema
+  Zod de `mcp.service.ts` usa `.strict()`). Detalle completo en
+  `docs/testing/test-031-scheduled-for-fecha.md`.
+- **Decisión del usuario:** mismo criterio aplicado en spec-030 — el spec
+  **permanece en `[TESTING]`**, no pasa a `[DONE]` todavía. Pendiente:
+  aplicar el fix sistémico de `.strict()` en `mcp.service.ts` (spec-030) y
+  re-ejecutar `TC-MCP-031-003` junto con `TC-MCP-030-004`.
+- Datos de prueba de la ronda eliminados y verificados `404` por API.
