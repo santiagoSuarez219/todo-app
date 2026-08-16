@@ -78,3 +78,34 @@
   implicaría agregar `.andWhere('activity.isTemplate = false')` a
   `findWithoutProject()` — bajo riesgo, pero cambia qué se ve hoy en Backlog,
   por lo que requiere confirmación del usuario antes de aplicarlo.
+
+- **El `EmptyState` de Hoy/Semana/Vencidas/Backlog no distingue "vacío de
+  verdad" de "todo diferido".** Cuando todas las actividades que
+  corresponderían a una vista quedan ocultas por `deferUntil`, la vista
+  muestra el mismo mensaje genérico que cuando no hay datos en absoluto (ej.
+  Backlog: "El backlog está vacío. Agrega tu primera tarea."), sin ningún
+  matiz que indique que hay actividades diferidas. Detectado en la ronda
+  manual de `test-030` (TC-030-011), vaciando temporalmente el Backlog real
+  (con autorización explícita del usuario, datos restaurados de inmediato
+  tras la verificación). Es un hallazgo de copy/UX, no de lógica — el
+  filtrado de `deferUntil` funciona correctamente. Corregirlo requeriría que
+  `EmptyState` (o las vistas que lo consumen) sepa distinguir "sin datos" de
+  "datos ocultos por diferimiento", fuera del scope de spec-030.
+
+- **`create_recurring_activity` no rechaza `deferUntil` con un error de
+  validación — lo acepta silenciosamente y descarta el campo.** El spec
+  esperaba (`TC-MCP-030-004`, criterio 2) que la tool MCP rechazara
+  `deferUntil` con `MCP error -32602`, igual que ocurre con un valor fuera
+  de enum (ej. `TC-MCP-029-003`). En la práctica, el schema Zod de
+  `create_recurring_activity` (`backend/src/mcp/mcp.service.ts`) no declara
+  `deferUntil` en su shape y **no usa `.strict()`**, así que Zod descarta
+  silenciosamente cualquier clave no declarada del input en vez de lanzar un
+  error — la plantilla se crea con éxito, simplemente sin persistir el
+  campo. Funcionalmente inofensivo (el campo nunca se guarda ni se hereda a
+  instancias), pero el agente no recibe ninguna señal de que el parámetro
+  fue ignorado. Detectado en la ronda manual de `test-030`
+  (`TC-MCP-030-004`, marcado `❌ Fallido` por este motivo). Corregirlo
+  implicaría agregar `.strict()` (o un `.refine()` equivalente) al shape de
+  la tool para que rechace explícitamente parámetros no declarados —
+  evaluar si aplica al resto de tools MCP del proyecto, no solo a esta,
+  antes de decidir el alcance del fix.
