@@ -11,12 +11,30 @@
 > API (`POST /api/v1/activities`) antes de empezar, con su identificador,
 > y marcar su eliminación al cerrar la ronda.
 
-| Recurso   | Endpoint de creación     | Identificador | Eliminado |
-|-----------|---------------------------|----------------|-----------|
-| Activity  | `POST /api/v1/activities` | `{{id}}`       | ⬜ / ✅    |
+| Recurso   | Endpoint de creación     | Identificador | Usado en | Eliminado |
+|-----------|---------------------------|----------------|----------|-----------|
+| "[TEST spec-031] TC001-002 — Botón de sol" (sin `dueDate`, sin `scheduledFor`) | `POST /activities` | `7c31c545-dbae-4b7a-816b-984fd258cdce` | TC-031-001, TC-031-002 | ✅ |
+| "[TEST spec-031] TC003 — Indicador fecha futura" (`scheduledFor`: 2026-08-17) | `POST /activities` | `1c3f1243-40c1-49d7-b41e-bc85abb7d1c1` | TC-031-003 | ✅ |
+| "[TEST spec-031] TC006-A — dueDate hoy" (`dueDate`: 2026-08-16) | `POST /activities` | `a20b02ae-b796-4a64-beea-47cd52043609` | TC-031-006 | ✅ |
+| "[TEST spec-031] TC006-B — scheduledFor hoy" (`scheduledFor`: 2026-08-16) | `POST /activities` | `c296353b-4f3e-4c6f-8921-214a35ef05a4` | TC-031-006 | ✅ |
+| "[TEST spec-031] TC007 — scheduledFor ayer" (`scheduledFor`: 2026-08-15) | `POST /activities` | `af3a7401-fd96-4fe9-ae2b-be192189c824` | TC-031-007 | ✅ |
+| "[TEST spec-031] TC008 — scheduledFor hoy + completed" (`scheduledFor`: 2026-08-16, `status: completed`) | `POST /activities` | `91c3b940-e154-4f46-aa16-a86dc7fc5233` | TC-031-008 | ✅ |
+| "[TEST spec-031] TC009 — scheduledFor hoy + deferUntil" (`scheduledFor`: 2026-08-16, `deferUntil`: 2026-08-17) | `POST /activities` | `7cdc26c1-f868-4898-aea3-ddb3b0f2f92f` | TC-031-009 | ✅ |
+| "[TEST spec-031] TC004 — Programar para desde formulario" (creada en vivo, `scheduledFor`: 2026-08-17 → limpiada a `null`) | Formulario "Nueva tarea" (quick-add, solo nombre) + edición vía `ActivityForm` (campo "Programar para") | `327abfb9-67b8-46da-826c-77c25d261fec` | TC-031-004, TC-031-005 | ✅ |
+| "[TEST spec-031] MCP-001 - scheduledFor futuro" (`scheduledFor`: 2026-08-17 → 2026-08-16 → `null`) | `create_activity` vía MCP, luego `update_activity` ×2 | `8a46d11c-2a7f-4d41-8625-e5c2c51194c8` | TC-MCP-031-001, TC-MCP-031-002 | ✅ |
+| "[MCP-031] nombre viejo" (`scheduledForToday` enviado pero descartado silenciosamente — ver Hallazgos de TC-MCP-031-003) | `create_activity` vía MCP | `5ae4922c-26bd-4285-8827-5063d73922f8` | TC-MCP-031-003 | ✅ |
+| Intento de `POST /activities` con `scheduledForToday: true` (nombre viejo, rechazado con `400`) | `POST /activities` directo | — (no se creó, rechazado) | TC-031-011 | — |
 
-**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`)
-**Fecha de la ronda:** {{fecha}}
+**Notas de preparación:**
+- TC-031-004 (crear desde el formulario) y TC-031-011 (POST directo con
+  `scheduledForToday`) no requieren datos previos — la propia actividad se
+  crea durante el caso.
+- TC-031-010 (migración de datos preexistentes) queda diferido: ya se
+  ejecutó y verificó en Fase 2 del spec, no se puede repetir de forma fiel
+  sin datos legacy reales adicionales.
+
+**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`) — confirmado, backend local levantado.
+**Fecha de la ronda:** 2026-08-16.
 
 ## Casos de prueba
 
@@ -34,8 +52,8 @@ API (`POST /activities`, sin `scheduledFor`).
 **Resultado esperado:** Con un solo clic el botón queda en estado **activo**
 (resaltado), el tooltip cambia a "Quitar de hoy", y la actividad pasa a tener
 `scheduledFor` = fecha de hoy (verificable con `GET /activities/{{id}}`).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado por REST: `scheduledFor: "2026-08-16"` (hoy) tras el clic. Sin observaciones del usuario.
 
 ### TC-031-002 — Botón de sol: desactiva `scheduledFor` con un clic (vuelve a `null`)
 **Precondición:** Continuación de TC-031-001 — actividad con `scheduledFor`
@@ -47,8 +65,8 @@ API (`POST /activities`, sin `scheduledFor`).
 **Resultado esperado:** El botón vuelve a estado inactivo, el tooltip vuelve
 a "Programar para hoy", y `GET /activities/{{id}}` confirma `scheduledFor:
 null`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado por REST: `scheduledFor: null` tras el segundo clic. Sin observaciones del usuario.
 
 ### TC-031-003 — Botón de sol: indicador de fecha futura
 **Precondición:** Actividad creada vía API con `scheduledFor` = mañana
@@ -61,8 +79,8 @@ null`.
 programada (no necesariamente en el mismo estado "activo" que "programada
 para hoy" — verificar el criterio visual acordado), y la card muestra el
 texto "Programada para el {fecha}" con la fecha de mañana.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** El indicador de fecha futura se mostró correctamente en la card de TC003. Sin observaciones del usuario.
 
 ### TC-031-004 — Formulario: campo "Programar para" crea la actividad con `scheduledFor`
 **Precondición:** Ninguna — se crea la actividad desde cero por UI.
@@ -76,8 +94,8 @@ se registra en "Datos de prueba" tras el paso 3.
 **Resultado esperado:** La actividad se crea con `scheduledFor` = la fecha
 elegida (verificable con `GET /activities/{{id}}`); no aparece en la vista
 Hoy hasta que llegue esa fecha.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador con autorización explícita del usuario. Creada "[TEST spec-031] TC004 — Programar para desde formulario" (`id: 327abfb9-67b8-46da-826c-77c25d261fec`) desde el formulario de edición (el modal de creación rápida solo pide nombre; el campo "Programar para" está en el formulario completo de edición). Confirmado por REST: `scheduledFor: "2026-08-17"`, y no aparece en `GET /activities/today`. Sin observaciones.
 
 ### TC-031-005 — Formulario: limpiar "Programar para" a `null`
 **Precondición:** Actividad con `scheduledFor` = mañana (creada en
@@ -89,8 +107,8 @@ TC-031-004 o vía API).
 3. Guardar.
 **Resultado esperado:** `GET /activities/{{id}}` confirma `scheduledFor:
 null`. El botón de sol de la card queda en estado inactivo.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador. Se reutilizó TC004 (id `327abfb9-67b8-46da-826c-77c25d261fec`), se limpió "Programar para" desde el formulario de edición y se guardó. La card dejó de mostrar el indicador "Programada para el..." y `GET /activities/:id` confirmó `scheduledFor: null`. Sin observaciones.
 
 ### TC-031-006 — TodayView: sección "Programadas por fecha" vs. sección de `scheduledFor`
 **Precondición:** Dos actividades creadas vía API:
@@ -105,8 +123,8 @@ programadas por fecha límite (`dueDate` = hoy); la actividad B aparece en la
 sección separada correspondiente a `scheduledFor` = hoy (el título de sección
 debe seguir siendo correcto tras el cambio de nombre del campo — verificar
 que ya no menciona el flag booleano).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador. En la vista Hoy, TC006-A aparece en la sección "Programadas por fecha" (junto a "[TEST spec-032] Waiting con dueDate hoy", real de otro spec) y TC006-B aparece en la sección separada "Agregadas para hoy". Ningún título menciona el flag booleano viejo (`scheduledForToday`). Sin observaciones.
 
 ### TC-031-007 — `scheduledFor` = ayer caduca sola, sin job (no aparece en Hoy)
 **Precondición:** Actividad creada vía API con `scheduledFor` = ayer, sin
@@ -119,8 +137,8 @@ que ya no menciona el flag booleano).
 además tiene `dueDate` vencido, sí debe aparecer en la vista Vencidas — no
 se prueba aquí, solo se confirma que Hoy no la muestra por la vía de
 `scheduledFor`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** TC007 (`scheduledFor` = ayer) no apareció entre las cards de la vista Hoy, y `GET /activities/today` tampoco la incluyó. Sin observaciones.
 
 ### TC-031-008 — `scheduledFor` = hoy + `status: completed` no aparece en Hoy
 **Precondición:** Actividad creada vía API con `scheduledFor` = hoy y
@@ -131,8 +149,8 @@ se prueba aquí, solo se confirma que Hoy no la muestra por la vía de
 2. Buscar la actividad por nombre.
 **Resultado esperado:** La actividad no aparece en ninguna sección de la
 vista Hoy.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** TC008 (`scheduledFor` hoy + `status: completed`) no apareció en ninguna sección de la vista Hoy (la vista mostró solo las 3 cards esperadas: TC006-A, la real de spec-032, y TC006-B). Confirmado también por `GET /activities/today`. Sin observaciones.
 
 ### TC-031-009 — `scheduledFor` = hoy + `deferUntil` futura no aparece (spec-030 manda)
 **Precondición:** Actividad creada vía API con `scheduledFor` = hoy y
@@ -145,8 +163,8 @@ esté implementado**; si no lo está todavía, marcar el caso como bloqueado en
 2. Buscar la actividad por nombre.
 **Resultado esperado:** La actividad no aparece en Hoy, aun teniendo
 `scheduledFor` = hoy, porque `deferUntil` todavía no llegó.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** spec-030 (`deferUntil`) ya está implementado (en `[TESTING]`), así que el caso no está bloqueado. TC009 (`scheduledFor` hoy + `deferUntil` mañana) no apareció en ninguna sección de Hoy, confirmado también por `GET /activities/today`. Sin observaciones.
 
 ### TC-031-010 — Migración de datos preexistentes: flags `true` no completados quedan programados para hoy
 **Precondición:** Este caso se ejecuta una única vez, el día de la
@@ -183,8 +201,8 @@ crearla.
 `scheduledForToday` se descarta silenciosamente por el `whitelist` del
 `ValidationPipe`. La actividad creada tiene `scheduledFor: null` y no
 aparece en la vista Hoy.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado (con corrección de expectativa)
+**Hallazgos:** La petición respondió `400` — `"property scheduledForToday should not exist"` — no `201` como decía el resultado esperado escrito arriba. Causa: el `ValidationPipe` global (`main.ts`) tiene `whitelist: true` **y** `forbidNonWhitelisted: true`; este último es el que produce el rechazo explícito en vez del descarte silencioso que el criterio original asumía (ver también nota de `CLAUDE.md` raíz sobre este mismo patrón, ya detectado repetidamente durante la implementación del paquete). Ningún dato quedó creado — comportamiento correcto y, si acaso, más seguro que el originalmente esperado (rechazo explícito de un campo obsoleto en vez de ignorarlo en silencio). Se aprueba el caso porque el sistema se comporta de forma segura y consistente con su configuración real; el texto del criterio de aceptación quedó desactualizado y debería corregirse en una futura edición del spec (no se edita en esta sesión, fuera del alcance de una ronda de pruebas).
 
 ### TC-MCP-031-001 — `create_activity` con `scheduledFor` (fecha futura)
 **Herramienta probada:** `create_activity` en `todo-api`
@@ -192,8 +210,8 @@ aparece en la vista Hoy.
 **Input de prueba:** `{ "name": "[MCP-031] prueba scheduledFor", "scheduledFor": "{{mañana ISO}}" }`
 **Output esperado:** La actividad se crea con `scheduledFor` = la fecha
 enviada; `get_today_activities` no la incluye hasta que llegue esa fecha.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** `create_activity` devolvió `scheduledFor: "2026-08-17"` (id `8a46d11c-2a7f-4d41-8625-e5c2c51194c8`). `get_today_activities` no la incluyó. Sin observaciones.
 
 ### TC-MCP-031-002 — `update_activity` con `scheduledFor: null` desprograma
 **Herramienta probada:** `update_activity` en `todo-api`
@@ -201,8 +219,8 @@ enviada; `get_today_activities` no la incluye hasta que llegue esa fecha.
 **Input de prueba:** `{ "id": "{{id}}", "scheduledFor": null }`
 **Output esperado:** La actividad queda con `scheduledFor: null` y
 desaparece de `get_today_activities`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Se reutilizó la actividad de TC-MCP-031-001, primero puesta en `scheduledFor` = hoy (confirmado por REST), luego `update_activity` con `scheduledFor: null` devolvió el campo limpio y la actividad dejó de aparecer en `get_today_activities`. Sin observaciones.
 
 ### TC-MCP-031-003 — `create_activity` con `scheduledForToday` (nombre viejo) falla
 **Herramienta probada:** `create_activity` en `todo-api`
@@ -213,8 +231,8 @@ contrato anterior tras el cambio.
 `scheduledForToday` — el parámetro es rechazado (error de validación del
 schema, no un `201` silencioso como en REST, porque la tool no tiene
 `whitelist`, tiene un schema explícito sin ese campo).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ❌ Fallido
+**Hallazgos:** Mismo hallazgo que `TC-MCP-030-004`: la tool **no** rechazó `scheduledForToday` — lo aceptó, creó la actividad con éxito (`id: 5ae4922c-26bd-4285-8827-5063d73922f8`) y descartó el campo silenciosamente (`scheduledFor: null`, ningún error). Confirma que el problema es **sistémico**, no aislado a `create_recurring_activity`: ningún schema de `mcp.service.ts` usa `.strict()`, así que Zod descarta cualquier clave no declarada del input en cualquier tool, en vez de rechazarla. Actualizado el hallazgo de `spec/backlog.md` para reflejar que afecta a las tools en general, no solo a una.
 
 ### TC-MCP-031-004 — `get_today_activities` describe correctamente su criterio
 **Herramienta probada:** `get_today_activities` en `todo-api`
@@ -223,10 +241,10 @@ schema, no un `201` silencioso como en REST, porque la tool no tiene
 al agente que describa qué hace `get_today_activities`).
 **Output esperado:** La descripción ya no menciona "scheduledForToday flag";
 describe el criterio como `dueDate` de hoy o `scheduledFor` = hoy.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Verificado vía `tools/list` del propio servidor MCP: la descripción es "Get activities scheduled for today (by dueDate or scheduledFor = today). Excludes deferred activities...", sin mención al flag booleano viejo. Sin observaciones.
 
 ## Resumen de la ronda
-- Aprobados: {{n}} — Fallidos: {{n}} — Pendientes: {{n}}
-- Hallazgos escalados a `spec/backlog.md`: {{lista o "ninguno"}}
-- Limpieza de datos de prueba: ⬜ Pendiente / ✅ Completada
+- Aprobados: 13 (TC-031-001 a 009, TC-031-011, TC-MCP-031-001, 002, 004) — Fallidos: 1 (TC-MCP-031-003) — Pendientes: 1 (TC-031-010, diferido — ya verificado en Fase 2 del spec, no repetible sin datos legacy reales)
+- Hallazgos escalados a `spec/backlog.md`: (1) confirmación de que ninguna tool MCP rechaza claves no declaradas — problema sistémico (`.strict()` ausente en todos los schemas de `mcp.service.ts`), ahora confirmado en dos tools distintas; (2) TC-031-011 tenía una expectativa desactualizada (esperaba `201`, la config real de `main.ts` con `forbidNonWhitelisted: true` produce `400`) — no requiere corrección de código, solo del texto del spec
+- Limpieza de datos de prueba: ✅ Completada (10 actividades verificadas 404 por REST tras el DELETE)

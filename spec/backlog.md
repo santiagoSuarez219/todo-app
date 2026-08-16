@@ -92,20 +92,30 @@
   `EmptyState` (o las vistas que lo consumen) sepa distinguir "sin datos" de
   "datos ocultos por diferimiento", fuera del scope de spec-030.
 
-- **`create_recurring_activity` no rechaza `deferUntil` con un error de
-  validación — lo acepta silenciosamente y descarta el campo.** El spec
-  esperaba (`TC-MCP-030-004`, criterio 2) que la tool MCP rechazara
-  `deferUntil` con `MCP error -32602`, igual que ocurre con un valor fuera
-  de enum (ej. `TC-MCP-029-003`). En la práctica, el schema Zod de
-  `create_recurring_activity` (`backend/src/mcp/mcp.service.ts`) no declara
-  `deferUntil` en su shape y **no usa `.strict()`**, así que Zod descarta
-  silenciosamente cualquier clave no declarada del input en vez de lanzar un
-  error — la plantilla se crea con éxito, simplemente sin persistir el
-  campo. Funcionalmente inofensivo (el campo nunca se guarda ni se hereda a
-  instancias), pero el agente no recibe ninguna señal de que el parámetro
-  fue ignorado. Detectado en la ronda manual de `test-030`
-  (`TC-MCP-030-004`, marcado `❌ Fallido` por este motivo). Corregirlo
-  implicaría agregar `.strict()` (o un `.refine()` equivalente) al shape de
-  la tool para que rechace explícitamente parámetros no declarados —
-  evaluar si aplica al resto de tools MCP del proyecto, no solo a esta,
-  antes de decidir el alcance del fix.
+- **Ninguna tool MCP rechaza claves no declaradas en su input — las
+  descarta silenciosamente en vez de dar un error de validación.**
+  Confirmado en dos tools distintas, por lo que es un problema **sistémico**
+  del servidor MCP, no aislado a una sola herramienta:
+  - `create_recurring_activity` no rechaza `deferUntil` (`TC-MCP-030-004`,
+    criterio 2): el spec esperaba `MCP error -32602`, igual que con un valor
+    fuera de enum (ej. `TC-MCP-029-003`), pero la plantilla se crea con
+    éxito y el campo simplemente no se persiste.
+  - `create_activity` no rechaza `scheduledForToday` (nombre viejo del
+    campo, `TC-MCP-031-003`): mismo patrón — la actividad se crea con éxito
+    y el campo se descarta sin aviso.
+
+  Causa raíz: ningún `server.tool(...)` de `backend/src/mcp/mcp.service.ts`
+  usa `.strict()` en su shape Zod, así que por defecto Zod descarta
+  cualquier clave no declarada del input en lugar de lanzar un error —
+  a diferencia del rechazo por **valor** inválido dentro de un campo sí
+  declarado (ej. `horizon` en `TC-MCP-029-003`), que si funciona porque ahí
+  el rechazo lo hace el propio `z.enum()`. Funcionalmente inofensivo en los
+  dos casos detectados (el campo descartado nunca se persiste ni se
+  hereda), pero el agente no recibe ninguna señal de que el parámetro fue
+  ignorado — un uso real del contrato viejo (`scheduledForToday`) pasaría
+  desapercibido. Detectado en las rondas manuales de `test-030`
+  (`TC-MCP-030-004`, `❌ Fallido`) y `test-031` (`TC-MCP-031-003`, `❌
+  Fallido`). Corregirlo implicaría agregar `.strict()` (o un `.refine()`
+  equivalente) a los shapes de todas las tools de escritura del servidor
+  MCP — evaluar el alcance completo (cuántas tools se ven afectadas) antes
+  de decidir el fix, no solo estas dos.
