@@ -1,4 +1,4 @@
-# spec-032 — [TESTING] Estado `waiting`: bloqueado por otra persona (`waitingFor`, `waitingSince`)
+# spec-032 — [DONE] Estado `waiting`: bloqueado por otra persona (`waitingFor`, `waitingSince`)
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -327,3 +327,16 @@ necesitaría leer y escribir para gestionar el estado.
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-17
+
+## Cierre de la ronda de pruebas (2026-08-16)
+
+- **Manuales:** 12/12 casos aprobados (`TC-032-001` a `TC-032-010`,
+  `TC-MCP-032-001`, `TC-MCP-032-002`) — la única ronda del paquete sin
+  fallos ni casos diferidos. Detalle completo en
+  `docs/testing/test-032-estado-waiting.md`.
+- **Automáticas:** confirmadas por `@tester` — `e2e-032-estado-waiting.e2e-spec.ts`
+  16/16, unit 105/105. Únicos fallos de la suite completa son 2
+  preexistentes y no relacionados (`app.e2e-spec.ts`, `auth.e2e-spec.ts`
+  TC-014).
+- Datos de prueba de la ronda eliminados y verificados `404` por API.
+- Spec marcado como `[DONE]`.
