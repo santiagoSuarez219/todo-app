@@ -177,10 +177,19 @@ export class ActivitiesService {
       energy,
       scheduledFor,
       deferUntil,
+      waitingFor,
+      waitingSince,
       recurrenceFrequency,
       recurrenceDays,
       recurrenceDayOfMonth,
     } = dto;
+
+    // spec-032: waitingFor/waitingSince only make sense with status ===
+    // 'waiting' — forced to null otherwise, even if the caller sent them
+    // (silent cleanup, not a 400 — same criterion as the removed
+    // sanitizeByType from spec-027). waitingSince defaults to today if the
+    // activity is born already waiting and none was given.
+    const isWaiting = status === ActivityStatus.WAITING;
 
     const activity = this.activitiesRepository.create({
       name,
@@ -191,6 +200,10 @@ export class ActivitiesService {
       energy,
       scheduledFor,
       deferUntil,
+      waitingFor: isWaiting ? (waitingFor ?? null) : null,
+      waitingSince: isWaiting
+        ? (waitingSince ?? this.toDateOnlyString(new Date()))
+        : null,
       recurrenceFrequency,
       recurrenceDays,
       recurrenceDayOfMonth,
@@ -258,6 +271,8 @@ export class ActivitiesService {
       energy,
       scheduledFor,
       deferUntil,
+      waitingFor,
+      waitingSince,
       recurrenceFrequency,
       recurrenceDays,
       recurrenceDayOfMonth,
@@ -328,6 +343,32 @@ export class ActivitiesService {
       activity.status !== ActivityStatus.COMPLETED
     ) {
       activity.completedAt = null;
+    }
+
+    // spec-032: waitingFor/waitingSince only make sense while status ===
+    // 'waiting'. Entering waiting (previousStatus wasn't already waiting)
+    // autocompletes waitingSince to today unless one was sent explicitly.
+    // Staying in waiting without touching status doesn't re-autocomplete —
+    // it only applies whatever the caller explicitly sent. Leaving waiting
+    // (or never being in it) forces both to null, silently discarding
+    // incoherent values instead of rejecting the call — same criterion as
+    // the removed sanitizeByType from spec-027.
+    if (activity.status === ActivityStatus.WAITING) {
+      const enteringWaiting = previousStatus !== ActivityStatus.WAITING;
+      if (waitingFor !== undefined) {
+        activity.waitingFor = waitingFor;
+      }
+      if (enteringWaiting) {
+        activity.waitingSince =
+          waitingSince !== undefined
+            ? waitingSince
+            : this.toDateOnlyString(new Date());
+      } else if (waitingSince !== undefined) {
+        activity.waitingSince = waitingSince;
+      }
+    } else {
+      activity.waitingFor = null;
+      activity.waitingSince = null;
     }
 
     // spec-028: "posponer" = had a dueDate already, and the new one is

@@ -59,8 +59,21 @@ de semántica (e.g. `2026-06-10` o, si el usuario da hora, `2026-06-10T09:00:00`
 `parentId` (subtareas) aplica a **cualquier** actividad, sin restricción.
 
 **Campos comunes:** `id`, `name`, `description`, `project`, `status`
-(`pending | in_progress | completed | cancelled | on_hold`), `priority`
+(`pending | in_progress | completed | cancelled | on_hold | waiting`), `priority`
 (`high | medium | low`), `energy` (`high | medium | low`).
+
+**`on_hold` vs. `waiting` — no son sinónimos.** `on_hold` es una pausa
+**decidida por el usuario**: no depende de nadie más, se retoma cuando él
+quiera. `waiting` es un **bloqueo por un tercero**: el usuario no puede
+avanzar hasta que otra persona o evento resuelva algo — el contador que no
+manda el documento, el proveedor que no responde. Si el motivo de la pausa
+es "estoy esperando a que X haga algo", es `waiting`, no `on_hold`. Al mover
+una actividad a `waiting`, pregunta **a quién** se espera y guárdalo en
+`waitingFor` (texto libre, opcional pero muy recomendable). `waitingSince`
+(fecha) se autocompleta a hoy si no la envías; si el usuario dice "esto
+espera desde el lunes", envíala explícita. Ambos campos se limpian solos al
+salir de `waiting` — nunca los envíes con otro `status`, se descartan en
+silencio sin error.
 
 `scheduledFor` (fecha, opcional) **programa** una actividad para aparecer en
 `get_today_activities` ese día, venza o no por `dueDate`. No es exclusivo de
@@ -283,6 +296,8 @@ Al final, muestra un **resumen completo** y pide aprobación antes de ejecutar.
 | "Cancela las próximas instancias de X"      | `get_activity_instances` para ubicar la plantilla, luego `cancel_future_instances(templateId)` |
 | "¿Qué tengo diferido?" / "¿qué está oculto?" | `get_deferred_activities` — ordenadas por `deferUntil` ascendente |
 | "No la veo hasta que confirmen X"           | `update_activity` con `deferUntil: <fecha>` — confirma antes de aplicar |
+| "¿Qué tengo en espera?" / "¿qué estoy esperando de X?" | `get_activities_by_status(waiting)` — presenta `waitingFor` y hace cuántos días espera (hoy − `waitingSince`) |
+| "Esto quedó esperando a que el proveedor responda" | `update_activity` con `status: waiting` y `waitingFor: "<proveedor>"` — pregunta a quién si no lo dijo |
 
 Presenta listas con: título · prioridad · fecha · estado.
 

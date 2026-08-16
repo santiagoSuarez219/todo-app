@@ -114,6 +114,14 @@ export class Activity {
   @Column({ type: 'integer', default: 0 })
   postponementCount: number;
 
+  // spec-032: solo tienen sentido con status === 'waiting'; el servicio los
+  // limpia a null en cualquier otro estado.
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  waitingFor: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  waitingSince: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

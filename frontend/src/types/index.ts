@@ -22,6 +22,8 @@ export const ActivityStatus = {
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   ON_HOLD: 'on_hold',
+  // spec-032: coexiste con ON_HOLD, no lo reemplaza.
+  WAITING: 'waiting',
 } as const;
 export type ActivityStatus = (typeof ActivityStatus)[keyof typeof ActivityStatus];
 
@@ -89,6 +91,10 @@ export interface Activity {
   completedAt: string | null;
   /** Derivado en el backend (spec-028) — nunca se envía en un DTO. */
   postponementCount: number;
+  /** spec-032: solo tienen sentido con status === 'waiting'; el backend los
+   * limpia a null en cualquier otro estado. */
+  waitingFor: string | null;
+  waitingSince: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -116,6 +122,8 @@ export interface CreateActivityDto {
   energy?: Energy;
   scheduledFor?: string | null;
   deferUntil?: string | null;
+  waitingFor?: string | null;
+  waitingSince?: string | null;
   recurrenceFrequency?: RecurrenceFrequency | null;
   recurrenceDays?: WeekDay[];
   recurrenceDayOfMonth?: number;

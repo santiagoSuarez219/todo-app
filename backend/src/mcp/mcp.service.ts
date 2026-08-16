@@ -264,9 +264,18 @@ export class McpService {
           .optional()
           .describe('Priority level (default: medium)'),
         status: z
-          .enum(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold'])
+          .enum([
+            'pending',
+            'in_progress',
+            'completed',
+            'cancelled',
+            'on_hold',
+            'waiting',
+          ])
           .optional()
-          .describe('Initial status (default: pending)'),
+          .describe(
+            "Initial status (default: pending). 'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
+          ),
         energy: z
           .enum(['high', 'medium', 'low'])
           .optional()
@@ -287,6 +296,18 @@ export class McpService {
           .optional()
           .describe(
             'Defer this activity: hidden from active views (today, tomorrow, this week, overdue, without-project) until this date (ISO 8601 date, e.g. 2026-04-20)',
+          ),
+        waitingFor: z
+          .string()
+          .optional()
+          .describe(
+            "Who/what this is blocked on — only meaningful when status is 'waiting'",
+          ),
+        waitingSince: z
+          .string()
+          .optional()
+          .describe(
+            "Date since when this has been waiting (ISO 8601) — only meaningful when status is 'waiting'. Defaults to today if omitted.",
           ),
         description: z.string().optional(),
       },
@@ -314,8 +335,18 @@ export class McpService {
         dueDate: z.string().nullable().optional(),
         priority: z.enum(['high', 'medium', 'low']).optional(),
         status: z
-          .enum(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold'])
-          .optional(),
+          .enum([
+            'pending',
+            'in_progress',
+            'completed',
+            'cancelled',
+            'on_hold',
+            'waiting',
+          ])
+          .optional()
+          .describe(
+            "'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
+          ),
         energy: z.enum(['high', 'medium', 'low']).optional(),
         parentId: z
           .string()
@@ -335,6 +366,20 @@ export class McpService {
           .nullable()
           .optional()
           .describe('Set or clear (null) the defer date (ISO 8601 date)'),
+        waitingFor: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "Who/what this is blocked on — only meaningful when status is 'waiting'. Set null to clear.",
+          ),
+        waitingSince: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "Date since when this has been waiting (ISO 8601) — only meaningful when status is 'waiting'. Set null to clear.",
+          ),
         recurrenceFrequency: z
           .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
           .nullable()
@@ -548,7 +593,14 @@ export class McpService {
       'Get activities filtered by status',
       {
         status: z
-          .enum(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold'])
+          .enum([
+            'pending',
+            'in_progress',
+            'completed',
+            'cancelled',
+            'on_hold',
+            'waiting',
+          ])
           .describe('Activity status'),
         ...paginationSchema,
       },

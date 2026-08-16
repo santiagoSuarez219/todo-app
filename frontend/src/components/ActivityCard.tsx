@@ -98,6 +98,14 @@ function BanIcon() {
   );
 }
 
+function ClockIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
+    </svg>
+  );
+}
+
 function EyeOffIcon() {
   return (
     <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -122,7 +130,8 @@ const STATUS_OPTIONS: { value: ActivityStatus; label: string; dot: string }[] = 
   { value: 'pending', label: 'Pendiente', dot: 'bg-yellow-400' },
   { value: 'in_progress', label: 'En progreso', dot: 'bg-blue-500' },
   { value: 'completed', label: 'Completada', dot: 'bg-green-500' },
-  { value: 'on_hold', label: 'En espera', dot: 'bg-purple-500' },
+  { value: 'on_hold', label: 'En pausa', dot: 'bg-purple-500' },
+  { value: 'waiting', label: 'Esperando', dot: 'bg-pink-500' },
 ];
 
 // ─── StatusDropdown ───────────────────────────────────────────────────────────
@@ -324,6 +333,17 @@ function fmtDateOnly(dateOnly: string) {
     month: 'short',
     year: 'numeric',
   });
+}
+
+/** Días transcurridos desde un `YYYY-MM-DD` (ej. `waitingSince`) hasta hoy,
+ * parseado con campos locales por el mismo motivo que `fmtDateOnly`. */
+function daysSinceDateOnly(dateOnly: string): number {
+  const [year, month, day] = dateOnly.split('-').map(Number);
+  const since = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  since.setHours(0, 0, 0, 0);
+  return Math.round((today.getTime() - since.getTime()) / 86_400_000);
 }
 
 function toInputValue(dateStr: string, withTime: boolean) {
@@ -758,6 +778,21 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           <InlinePriorityEditor activity={activity} />
           <EnergyIndicator energy={activity.energy} />
         </div>
+
+        {/* ── Row 4.5: chip "Esperando a…" — solo con status: waiting ── */}
+        {activity.status === 'waiting' && (
+          <div className="flex flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800 w-fit">
+              <ClockIcon />
+              {activity.waitingFor
+                ? `Esperando a ${activity.waitingFor}`
+                : 'Esperando'}
+              {activity.waitingSince && (
+                <> · hace {daysSinceDateOnly(activity.waitingSince)} días</>
+              )}
+            </span>
+          </div>
+        )}
 
         {/* ── Row 5: fecha ── */}
         {(activity.dueDate || isDeferred || isScheduledFuture) && (

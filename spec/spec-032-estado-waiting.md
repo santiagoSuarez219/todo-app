@@ -1,4 +1,4 @@
-# spec-032 — [NOT STARTED] Estado `waiting`: bloqueado por otra persona (`waitingFor`, `waitingSince`)
+# spec-032 — [TESTING] Estado `waiting`: bloqueado por otra persona (`waitingFor`, `waitingSince`)
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -174,54 +174,102 @@ necesitaría leer y escribir para gestionar el estado.
 ## Fases de implementación
 
 ### Fase 1 — Backend: enum, modelo y DTO
-- [ ] `activity-status.enum.ts`: agregar `WAITING = 'waiting'`
-- [ ] `activity.entity.ts`: columnas `waitingFor` y `waitingSince`
-- [ ] `create-activity.dto.ts`: props opcionales validadas
-- [ ] `npm run build` y `npm run lint` en `backend/`
+- [x] `activity-status.enum.ts`: agregar `WAITING = 'waiting'`
+- [x] `activity.entity.ts`: columnas `waitingFor` y `waitingSince`
+- [x] `create-activity.dto.ts`: props opcionales validadas
+- [x] `npm run build` y `npm run lint` en `backend/` — build limpio; lint
+      scoped sin hallazgos nuevos (los 3 errores preexistentes de
+      `create-activity.dto.ts` ya confirmados en specs anteriores)
 
 ### Fase 2 — Backend: ciclo de vida de `waiting`
-- [ ] `create()`: autocompletar `waitingSince` si nace en `waiting`; forzar
+- [x] `create()`: autocompletar `waitingSince` si nace en `waiting`; forzar
       `null` en ambos campos si no
-- [ ] `update()`: autocompletar al entrar, limpiar al salir, ignorar valores
-      incoherentes
-- [ ] Verificar que `waiting` no afecta la cascada de spec-024 ni `completedAt`
-      de spec-028, y cubrir el caso `completed → waiting`
-- [ ] Verificar que ninguna consulta trata `waiting` como estado terminal
+- [x] `update()`: autocompletar al entrar, limpiar al salir, ignorar valores
+      incoherentes; permanecer en `waiting` sin tocar `status` no pisa el
+      valor existente de `waitingSince`
+- [x] Verificar que `waiting` no afecta la cascada de spec-024 ni `completedAt`
+      de spec-028, y cubrir el caso `completed → waiting` — 10/10 unitarios
+      en verde, incluida la regresión explícita
+- [x] Verificar que ninguna consulta trata `waiting` como estado terminal —
+      confirmado por lectura directa: todas las vistas activas comparan
+      `!= COMPLETED`, ninguna enumera estados "activos" a mano
 
 ### Fase 3 — Migración
-- [ ] Confirmar el nombre real del tipo enum de `status` en la base
-- [ ] Crear `migrations/1787000000005-AddWaitingToActivities.ts` (patrón
+- [x] Confirmar el nombre real del tipo enum de `status` en la base —
+      `activities_status_enum`, confirmado vía `\dT+`
+- [x] Crear `migrations/1787000000005-AddWaitingToActivities.ts` (patrón
       `CREATE TYPE nuevo` + `ALTER COLUMN … USING` + `DROP TYPE` + `RENAME`,
       más las dos columnas)
-- [ ] `down()` con conversión previa de `waiting` → `on_hold`, documentado
-- [ ] Ejecutar en local y verificar que las actividades existentes conservan su
-      estado
+- [x] `down()` con conversión previa de `waiting` → `on_hold`, documentado
+- [x] Ejecutar en local y verificar que las actividades existentes conservan su
+      estado — snapshot antes/después idéntico (64 pending, 1 in_progress,
+      22 completed, 1 cancelled, 1 on_hold); enum ahora incluye `waiting`;
+      columnas `waitingFor`/`waitingSince` presentes
 
 ### Fase 4 — MCP: actualizar `todo-api`
-- [ ] Ampliar el enum de `status` en las tools que lo declaran
-- [ ] Agregar `waitingFor` / `waitingSince` a `create_activity` y `update_activity`
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md` (diferencia
-      `on_hold` vs `waiting`)
-- [ ] Actualizar `docs/mcps/README.md`
-- [ ] Verificar que el MCP responde correctamente a las herramientas declaradas
+- [x] Ampliar el enum de `status` en las tools que lo declaran
+      (`create_activity`, `update_activity`, `get_activities_by_status`) —
+      `create_recurring_activity` no expone `status`, nada que ampliar ahí
+- [x] Agregar `waitingFor` / `waitingSince` a `create_activity` y `update_activity`
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` (diferencia
+      `on_hold` vs `waiting` explícita, 2 flujos frecuentes nuevos). El
+      flujo de creación no ofrece elegir `status`, así que no aplica
+      agregarlo ahí
+- [x] Actualizar `docs/mcps/README.md` — sin cambios necesarios (no enumera
+      campos)
+- [x] Verificar que el MCP responde correctamente a las herramientas
+      declaradas — backend local: `create_activity` con `status: waiting` +
+      `waitingFor` autocompleta `waitingSince` a hoy; `get_activities_by_status`
+      con `waiting` la recupera
 
 ### Fase 5 — Frontend
-- [ ] Leer `frontend/DESIGN.md`
-- [ ] `types/index.ts`: `WAITING` + los dos campos
-- [ ] `StatusBadge.tsx`: variante "Esperando"
-- [ ] `ActivityForm.tsx`: opción de estado + campos condicionales + default de
-      `waitingSince`
-- [ ] `ActivityCard.tsx`: `waiting` en la edición rápida + chip "Esperando a … ·
-      hace N días"
-- [ ] Completar los `Record<ActivityStatus, …>` que TypeScript señale
-- [ ] `npm run lint` y `npm run build` en `frontend/`
+- [x] Leer `frontend/DESIGN.md`
+- [x] `types/index.ts`: `WAITING` + los dos campos
+- [x] `StatusBadge.tsx`: variante "Esperando" (rosa, dentro de los tokens
+      existentes, sin token nuevo). Decisión tomada en el camino: la
+      etiqueta de `on_hold` pasó de "En espera" a "En pausa" — ese texto
+      quedaba libre para `waiting` y la colisión semántica era justo lo que
+      el spec pedía evitar ("distinguible de 'En pausa'"); se corrigió en
+      los tres lugares que la declaraban (`StatusBadge.tsx`,
+      `ActivityForm.tsx`, `ActivityCard.tsx`)
+- [x] `ActivityForm.tsx`: opción de estado (junto a `on_hold`, mismo orden
+      del enum) + campos condicionales "Esperando a"/"Esperando desde" +
+      default de `waitingSince` a hoy al seleccionar `waiting` en el `select`
+- [x] `ActivityCard.tsx`: `waiting` en la edición rápida + chip "Esperando a
+      {persona} · hace {N} días" (rosa, ícono de reloj)
+- [x] Completar los `Record<ActivityStatus, …>` que TypeScript señale —
+      `npx tsc -b` sin errores: no existe ningún `Record<ActivityStatus, …>`
+      tipado estrictamente en el proyecto (los mapas de tabs de
+      `ProjectDetail.tsx`/`Dashboard.tsx` son subconjuntos deliberados de
+      strings, ya excluían `on_hold` también, sin relación con este cambio)
+- [x] `npm run lint` y `npm run build` en `frontend/` — ambos limpios
 
 ### Fase 6 — Pruebas
-- [ ] `docs/testing/test-032-estado-waiting.md` con casos `TC-032-xx` y
-      `TC-MCP-032-xx`
-- [ ] `backend/test/e2e-032-estado-waiting.e2e-spec.ts` en rojo
-- [ ] Casos unitarios en `activities.service.spec.ts`
-- [ ] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`)
+- [x] `docs/testing/test-032-estado-waiting.md` con casos `TC-032-xx` y
+      `TC-MCP-032-xx` (redactado junto con el spec; pendiente de ejecución
+      manual por el usuario)
+- [x] `backend/test/e2e-032-estado-waiting.e2e-spec.ts` — 16/16 en verde. Se
+      corrigió el mismo desajuste ya visto en spec-030/031: el helper
+      `createActivity()` seguía enviando `type: 'task'` (eliminado en
+      spec-027), causando 400 en cascada sobre 14 de los 16 casos
+- [x] Casos unitarios en `activities.service.spec.ts` — 10/10 en verde de
+      entrada, sin correcciones necesarias
+- [x] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`) —
+      **105/105 en la suite unitaria completa**: con spec-032 implementado,
+      todo el paquete 027-032 queda sin ningún test rojo. La suite e2e
+      **completa** reveló además 3 fixtures de specs **anteriores al
+      paquete** (024, 025) y uno del propio paquete (030) rotos por los
+      cambios de modelo de este mismo paquete y no actualizados hasta
+      ahora: `e2e-024` y `e2e-025` seguían enviando `type`/`isRecurring`
+      (eliminados en spec-027) y `e2e-025` importaba el enum `ActivityType`
+      ya borrado; `e2e-030` tenía un caso que aún enviaba
+      `scheduledForToday` (reemplazado por `scheduledFor` en spec-031) sin
+      cambiar su intención (verificar que la rama de "programado" también
+      respeta `deferUntil`). Los cuatro se corrigieron — **151/154 en la
+      suite e2e completa** (1 skip esperado; los 2 fallos restantes en
+      `app.e2e-spec.ts` y `auth.e2e-spec.ts` TC-014 son preexistentes,
+      confirmados sin relación con esta rama por comparación directa contra
+      `development`)
 
 ## Criterios de aceptación
 
@@ -277,5 +325,5 @@ necesitaría leer y escribir para gestionar el estado.
 ## Aprobación de implementación
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{fecha}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-17

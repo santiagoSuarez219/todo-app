@@ -85,6 +85,25 @@ export class CreateActivityDto {
   @IsOptional()
   deferUntil?: string | null;
 
+  @ApiPropertyOptional({
+    example: 'Contador',
+    description:
+      "Who/what this activity is blocked on — only meaningful when status is 'waiting'. Ignored (not saved) for any other status.",
+  })
+  @IsString()
+  @MaxLength(255)
+  @IsOptional()
+  waitingFor?: string | null;
+
+  @ApiPropertyOptional({
+    example: '2026-04-10',
+    description:
+      "Date since when this activity has been waiting — only meaningful when status is 'waiting'. Defaults to today if omitted when entering waiting.",
+  })
+  @IsDateString()
+  @IsOptional()
+  waitingSince?: string | null;
+
   // ─── Recurrence ─────────────────────────────────────────────────────────────
 
   @ApiPropertyOptional({

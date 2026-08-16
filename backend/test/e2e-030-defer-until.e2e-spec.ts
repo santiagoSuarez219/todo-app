@@ -241,10 +241,14 @@ describe('spec-030 — Diferir actividades: deferUntil (e2e)', () => {
       expect(idsOf(response.body.data)).toContain(activity.id);
     });
 
-    it('AC: the deferred-future filter also applies to the scheduledForToday branch, not just the dueDate branch', async () => {
+    it('AC: the deferred-future filter also applies to the scheduledFor branch, not just the dueDate branch', async () => {
+      // scheduledForToday (boolean) fue reemplazado por scheduledFor (fecha)
+      // en spec-031 — este caso ya existía antes de ese cambio y quedó
+      // desactualizado; ajustado para usar el campo real, sin cambiar su
+      // intención (la rama de scheduledFor también debe respetar deferUntil).
       const deferred = await createActivity({
-        name: '[E2E-030] Today — scheduledForToday + deferUntil futuro',
-        scheduledForToday: true,
+        name: '[E2E-030] Today — scheduledFor + deferUntil futuro',
+        scheduledFor: deferDateOnly(0),
         deferUntil: deferDateOnly(5),
       });
 

@@ -131,7 +131,6 @@ describe('spec-032 — Estado `waiting` (e2e)', () => {
       .set('Cookie', authCookies)
       .send({
         name: 'Actividad de prueba spec-032',
-        type: 'task',
         ...overrides,
       })
       .expect(expectedStatus);

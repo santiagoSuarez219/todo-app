@@ -1,3 +1,4 @@
+import type { ChangeEvent } from 'react';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,6 +28,8 @@ const schema = z.object({
   dueDate: z.string().nullish(),
   deferUntil: z.string().nullish(),
   scheduledFor: z.string().nullish(),
+  waitingFor: z.string().nullish(),
+  waitingSince: z.string().nullish(),
   // ── Recurrence — `isRecurring` es estado local del formulario, no viaja al
   // DTO: al enviar, `true` se traduce en `recurrenceFrequency` y `false` en
   // `recurrenceFrequency: null` (spec-027) ──
@@ -75,7 +78,8 @@ const STATUS_LABELS: Record<string, string> = {
   in_progress: 'En progreso',
   completed: 'Completada',
   cancelled: 'Cancelada',
-  on_hold: 'En espera',
+  on_hold: 'En pausa',
+  waiting: 'Esperando',
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -130,6 +134,8 @@ export default function ActivityForm({
         dueDate: initial?.dueDate ? initial.dueDate.slice(0, 10) : '',
         deferUntil: initial?.deferUntil ? initial.deferUntil.slice(0, 10) : '',
         scheduledFor: initial?.scheduledFor ? initial.scheduledFor.slice(0, 10) : '',
+        waitingFor: initial?.waitingFor ?? '',
+        waitingSince: initial?.waitingSince ? initial.waitingSince.slice(0, 10) : '',
         isRecurring: initial?.recurrenceFrequency != null,
         recurrenceFrequency: initial?.recurrenceFrequency ?? undefined,
         recurrenceDays: (initial?.recurrenceDays as WeekDay[] | null) ?? [],
@@ -143,6 +149,17 @@ export default function ActivityForm({
   const recurrenceDays    = useWatch({ control, name: 'recurrenceDays' }) ?? [];
   const showDayPicker     = recurrenceFreq === RecurrenceFrequency.WEEKLY || recurrenceFreq === RecurrenceFrequency.BIWEEKLY;
   const showDayOfMonth    = recurrenceFreq === RecurrenceFrequency.MONTHLY;
+
+  const watchedStatus = useWatch({ control, name: 'status' });
+  const isWaiting = watchedStatus === ActivityStatus.WAITING;
+
+  function handleStatusChange(e: ChangeEvent<HTMLSelectElement>) {
+    if (e.target.value === ActivityStatus.WAITING && !initial?.waitingSince) {
+      const today = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setValue('waitingSince', `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`);
+    }
+  }
 
   function toggleDay(day: WeekDay) {
     const current = recurrenceDays as WeekDay[];
@@ -164,6 +181,11 @@ export default function ActivityForm({
       dueDate: values.dueDate || null,
       deferUntil: values.deferUntil || null,
       scheduledFor: values.scheduledFor || null,
+      // El backend limpia estos dos campos si el status no es 'waiting'
+      // (spec-032) — se envían igual, sin condicionarlos aquí, para no
+      // duplicar esa regla en el cliente.
+      waitingFor: values.waitingFor || null,
+      waitingSince: values.waitingSince || null,
     };
 
     if (values.isRecurring) {
@@ -220,7 +242,14 @@ export default function ActivityForm({
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className={labelCls}>Estado</label>
-          <select {...register('status')} className={inputCls}>
+          <select
+            {...register('status')}
+            onChange={(e) => {
+              register('status').onChange(e);
+              handleStatusChange(e);
+            }}
+            className={inputCls}
+          >
             {Object.values(ActivityStatus).map((s) => (
               <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
             ))}
@@ -243,6 +272,28 @@ export default function ActivityForm({
           </select>
         </div>
       </div>
+
+      {/* ── Esperando a / Esperando desde — solo con status: waiting ── */}
+      {isWaiting && (
+        <div className="grid grid-cols-2 gap-3 border border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/10 rounded-lg p-3">
+          <div>
+            <label className={labelCls}>Esperando a</label>
+            <input
+              {...register('waitingFor')}
+              className={inputCls}
+              placeholder="¿Quién o qué? (opcional)"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Esperando desde</label>
+            <input
+              type="date"
+              {...register('waitingSince')}
+              className={inputCls}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Fecha límite / Programar para / Diferir hasta ── */}
       <div className="grid grid-cols-3 gap-3">
