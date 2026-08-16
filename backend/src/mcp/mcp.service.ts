@@ -133,6 +133,12 @@ export class McpService {
           .enum(['active', 'inactive', 'paused', 'completed'])
           .optional()
           .describe('Initial status (default: active)'),
+        horizon: z
+          .enum(['now', 'next', 'later', 'someday'])
+          .optional()
+          .describe(
+            'Strategic time horizon (default: next) — independent of status',
+          ),
         startDate: z
           .string()
           .describe('Start date in ISO 8601 format (e.g. 2026-04-13)'),
@@ -165,6 +171,10 @@ export class McpService {
           .enum(['active', 'inactive', 'paused', 'completed'])
           .optional()
           .describe('New status'),
+        horizon: z
+          .enum(['now', 'next', 'later', 'someday'])
+          .optional()
+          .describe('New strategic time horizon — independent of status'),
         startDate: z.string().optional().describe('New start date (ISO 8601)'),
         endDate: z
           .string()

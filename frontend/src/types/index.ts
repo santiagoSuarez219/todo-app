@@ -8,6 +8,14 @@ export const ProjectStatus = {
 } as const;
 export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus];
 
+export const ProjectHorizon = {
+  NOW: 'now',
+  NEXT: 'next',
+  LATER: 'later',
+  SOMEDAY: 'someday',
+} as const;
+export type ProjectHorizon = (typeof ProjectHorizon)[keyof typeof ProjectHorizon];
+
 export const ActivityStatus = {
   PENDING: 'pending',
   IN_PROGRESS: 'in_progress',
@@ -48,6 +56,7 @@ export interface Project {
   id: string;
   name: string;
   status: ProjectStatus;
+  horizon: ProjectHorizon;
   startDate: string;
   endDate: string | null;
   createdAt: string;
@@ -86,6 +95,7 @@ export interface Activity {
 export interface CreateProjectDto {
   name: string;
   status?: ProjectStatus;
+  horizon?: ProjectHorizon;
   startDate: string;
   endDate?: string | null;
 }

@@ -8,6 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ProjectStatus } from '../../common/enums/project-status.enum';
+import { ProjectHorizon } from '../../common/enums/project-horizon.enum';
 
 export class CreateProjectDto {
   @ApiProperty({ example: 'Mi proyecto', maxLength: 255 })
@@ -20,6 +21,15 @@ export class CreateProjectDto {
   @IsEnum(ProjectStatus)
   @IsOptional()
   status?: ProjectStatus;
+
+  @ApiPropertyOptional({
+    enum: ProjectHorizon,
+    default: ProjectHorizon.NEXT,
+    description: 'Horizonte temporal/estratégico del proyecto',
+  })
+  @IsEnum(ProjectHorizon)
+  @IsOptional()
+  horizon?: ProjectHorizon;
 
   @ApiProperty({ example: '2026-04-13' })
   @IsDateString()

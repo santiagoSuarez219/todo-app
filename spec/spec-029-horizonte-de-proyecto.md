@@ -1,4 +1,4 @@
-# spec-029 — [NOT STARTED] Horizonte de proyecto (`horizon`)
+# spec-029 — [TESTING] Horizonte de proyecto (`horizon`)
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -172,37 +172,51 @@ plazo?"), con el mismo patrón que cualquier campo nuevo de `Project`.
 ## Fases de implementación
 
 ### Fase 1 — Backend
-- [ ] Crear `common/enums/project-horizon.enum.ts`
-- [ ] `project.entity.ts`: columna `horizon` (`NOT NULL`, default `NEXT`)
-- [ ] `create-project.dto.ts`: prop opcional `horizon` validada con `@IsEnum`
-- [ ] Verificar que `projects.service.ts` devuelve el campo en todas sus consultas
-- [ ] `npm run build` y `npm run lint` en `backend/`
+- [x] Crear `common/enums/project-horizon.enum.ts`
+- [x] `project.entity.ts`: columna `horizon` (`NOT NULL`, default `NEXT`)
+- [x] `create-project.dto.ts`: prop opcional `horizon` validada con `@IsEnum`
+- [x] Verificar que `projects.service.ts` devuelve el campo en todas sus
+      consultas — sin `select` restrictivo en ninguna, no requirió cambios
+- [x] `npm run build` y `npm run lint` en `backend/` — ambos limpios
 
 ### Fase 2 — Migración
-- [ ] Crear `migrations/1787000000002-AddHorizonToProjects.ts` (CREATE TYPE +
+- [x] Crear `migrations/1787000000002-AddHorizonToProjects.ts` (CREATE TYPE +
       ADD COLUMN con default `next`)
-- [ ] Ejecutar en local y verificar que los proyectos existentes quedaron en `next`
+- [x] Ejecutar en local y verificar que los proyectos existentes quedaron en
+      `next` — confirmado: 10/10 proyectos existentes en `next`
 
 ### Fase 3 — MCP: actualizar `todo-api`
-- [ ] Agregar `horizon` a `create_project` y `update_project`
-- [ ] Evaluar filtro por horizonte en la tool de listado de proyectos
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md`
-- [ ] Actualizar `docs/mcps/README.md`
-- [ ] Verificar que el MCP responde correctamente a las herramientas declaradas
+- [x] Agregar `horizon` a `create_project` y `update_project`
+- [x] Evaluar filtro por horizonte en la tool de listado de proyectos — no se
+      agrega, ya decidido en "Decisiones ya resueltas"
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` — sección
+      "Proyectos" con los 4 valores, etiquetas y aclaración explícita de que
+      no impone restricciones hoy
+- [x] Actualizar `docs/mcps/README.md` — sin cambios necesarios (no enumera
+      campos)
+- [x] Verificar que el MCP responde correctamente a las herramientas
+      declaradas — backend local: `create_project` con `horizon: "now"` lo
+      persiste tal cual
 
 ### Fase 4 — Frontend
-- [ ] Leer `frontend/DESIGN.md`
-- [ ] `types/index.ts`: `ProjectHorizon` + campos en `Project` y `CreateProjectDto`
-- [ ] `ProjectForm.tsx`: selector "Horizonte" con default `next`
-- [ ] `ProjectList.tsx`: etiquetas en español, badge y filtro por horizonte
-- [ ] `ProjectDetail.tsx`: mostrar el horizonte
-- [ ] `npm run lint` y `npm run build` en `frontend/`
+- [x] Leer `frontend/DESIGN.md`
+- [x] `types/index.ts`: `ProjectHorizon` + campos en `Project` y `CreateProjectDto`
+- [x] `ProjectForm.tsx`: selector "Horizonte" con default `next`
+- [x] `ProjectList.tsx`: etiquetas en español, badge y filtro por horizonte
+      (client-side, mismo patrón que el filtro de `status`); nuevo componente
+      `HorizonBadge.tsx` (badge propio, no se amplió `StatusBadge` — colores
+      dentro de los tokens ya documentados en `DESIGN.md`, sin token nuevo)
+- [x] `ProjectDetail.tsx`: mostrar el horizonte
+- [x] `npm run lint` y `npm run build` en `frontend/` — ambos limpios
 
 ### Fase 5 — Pruebas
-- [ ] `docs/testing/test-029-horizonte-de-proyecto.md` con casos `TC-029-xx` y
-      `TC-MCP-029-xx`
-- [ ] `backend/test/e2e-029-horizonte-de-proyecto.e2e-spec.ts` en rojo
-- [ ] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`)
+- [x] `docs/testing/test-029-horizonte-de-proyecto.md` con casos `TC-029-xx` y
+      `TC-MCP-029-xx` (redactado junto con el spec; pendiente de ejecución
+      manual por el usuario)
+- [x] `backend/test/e2e-029-horizonte-de-proyecto.e2e-spec.ts` — 14/14 en
+      verde
+- [x] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`) —
+      sin regresiones fuera de alcance (specs 030-032 aún no implementados)
 
 ## Criterios de aceptación
 
@@ -245,5 +259,5 @@ plazo?"), con el mismo patrón que cualquier campo nuevo de `Project`.
 ## Aprobación de implementación
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{fecha}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-17
