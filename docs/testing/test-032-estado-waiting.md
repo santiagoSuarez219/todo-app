@@ -15,20 +15,28 @@
 
 | Recurso | Endpoint de creación | Identificador | Usado en | Eliminado |
 |---|---|---|---|---|
-| Actividad "Esperar factura contador" (`pending`, sin `dueDate`) | `POST /activities` | `{{id}}` | TC-032-001, TC-032-005 | ⬜ |
-| Actividad "Esperar respuesta proveedor" (`pending`, sin `dueDate`) | `POST /activities` | `{{id}}` | TC-032-002 | ⬜ |
-| Actividad "Esperar sin decir a quién" (`pending`, sin `dueDate`) | `POST /activities` | `{{id}}` | TC-032-003 | ⬜ |
-| Actividad "En pausa por decisión propia" (`on_hold`) | `POST /activities` | `{{id}}` | TC-032-004, TC-032-009 | ⬜ |
-| Actividad "Waiting con dueDate hoy" (`waiting`, `dueDate` = hoy) | `POST /activities` | `{{id}}` | TC-032-008a | ⬜ |
-| Actividad "Waiting vencida" (`waiting`, `dueDate` = hace 5 días) | `POST /activities` | `{{id}}` | TC-032-008b | ⬜ |
-| Actividad "Comparar badges" (`waiting`, `waitingFor` = "El banco") | `POST /activities` | `{{id}}` | TC-032-006, TC-032-007 | ⬜ |
-| Actividad "Edición rápida desde card" (`pending`) | `POST /activities` | `{{id}}` | TC-032-010 | ⬜ |
-| Actividad "[TEST spec-032] MCP - waiting" (creada por el agente vía `update_activity`/`create_activity`) | MCP `create_activity` / `update_activity` | `{{id}}` | TC-MCP-032-001, TC-MCP-032-002 | ⬜ |
+| Actividad "Esperar factura contador" (`pending`, sin `dueDate`) | `POST /activities` | `52f258b1-4d48-416e-8258-03674445a56a` | TC-032-001, TC-032-005 | ✅ |
+| Actividad "Esperar respuesta proveedor" (`pending`, sin `dueDate`) | `POST /activities` | `3fec4bf5-ac25-4342-b040-af2ca128f2bc` | TC-032-002 | ✅ |
+| Actividad "Esperar sin decir a quién" (`pending`, sin `dueDate`) | `POST /activities` | `ded3a9dd-56a1-4632-b601-9fa76dc3f17f` | TC-032-003 | ✅ |
+| Actividad "En pausa por decisión propia" (`on_hold`) | `POST /activities` | `39fbf594-84bd-4809-a1e2-a3381cf58283` | TC-032-004, TC-032-009 | ✅ |
+| Actividad "Waiting con dueDate hoy" (`waiting`, `dueDate` = 2026-08-16) | `POST /activities` | `f1ee9923-44eb-4347-b3ac-0a075f94ce13` | TC-032-008a | ✅ |
+| Actividad "Waiting vencida" (`waiting`, `dueDate` = 2026-08-11) | `POST /activities` | `08314981-ef96-4ec1-aaa4-aa1919b81858` | TC-032-008b | ✅ |
+| Actividad "Comparar badges" (`waiting`, `waitingFor` = "El banco", `waitingSince` = 2026-08-13, hace 3 días) | `POST /activities` | `5cd64e1f-c8c9-4905-8652-2624bbb2c248` | TC-032-006, TC-032-007 | ✅ |
+| Actividad "Edición rápida desde card" (`pending`) | `POST /activities` | `da0bf65b-07b2-4044-bd45-80b6d6e1eab8` | TC-032-010 | ✅ |
+| Actividad "[TEST spec-032] MCP base" (creada `pending`, luego movida a `waiting` con `waitingFor: "El contador"`) | `create_activity` vía MCP, luego `update_activity` | `b37a357a-ab81-44e5-8752-7b35bd0459a0` | TC-MCP-032-001 | ✅ |
+| Actividad "[TEST spec-032] MCP - waiting" (creada directamente en `waiting`, sin `waitingFor`) | `create_activity` vía MCP | `5ff5f83b-6b9c-4531-87a0-299f3d356bd0` | TC-MCP-032-002 | ✅ |
 
-**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1` — confirmar
-el puerto real configurado en `.env` antes de empezar, ver nota histórica en
-`test-024`)
-**Fecha de la ronda:** {{fecha}}
+**Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`) — confirmado, backend local levantado.
+**Fecha de la ronda:** 2026-08-16.
+
+**Notas de preparación:**
+- Desajuste detectado en el propio archivo (no corregido, solo documentado):
+  la tabla lista "En pausa por decisión propia" como usada en TC-032-004,
+  pero el texto de precondición de ese caso dice "Reutilizar la actividad de
+  TC-032-001 o TC-032-002, ya en waiting" — es decir, TC-032-004 en realidad
+  reutiliza una de las actividades que TC-032-001/002 dejaron en `waiting`,
+  no la de `on_hold`. Se sigue el texto de precondición (autoritativo) al
+  ejecutar; "En pausa por decisión propia" queda para TC-032-009 únicamente.
 
 ## Casos de prueba
 
@@ -44,8 +52,8 @@ en cualquier vista de lista.
 4. Guardar sin modificar esa fecha.
 **Resultado esperado:** La actividad queda en estado "Esperando"; el chip en
 la card muestra "hace 0 días" (o equivalente a "hoy").
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador. Al seleccionar "Esperando" en el formulario, "Esperando desde" se pre-completó con hoy (16/08/2026) sin tocarlo. Guardado. La card mostró badge "Esperando" y chip "Esperando · hace 0 días". Sin observaciones.
 
 ### TC-032-002 — Entrar en `waiting` con fecha explícita: se respeta
 **Precondición:** Actividad "Esperar respuesta proveedor" en `pending`.
@@ -57,8 +65,8 @@ la card muestra "hace 0 días" (o equivalente a "hoy").
 4. Guardar.
 **Resultado esperado:** El chip en la card muestra "hace 5 días", no "hace 0
 días" — se respeta la fecha indicada por el usuario en vez de sobrescribirla.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador. Estado cambiado a "Esperando" y "Esperando desde" editado a 2026-08-11 (5 días atrás). Guardado. La card mostró "Esperando · hace 5 días", respetando la fecha explícita. Sin observaciones.
 
 ### TC-032-003 — `waitingFor` es opcional
 **Precondición:** Actividad "Esperar sin decir a quién" en `pending`.
@@ -71,8 +79,8 @@ días" — se respeta la fecha indicada por el usuario en vez de sobrescribirla.
 **Resultado esperado:** No aparece ningún error de validación; la actividad
 queda en `waiting`. El chip en la card se muestra sin nombre de persona (solo
 "Esperando · hace N días" o equivalente, según el diseño final del chip).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador. Estado cambiado a "Esperando" dejando "Esperando a" vacío. Guardado sin error. La card mostró "Esperando · hace 0 días", sin nombre de persona. Sin observaciones.
 
 ### TC-032-004 — Salir de `waiting` limpia ambos campos
 **Precondición:** Reutilizar la actividad de TC-032-001 o TC-032-002, ya en
@@ -87,8 +95,8 @@ queda en `waiting`. El chip en la card se muestra sin nombre de persona (solo
 reabrir el formulario, los campos "Esperando a" y "Esperando desde" — ya
 ocultos por no estar en `waiting` — no muestran ningún valor residual si se
 vuelve a seleccionar `waiting`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador, reutilizando "Esperar factura contador" (ya en `waiting` de TC-032-001). Cambiado a "Pendiente" y guardado: el chip "Esperando..." desapareció de la card. Al reabrir y volver a seleccionar "Esperando", "Esperando a" quedó vacío y "Esperando desde" mostró el default de hoy, sin ningún valor residual de la ejecución anterior. Sin observaciones.
 
 ### TC-032-005 — Campos condicionales solo visibles con `waiting` seleccionado
 **Precondición:** Actividad "Esperar factura contador" (cualquier estado no
@@ -104,8 +112,8 @@ vuelve a seleccionar `waiting`.
 6. Confirmar que ambos campos vuelven a ocultarse.
 **Resultado esperado:** Los campos condicionales reaccionan en vivo al
 selector de estado (patrón `useWatch`), sin necesidad de guardar.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ejecutado por Claude en el navegador (reutilizando el formulario de "Esperar factura contador", cancelado sin guardar al terminar). Con "Pendiente" los campos condicionales no estaban visibles; al cambiar a "Esperando" sin guardar aparecieron de inmediato; al cambiar a "En pausa" sin guardar se ocultaron de inmediato. Reactividad en vivo confirmada. Sin observaciones.
 
 ### TC-032-006 — Badge de `waiting` distinguible visualmente de `on_hold`
 **Precondición:** Dos actividades visibles simultáneamente: "Comparar
@@ -116,8 +124,8 @@ badges" en `waiting` y "En pausa por decisión propia" en `on_hold`.
 2. Comparar el badge de estado de cada una.
 **Resultado esperado:** Los badges usan colores/etiquetas distintos
 ("Esperando" vs. "En pausa") y no se confunden a simple vista.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Ambas cards visibles simultáneamente en el buscador global (filtro "[TEST spec-032]"): "En pausa por decisión propia" con badge violeta "En pausa", "Comparar badges" con badge rosa/rojo "Esperando". Claramente distinguibles a simple vista. Sin observaciones.
 
 ### TC-032-007 — Chip "Esperando a {persona} · hace N días" en la card
 **Precondición:** Actividad "Comparar badges" en `waiting`, `waitingFor` =
@@ -128,8 +136,8 @@ badges" en `waiting` y "En pausa por decisión propia" en `on_hold`.
 2. Observar el chip adicional a la card (no el badge de estado).
 **Resultado esperado:** El chip muestra el texto "Esperando a El banco · hace
 3 días" (o formato equivalente definido en la implementación final).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** El chip de "Comparar badges" mostró exactamente "Esperando a El banco · hace 3 días", verificado en la misma captura de TC-032-006. Sin observaciones.
 
 ### TC-032-008a — Actividad `waiting` con `dueDate` de hoy aparece en Hoy
 **Precondición:** Actividad "Waiting con dueDate hoy", `status: waiting`,
@@ -139,8 +147,8 @@ badges" en `waiting` y "En pausa por decisión propia" en `on_hold`.
 1. Ir a la vista "Hoy".
 **Resultado esperado:** La actividad aparece en la lista, con su badge de
 "Esperando".
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** "Waiting con dueDate hoy" apareció en la vista Hoy, sección "Programadas por fecha", con badge "Esperando". Sin observaciones.
 
 ### TC-032-008b — Actividad `waiting` con `dueDate` vencido aparece en Vencidas
 **Precondición:** Actividad "Waiting vencida", `status: waiting`, `dueDate` =
@@ -150,8 +158,8 @@ hace 5 días.
 1. Ir a la vista "Vencidas".
 **Resultado esperado:** La actividad aparece en la lista de vencidas, pese a
 estar en `waiting` (no completada ni cancelada).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** "Waiting vencida" apareció en la vista Vencidas con badge "Esperando", pese a estar en `waiting`. Sin observaciones.
 
 ### TC-032-009 — `on_hold` sigue funcionando igual (sin regresión visual)
 **Precondición:** Actividad "En pausa por decisión propia" en `on_hold`.
@@ -164,8 +172,8 @@ estar en `waiting` (no completada ni cancelada).
    "Esperando desde" no aparecen (no son aplicables a `on_hold`).
 **Resultado esperado:** Ningún cambio visual ni funcional respecto del
 comportamiento de `on_hold` previo a este spec.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** "En pausa por decisión propia" muestra badge "En pausa" sin ningún chip "Esperando a...". El formulario de edición con estado "En pausa" no muestra los campos "Esperando a"/"Esperando desde". Sin regresión visual ni funcional. Sin observaciones.
 
 ### TC-032-010 — Edición rápida de estado desde la card incluye `waiting`
 **Precondición:** Actividad "Edición rápida desde card" en `pending`,
@@ -181,8 +189,8 @@ visible en lista.
 inmediatamente, sin abrir el modal/formulario completo. El chip
 "Esperando a…" aparece en la card apenas se aplica el cambio (aunque
 `waitingFor` quede vacío, por no poder cargarse desde la edición rápida).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** "Esperando" aparece en el desplegable inline junto a "En pausa", mismo orden que en `ActivityForm`. Al seleccionarlo, el estado cambió a `waiting` de inmediato sin abrir el modal completo, y la card mostró "Esperando · hace 0 días" (sin nombre de persona, como se esperaba). Sin observaciones.
 
 ### TC-MCP-032-001 — El agente mueve una actividad a `waiting` y la recupera por status
 **Herramienta probada:** `update_activity` y `get_activities_by_status` en
@@ -197,8 +205,8 @@ inmediatamente, sin abrir el modal/formulario completo. El chip
    `waitingSince` = fecha de hoy (autocompletada, no se envió).
 2. La lista devuelta por `get_activities_by_status("waiting")` incluye la
    actividad, con `waitingFor` visible en el resultado.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** `update_activity` devolvió `status: "waiting"`, `waitingFor: "El contador"`, `waitingSince: "2026-08-16"` (autocompletada, no enviada). `get_activities_by_status("waiting")` incluyó la actividad con `waitingFor` visible en el resultado. Sin observaciones.
 
 ### TC-MCP-032-002 — El agente crea una actividad directamente en `waiting`
 **Herramienta probada:** `create_activity` en `todo-api`
@@ -208,8 +216,8 @@ inmediatamente, sin abrir el modal/formulario completo. El chip
 (sin `waitingFor` ni `waitingSince`)
 **Output esperado:** La actividad se crea con `status: "waiting"`,
 `waitingSince` = hoy (autocompletada) y `waitingFor: null`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** El input escrito en el caso incluye `type: "task"`, un campo obsoleto ya eliminado del modelo (no existe `type` en `Activity` desde antes de este paquete de specs); se omitió al ejecutar, sin afectar el resultado. `create_activity` devolvió `status: "waiting"`, `waitingSince: "2026-08-16"` (autocompletada) y `waitingFor: null`. Sin más observaciones.
 
 ## Notas de alcance
 
@@ -229,6 +237,6 @@ inmediatamente, sin abrir el modal/formulario completo. El chip
     spec-028 sin revertir la cascada de subtareas de spec-024).
 
 ## Resumen de la ronda
-- Aprobados: {{n}} — Fallidos: {{n}} — Pendientes: 12 (10 manuales + 2 MCP)
-- Hallazgos escalados a `spec/backlog.md`: {{lista o "ninguno"}}
-- Limpieza de datos de prueba: ⬜ Pendiente
+- Aprobados: 12 (TC-032-001 a 010, TC-MCP-032-001, TC-MCP-032-002) — Fallidos: 0 — Pendientes: 0
+- Hallazgos escalados a `spec/backlog.md`: ninguno nuevo en esta ronda. Se siguió la nota de desajuste ya documentada en el propio archivo (TC-032-004 reutiliza una actividad de TC-032-001/002, no "En pausa por decisión propia"), sin discrepancias adicionales. El input de `TC-MCP-032-002` tenía un campo obsoleto (`type: "task"`), omitido al ejecutar sin afectar el resultado — no amerita entrada de backlog por ser un residuo puntual del texto del caso, mismo patrón ya corregido repetidamente en archivos e2e durante la implementación.
+- Limpieza de datos de prueba: ✅ Completada (10 actividades verificadas 404 por REST tras el DELETE)
