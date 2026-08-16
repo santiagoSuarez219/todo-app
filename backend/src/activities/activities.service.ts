@@ -4,14 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { In, IsNull, Not, Repository, SelectQueryBuilder } from 'typeorm';
 import { Activity } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { ProjectsService } from '../projects/projects.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
-import { ActivityType } from '../common/enums/activity-type.enum';
 import { Priority } from '../common/enums/priority.enum';
 import { RecurrenceFrequency } from '../common/enums/recurrence-frequency.enum';
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
@@ -55,46 +54,20 @@ export class ActivitiesService {
     return { start, end };
   }
 
-  // ─── Type sanitization ───────────────────────────────────────────────────────
-
-  private sanitizeByType(dto: CreateActivityDto): CreateActivityDto {
-    const type = dto.type ?? ActivityType.TASK;
-    const sanitized = { ...dto };
-
-    if (type === ActivityType.REMINDER) {
-      sanitized.parentId = undefined;
-    }
-
-    // For TASK: strip time from dueDate (keep date only)
-    if (type === ActivityType.TASK && sanitized.dueDate) {
-      const d = new Date(sanitized.dueDate);
-      d.setHours(0, 0, 0, 0);
-      sanitized.dueDate = d.toISOString();
-    }
-
-    return sanitized;
-  }
-
   // ─── Recurrence helpers ──────────────────────────────────────────────────────
 
   buildInstanceFromTemplate(template: Activity, date: Date): Activity {
     const instance = this.activitiesRepository.create({
       name: template.name,
       description: template.description,
-      type: template.type,
       priority: template.priority,
       energy: template.energy,
       project: template.project,
       status: ActivityStatus.PENDING,
       isTemplate: false,
-      isRecurring: false,
       templateId: template.id,
       instanceDate: date.toISOString().split('T')[0],
-      // For reminders: set dueDate to instance date at 9am
-      dueDate:
-        template.type === ActivityType.REMINDER
-          ? new Date(date.setHours(9, 0, 0, 0))
-          : null,
+      dueDate: null,
       scheduledForToday: this.isToday(date),
     });
     return instance;
@@ -180,16 +153,38 @@ export class ActivitiesService {
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
   async create(dto: CreateActivityDto): Promise<Activity> {
-    const { projectId, parentId, isRecurring, recurrenceEndDate, ...rest } =
-      this.sanitizeByType(dto);
+    // Whitelisted field-by-field (no `...rest` spread) so a caller that
+    // bypasses the HTTP ValidationPipe (direct service call, MCP) can never
+    // smuggle a stale/removed field (e.g. `type`) into the persisted entity.
+    const {
+      projectId,
+      parentId,
+      recurrenceEndDate,
+      name,
+      description,
+      dueDate,
+      priority,
+      status,
+      energy,
+      scheduledForToday,
+      recurrenceFrequency,
+      recurrenceDays,
+      recurrenceDayOfMonth,
+    } = dto;
 
     const activity = this.activitiesRepository.create({
-      ...rest,
-      isRecurring: isRecurring ?? false,
-      isTemplate: isRecurring ?? false,
-      recurrenceEndDate: recurrenceEndDate
-        ? new Date(recurrenceEndDate)
-        : null,
+      name,
+      description,
+      dueDate,
+      priority,
+      status,
+      energy,
+      scheduledForToday,
+      recurrenceFrequency,
+      recurrenceDays,
+      recurrenceDayOfMonth,
+      isTemplate: recurrenceFrequency != null,
+      recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
     });
 
     if (projectId) {
@@ -197,7 +192,9 @@ export class ActivitiesService {
     }
 
     if (parentId) {
-      const parent = await this.activitiesRepository.findOneBy({ id: parentId });
+      const parent = await this.activitiesRepository.findOneBy({
+        id: parentId,
+      });
       if (!parent) {
         throw new NotFoundException(`Activity with id "${parentId}" not found`);
       }
@@ -225,23 +222,41 @@ export class ActivitiesService {
   async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
     const activity = await this.findOne(id);
     const previousStatus = activity.status;
-    const effectiveDto = { ...dto, type: dto.type ?? activity.type } as CreateActivityDto;
+    // Whitelisted field-by-field — see the same note in create().
     const {
       projectId,
       parentId,
-      isRecurring,
       recurrenceEndDate,
-      ...rest
-    } = this.sanitizeByType(effectiveDto);
+      name,
+      description,
+      dueDate,
+      priority,
+      status,
+      energy,
+      scheduledForToday,
+      recurrenceFrequency,
+      recurrenceDays,
+      recurrenceDayOfMonth,
+    } = dto;
 
     Object.assign(activity, {
-      ...rest,
-      ...(isRecurring !== undefined && {
-        isRecurring,
-        isTemplate: isRecurring,
+      ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
+      ...(dueDate !== undefined && { dueDate }),
+      ...(priority !== undefined && { priority }),
+      ...(status !== undefined && { status }),
+      ...(energy !== undefined && { energy }),
+      ...(scheduledForToday !== undefined && { scheduledForToday }),
+      ...(recurrenceFrequency !== undefined && {
+        recurrenceFrequency,
+        isTemplate: recurrenceFrequency != null,
       }),
+      ...(recurrenceDays !== undefined && { recurrenceDays }),
+      ...(recurrenceDayOfMonth !== undefined && { recurrenceDayOfMonth }),
       ...(recurrenceEndDate !== undefined && {
-        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+        recurrenceEndDate: recurrenceEndDate
+          ? new Date(recurrenceEndDate)
+          : null,
       }),
     });
 
@@ -258,9 +273,13 @@ export class ActivitiesService {
         if (parentId === id) {
           throw new BadRequestException('An activity cannot be its own parent');
         }
-        const parent = await this.activitiesRepository.findOneBy({ id: parentId });
+        const parent = await this.activitiesRepository.findOneBy({
+          id: parentId,
+        });
         if (!parent) {
-          throw new NotFoundException(`Activity with id "${parentId}" not found`);
+          throw new NotFoundException(
+            `Activity with id "${parentId}" not found`,
+          );
         }
         activity.parent = parent;
       }
@@ -375,14 +394,17 @@ export class ActivitiesService {
 
   findActiveTemplates(): Promise<Activity[]> {
     return this.activitiesRepository.find({
-      where: { isTemplate: true, isRecurring: true },
+      where: { isTemplate: true, recurrenceFrequency: Not(IsNull()) },
       relations: { project: true },
     });
   }
 
   // ─── Consultas especializadas ────────────────────────────────────────────────
 
-  findByProject(projectId: string, pagination: PaginationDto): Promise<Activity[]> {
+  findByProject(
+    projectId: string,
+    pagination: PaginationDto,
+  ): Promise<Activity[]> {
     return this.paginate(
       this.baseQuery().where('project.id = :projectId', { projectId }),
       pagination,
@@ -423,10 +445,7 @@ export class ActivitiesService {
     return this.paginate(
       this.baseQuery()
         .where('activity.isTemplate = false')
-        .andWhere(
-          'activity.dueDate BETWEEN :start AND :end',
-          { start, end },
-        ),
+        .andWhere('activity.dueDate BETWEEN :start AND :end', { start, end }),
       pagination,
     ).getMany();
   }
@@ -444,10 +463,10 @@ export class ActivitiesService {
     return this.paginate(
       this.baseQuery()
         .where('activity.isTemplate = false')
-        .andWhere(
-          'activity.dueDate BETWEEN :monday AND :sunday',
-          { monday, sunday },
-        ),
+        .andWhere('activity.dueDate BETWEEN :monday AND :sunday', {
+          monday,
+          sunday,
+        }),
       pagination,
     ).getMany();
   }
@@ -459,7 +478,9 @@ export class ActivitiesService {
       this.baseQuery()
         .where('activity.isTemplate = false')
         .andWhere('activity.dueDate < :now', { now })
-        .andWhere('activity.status != :status', { status: ActivityStatus.COMPLETED }),
+        .andWhere('activity.status != :status', {
+          status: ActivityStatus.COMPLETED,
+        }),
       pagination,
     ).getMany();
   }
@@ -470,7 +491,10 @@ export class ActivitiesService {
    * containing its last day. Mirrors the Mon–Sun convention already used by
    * `findThisWeek()`.
    */
-  private getVisibleGridRange(year: number, month: number): { start: Date; end: Date } {
+  private getVisibleGridRange(
+    year: number,
+    month: number,
+  ): { start: Date; end: Date } {
     const firstDay = new Date(year, month - 1, 1);
     const firstDayOfWeek = firstDay.getDay();
     const diffToMonday = firstDayOfWeek === 0 ? -6 : 1 - firstDayOfWeek;
@@ -536,28 +560,30 @@ export class ActivitiesService {
       .getMany();
   }
 
-  findByType(type: ActivityType, pagination: PaginationDto): Promise<Activity[]> {
-    return this.paginate(
-      this.baseQuery().where('activity.type = :type', { type }),
-      pagination,
-    ).getMany();
-  }
-
-  findByPriority(priority: Priority, pagination: PaginationDto): Promise<Activity[]> {
+  findByPriority(
+    priority: Priority,
+    pagination: PaginationDto,
+  ): Promise<Activity[]> {
     return this.paginate(
       this.baseQuery().where('activity.priority = :priority', { priority }),
       pagination,
     ).getMany();
   }
 
-  findByStatus(status: ActivityStatus, pagination: PaginationDto): Promise<Activity[]> {
+  findByStatus(
+    status: ActivityStatus,
+    pagination: PaginationDto,
+  ): Promise<Activity[]> {
     return this.paginate(
       this.baseQuery().where('activity.status = :status', { status }),
       pagination,
     ).getMany();
   }
 
-  async findSubtasks(id: string, pagination: PaginationDto): Promise<Activity[]> {
+  async findSubtasks(
+    id: string,
+    pagination: PaginationDto,
+  ): Promise<Activity[]> {
     await this.findOne(id);
     return this.paginate(
       this.baseQuery().where('parent.id = :id', { id }),
@@ -565,7 +591,11 @@ export class ActivitiesService {
     ).getMany();
   }
 
-  async search(query: string, pagination: PaginationDto, projectId?: string): Promise<Activity[]> {
+  async search(
+    query: string,
+    pagination: PaginationDto,
+    projectId?: string,
+  ): Promise<Activity[]> {
     const term = query.trim();
     if (!term) return [];
 

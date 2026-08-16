@@ -29,7 +29,6 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { SearchActivitiesQueryDto } from './dto/search-activities-query.dto';
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
-import { ActivityType } from '../common/enums/activity-type.enum';
 import { Priority } from '../common/enums/priority.enum';
 
 @ApiTags('activities')
@@ -70,21 +69,28 @@ export class ActivitiesController {
   }
 
   @Get('this-week')
-  @ApiOperation({ summary: 'Get activities for the current week (Mon–Sun, by actionDate)' })
+  @ApiOperation({
+    summary: 'Get activities for the current week (Mon–Sun, by actionDate)',
+  })
   @ApiOkResponse({ type: [Activity] })
   findThisWeek(@Query() pagination: PaginationDto): Promise<Activity[]> {
     return this.activitiesService.findThisWeek(pagination);
   }
 
   @Get('overdue')
-  @ApiOperation({ summary: 'Get overdue activities (dueDate < today, status != completed)' })
+  @ApiOperation({
+    summary: 'Get overdue activities (dueDate < today, status != completed)',
+  })
   @ApiOkResponse({ type: [Activity] })
   findOverdue(@Query() pagination: PaginationDto): Promise<Activity[]> {
     return this.activitiesService.findOverdue(pagination);
   }
 
   @Get('schedule')
-  @ApiOperation({ summary: 'Get top-level activities within a month\'s visible calendar grid range (Mon–Sun fill included), located by dueDate or, if absent, instanceDate' })
+  @ApiOperation({
+    summary:
+      "Get top-level activities within a month's visible calendar grid range (Mon–Sun fill included), located by dueDate or, if absent, instanceDate",
+  })
   @ApiOkResponse({ type: [Activity] })
   findBySchedule(@Query() query: ScheduleQueryDto): Promise<Activity[]> {
     return this.activitiesService.findByMonth(query);
@@ -106,17 +112,6 @@ export class ActivitiesController {
     @Query() pagination: PaginationDto,
   ): Promise<Activity[]> {
     return this.activitiesService.findByProject(projectId, pagination);
-  }
-
-  @Get('type/:type')
-  @ApiOperation({ summary: 'Get activities by type' })
-  @ApiParam({ name: 'type', enum: ActivityType })
-  @ApiOkResponse({ type: [Activity] })
-  findByType(
-    @Param('type', new ParseEnumPipe(ActivityType)) type: ActivityType,
-    @Query() pagination: PaginationDto,
-  ): Promise<Activity[]> {
-    return this.activitiesService.findByType(type, pagination);
   }
 
   @Get('priority/:priority')
@@ -142,7 +137,10 @@ export class ActivitiesController {
   }
 
   @Get('search/:query')
-  @ApiOperation({ summary: 'Buscar actividades por nombre, descripcion o proyecto (scope global o por proyecto)' })
+  @ApiOperation({
+    summary:
+      'Buscar actividades por nombre, descripcion o proyecto (scope global o por proyecto)',
+  })
   @ApiParam({ name: 'query', type: String })
   @ApiOkResponse({ type: [Activity] })
   search(
@@ -164,30 +162,32 @@ export class ActivitiesController {
   }
 
   @Get(':id/instances')
-  @ApiOperation({ summary: 'Get all instances of a recurring activity template' })
+  @ApiOperation({
+    summary: 'Get all instances of a recurring activity template',
+  })
   @ApiOkResponse({ type: [Activity] })
   @ApiNotFoundResponse()
-  getInstances(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<Activity[]> {
+  getInstances(@Param('id', ParseUUIDPipe) id: string): Promise<Activity[]> {
     return this.activitiesService.getInstancesByTemplate(id);
   }
 
   @Delete(':id/future-instances')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Cancel all future pending instances of a recurring template' })
+  @ApiOperation({
+    summary: 'Cancel all future pending instances of a recurring template',
+  })
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
-  cancelFutureInstances(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  cancelFutureInstances(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.activitiesService.cancelFutureInstances(id);
   }
 
   // ─── Rutas dinámicas (siempre al final) ─────────────────────────────────────
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get an activity by id (includes project, parent, subtasks)' })
+  @ApiOperation({
+    summary: 'Get an activity by id (includes project, parent, subtasks)',
+  })
   @ApiOkResponse({ type: Activity })
   @ApiNotFoundResponse()
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Activity> {

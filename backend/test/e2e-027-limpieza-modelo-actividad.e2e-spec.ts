@@ -8,23 +8,12 @@
 // `isTemplate` derivado de `recurrenceFrequency`, tool MCP
 // `get_activities_by_type` eliminada).
 //
-// ⚠️ RIESGO DETECTADO AL REDACTAR ESTE ARCHIVO (reportar antes de implementar,
-// no corregido aquí): el criterio de aceptación "POST /activities con type,
-// notionUrl o isRecurring en el body no falla, pero esas propiedades se
-// descartan" asume el comportamiento de un ValidationPipe con
-// `whitelist: true` y `forbidNonWhitelisted: false` — pero `main.ts` (y todos
-// los bootstraps de e2e existentes, incluido este archivo, por consistencia)
-// usan `forbidNonWhitelisted: true`. Con esa combinación, NestJS no descarta
-// silenciosamente las propiedades no reconocidas: lanza `400 Bad Request`
-// ("property type should not exist", etc.). El caso `AC-027-01` de abajo
-// encodifica el criterio TAL COMO ESTÁ ESCRITO en el spec (expect 201 con las
-// propiedades ausentes de la respuesta) — quedará en rojo tanto antes de
-// implementar (hoy esas props sí se guardan y aparecen) como, muy
-// probablemente, después de implementar (a menos que se decida no incluir
-// `forbidNonWhitelisted` para esos tres campos, algo que el spec no
-// contempla). Confirmar con @architect/el usuario antes de dar por buena la
-// implementación: o se ajusta el criterio de aceptación (esperar 400), o se
-// ajusta el pipe.
+// AC-027-01 fue corregido tras detectar, al redactar este archivo, que
+// `main.ts` fija `forbidNonWhitelisted: true` junto con `whitelist: true` —
+// una propiedad no declarada en el DTO rechaza toda la petición con `400`,
+// no se descarta en silencio. El criterio de aceptación del spec ya refleja
+// esto ("Corregido tras la ronda de pruebas..."); este caso codifica el
+// comportamiento real.
 
 const setupTestEnv = () => {
   process.env.NODE_ENV = 'test';
@@ -170,19 +159,19 @@ describe('spec-027 — Limpieza del modelo de Activity (e2e)', () => {
     return response;
   }
 
-  describe('AC-027-01: type/notionUrl/isRecurring en el body se descartan silenciosamente', () => {
-    it('POST /activities con esos campos no falla y no los persiste ni devuelve', async () => {
-      const response = await createActivity({
-        name: '[E2E-027] AC1 — campos descartados',
-        type: 'reminder',
-        notionUrl: 'https://notion.so/pagina-de-prueba',
-        isRecurring: true,
-      });
+  describe('AC-027-01: type/notionUrl/isRecurring en el body rechazan la petición con 400', () => {
+    it('POST /activities con esos campos responde 400 (forbidNonWhitelisted)', async () => {
+      const response = await createActivity(
+        {
+          name: '[E2E-027] AC1 — campos rechazados',
+          type: 'reminder',
+          notionUrl: 'https://notion.so/pagina-de-prueba',
+          isRecurring: true,
+        },
+        400,
+      );
 
-      expect(response.status).toBe(201);
-      expect(response.body.data).not.toHaveProperty('type');
-      expect(response.body.data).not.toHaveProperty('notionUrl');
-      expect(response.body.data).not.toHaveProperty('isRecurring');
+      expect(response.status).toBe(400);
     });
   });
 

@@ -7,7 +7,6 @@ import type {
   ActivitySearchParams,
   ScheduleParams,
   ActivityStatus,
-  ActivityType,
   Priority,
 } from '../types';
 
@@ -64,13 +63,6 @@ export async function getActivitiesByProject(
   params?: PaginationParams,
 ): Promise<Activity[]> {
   return getList(`/activities/project/${projectId}`, params);
-}
-
-export async function getActivitiesByType(
-  type: ActivityType,
-  params?: PaginationParams,
-): Promise<Activity[]> {
-  return getList(`/activities/type/${type}`, params);
 }
 
 export async function getActivitiesByPriority(

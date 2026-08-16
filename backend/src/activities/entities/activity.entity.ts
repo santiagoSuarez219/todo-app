@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ActivityStatus } from '../../common/enums/activity-status.enum';
-import { ActivityType } from '../../common/enums/activity-type.enum';
 import { Priority } from '../../common/enums/priority.enum';
 import { Energy } from '../../common/enums/energy.enum';
 import { RecurrenceFrequency } from '../../common/enums/recurrence-frequency.enum';
@@ -56,18 +55,8 @@ export class Activity {
   })
   energy: Energy;
 
-  @Column({
-    type: 'enum',
-    enum: ActivityType,
-    default: ActivityType.TASK,
-  })
-  type: ActivityType;
-
   @Column({ type: 'boolean', default: false })
   scheduledForToday: boolean;
-
-  @Column({ type: 'varchar', nullable: true })
-  notionUrl: string | null;
 
   @ManyToOne(() => Activity, (activity) => activity.subtasks, {
     nullable: true,
@@ -82,9 +71,6 @@ export class Activity {
 
   @Column({ type: 'boolean', default: false })
   isTemplate: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  isRecurring: boolean;
 
   @Column({ type: 'uuid', nullable: true })
   templateId: string | null;

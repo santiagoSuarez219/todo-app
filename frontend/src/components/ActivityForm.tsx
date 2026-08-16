@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  ActivityStatus, ActivityType, Priority, Energy,
+  ActivityStatus, Priority, Energy,
   RecurrenceFrequency,
   type CreateActivityDto, type Activity, type Project, type WeekDay,
 } from '../types';
@@ -25,10 +24,10 @@ const schema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),
   energy: z.string().optional(),
-  type: z.string().optional(),
   dueDate: z.string().nullish(),
-  notionUrl: z.union([z.string().url({ message: 'Debe ser una URL válida' }), z.literal('')]).nullish(),
-  // ── Recurrence ──
+  // ── Recurrence — `isRecurring` es estado local del formulario, no viaja al
+  // DTO: al enviar, `true` se traduce en `recurrenceFrequency` y `false` en
+  // `recurrenceFrequency: null` (spec-027) ──
   isRecurring: z.boolean(),
   recurrenceFrequency: z.nativeEnum(RecurrenceFrequency).optional(),
   recurrenceDays: z.array(z.number().min(0).max(6)).optional(),
@@ -104,13 +103,6 @@ const inputCls =
 
 const labelCls = 'block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1';
 
-// ─── Type selector pills ──────────────────────────────────────────────────────
-
-const TYPE_OPTIONS = [
-  { value: ActivityType.TASK,     label: 'Tarea',       icon: '✓' },
-  { value: ActivityType.REMINDER, label: 'Recordatorio', icon: '🔔' },
-];
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ActivityForm({
@@ -133,10 +125,8 @@ export default function ActivityForm({
         status: initial?.status ?? ActivityStatus.PENDING,
         priority: initial?.priority ?? Priority.MEDIUM,
         energy: initial?.energy ?? Energy.MEDIUM,
-        type: initial?.type ?? ActivityType.TASK,
-        dueDate: initial?.dueDate ? initial.dueDate.slice(0, 16) : '',
-        notionUrl: initial?.notionUrl ?? null,
-        isRecurring: initial?.isRecurring ?? false,
+        dueDate: initial?.dueDate ? initial.dueDate.slice(0, 10) : '',
+        isRecurring: initial?.recurrenceFrequency != null,
         recurrenceFrequency: initial?.recurrenceFrequency ?? undefined,
         recurrenceDays: (initial?.recurrenceDays as WeekDay[] | null) ?? [],
         recurrenceDayOfMonth: initial?.recurrenceDayOfMonth ?? undefined,
@@ -144,21 +134,11 @@ export default function ActivityForm({
       },
     });
 
-  const watchedType = useWatch({ control, name: 'type' }) ?? ActivityType.TASK;
-  const isReminder = watchedType === ActivityType.REMINDER;
-
   const isRecurring       = useWatch({ control, name: 'isRecurring' });
   const recurrenceFreq    = useWatch({ control, name: 'recurrenceFrequency' });
   const recurrenceDays    = useWatch({ control, name: 'recurrenceDays' }) ?? [];
   const showDayPicker     = recurrenceFreq === RecurrenceFrequency.WEEKLY || recurrenceFreq === RecurrenceFrequency.BIWEEKLY;
   const showDayOfMonth    = recurrenceFreq === RecurrenceFrequency.MONTHLY;
-
-  // Clear dueDate when type changes to reminder (date-only → datetime-local)
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return; }
-    setValue('dueDate', null, { shouldDirty: false });
-  }, [watchedType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleDay(day: WeekDay) {
     const current = recurrenceDays as WeekDay[];
@@ -177,17 +157,18 @@ export default function ActivityForm({
       status: (values.status as CreateActivityDto['status']) || undefined,
       priority: (values.priority as CreateActivityDto['priority']) || undefined,
       energy: (values.energy as CreateActivityDto['energy']) || undefined,
-      type: (values.type as CreateActivityDto['type']) || undefined,
       dueDate: values.dueDate || null,
-      notionUrl: values.notionUrl || null,
     };
 
     if (values.isRecurring) {
-      dto.isRecurring = true;
       dto.recurrenceFrequency = values.recurrenceFrequency;
       dto.recurrenceDays = values.recurrenceDays as WeekDay[];
       dto.recurrenceDayOfMonth = values.recurrenceDayOfMonth;
       dto.recurrenceEndDate = values.recurrenceEndDate || null;
+    } else {
+      // Desmarcar el switch envía recurrenceFrequency: null — el backend
+      // deriva isTemplate: false a partir de esto (spec-027).
+      dto.recurrenceFrequency = null;
     }
 
     return dto;
@@ -197,32 +178,6 @@ export default function ActivityForm({
 
   return (
     <form onSubmit={handleSubmit((values) => onSubmit(toDto(values)))} className="space-y-4">
-
-      {/* ── Tipo (primero) ── */}
-      <div>
-        <label className={labelCls}>Tipo de actividad</label>
-        <div className="flex gap-2">
-          {TYPE_OPTIONS.map(({ value, label, icon }) => (
-            <label
-              key={value}
-              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                watchedType === value
-                  ? 'bg-blue-700 dark:bg-blue-600 text-white border-blue-700 dark:border-blue-600'
-                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
-              }`}
-            >
-              <input
-                type="radio"
-                value={value}
-                className="sr-only"
-                {...register('type')}
-              />
-              <span>{icon}</span>
-              {label}
-            </label>
-          ))}
-        </div>
-      </div>
 
       {/* ── Nombre ── */}
       <div>
@@ -240,20 +195,6 @@ export default function ActivityForm({
           placeholder="Detalle adicional..."
           className={`${inputCls} resize-none`}
         />
-      </div>
-
-      {/* ── Notion URL ── */}
-      <div>
-        <label className={labelCls}>Página de Notion</label>
-        <input
-          type="url"
-          {...register('notionUrl')}
-          placeholder="https://www.notion.so/..."
-          className={inputCls}
-        />
-        {errors.notionUrl && (
-          <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.notionUrl.message}</p>
-        )}
       </div>
 
       {/* ── Proyecto — oculto en subtareas ── */}
@@ -297,13 +238,11 @@ export default function ActivityForm({
         </div>
       </div>
 
-      {/* ── Fecha — semántica por tipo ── */}
+      {/* ── Fecha límite ── */}
       <div>
-        <label className={labelCls}>
-          {isReminder ? 'Fecha y hora del recordatorio' : 'Fecha límite'}
-        </label>
+        <label className={labelCls}>Fecha límite</label>
         <input
-          type={isReminder ? 'datetime-local' : 'date'}
+          type="date"
           {...register('dueDate')}
           className={inputCls}
         />

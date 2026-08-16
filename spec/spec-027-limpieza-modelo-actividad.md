@@ -1,4 +1,4 @@
-# spec-027 — [NOT STARTED] Limpieza del modelo de Activity: eliminar `notionUrl`, `isRecurring` y `type`
+# spec-027 — [TESTING] Limpieza del modelo de Activity: eliminar `notionUrl`, `isRecurring` y `type`
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -189,55 +189,85 @@ con parámetros fantasma que rompen en runtime contra el DTO real.
 ## Fases de implementación
 
 ### Fase 1 — Backend: modelo, DTO y servicio
-- [ ] Eliminar `backend/src/common/enums/activity-type.enum.ts`
-- [ ] `activity.entity.ts`: quitar `type`, `notionUrl`, `isRecurring` e imports
-- [ ] `create-activity.dto.ts`: quitar las tres props, el `@ValidateIf` de
+- [x] Eliminar `backend/src/common/enums/activity-type.enum.ts`
+- [x] `activity.entity.ts`: quitar `type`, `notionUrl`, `isRecurring` e imports
+- [x] `create-activity.dto.ts`: quitar las tres props, el `@ValidateIf` de
       `recurrenceFrequency` y los imports huérfanos
-- [ ] `activities.service.ts`: eliminar `sanitizeByType()` y sus llamadas
-- [ ] `activities.service.ts`: derivar `isTemplate = recurrenceFrequency != null`
+- [x] `activities.service.ts`: eliminar `sanitizeByType()` y sus llamadas
+- [x] `activities.service.ts`: derivar `isTemplate = recurrenceFrequency != null`
       en `create()` y `update()`
-- [ ] `activities.service.ts`: ajustar `findActiveTemplates()` y
+- [x] `activities.service.ts`: ajustar `findActiveTemplates()` y
       `buildInstanceFromTemplate()`
-- [ ] `activities.service.ts`: eliminar `findByType()`
-- [ ] `activities.controller.ts`: eliminar `GET /activities/type/:type`
-- [ ] `npm run build` y `npm run lint` en `backend/` sin errores
+- [x] `activities.service.ts`: eliminar `findByType()`
+- [x] `activities.controller.ts`: eliminar `GET /activities/type/:type`
+- [x] `npm run build` y `npm run lint` en `backend/` sin errores — build
+      queda en rojo solo por `mcp.service.ts`, pendiente de la Fase 4; el
+      resto del código de esta fase compila limpio
 
 ### Fase 2 — Migración
-- [ ] Confirmar en base el nombre real del tipo enum de `type`
-- [ ] Crear `migrations/1787000000000-CleanupActivityModel.ts` con los tres
+- [x] Confirmar en base el nombre real del tipo enum de `type`
+      (`activities_type_enum`, confirmado vía `\dT+`)
+- [x] Crear `migrations/1787000000000-CleanupActivityModel.ts` con los tres
       `DROP COLUMN` y el `DROP TYPE`
-- [ ] Escribir el `down()` que restituye estructura (documentando la pérdida de
+- [x] Escribir el `down()` que restituye estructura (documentando la pérdida de
       datos de `notionUrl`)
-- [ ] Ejecutar la migración **solo en local**:
-      `npx typeorm migration:run -d src/data-source.ts`
-- [ ] Verificar con `\d activities` que las tres columnas ya no existen
+- [x] Ejecutar la migración **solo en local**: `npm run migration:run`
+- [x] Verificar con `\d activities` que las tres columnas ya no existen
 
 ### Fase 3 — Frontend
-- [ ] Leer `frontend/DESIGN.md` antes de tocar componentes
-- [ ] `types/index.ts`: eliminar `ActivityType` y los tres campos de `Activity`
-      y `CreateActivityDto`
-- [ ] `ActivityForm.tsx`: quitar selector de tipo, `isReminder`, input de
-      `notionUrl`; recurrencia como estado local del formulario
-- [ ] `ActivityCard.tsx`: quitar chip de Notion y la condición `isTask`
-- [ ] `services/activities.service.ts`: eliminar `getActivitiesByType()`
-- [ ] `grep` de residuos (`notionUrl`, `isRecurring`, `ActivityType`) en
-      `frontend/src`
-- [ ] `npm run lint` y `npm run build` en `frontend/` sin errores
+- [x] Leer `frontend/DESIGN.md` antes de tocar componentes
+- [x] `types/index.ts`: eliminar `ActivityType` y los tres campos de `Activity`
+      y `CreateActivityDto` (además: `RecurrenceConfig`, tipo muerto sin
+      consumidores que también declaraba `isRecurring`)
+- [x] `ActivityForm.tsx`: quitar selector de tipo, `isReminder`, input de
+      `notionUrl`; recurrencia como estado local del formulario (`isRecurring`
+      del schema Zod nunca viaja al DTO — se traduce a `recurrenceFrequency`
+      o a `null`)
+- [x] `ActivityCard.tsx`: quitar chip de Notion y la condición `isTask`; el
+      contador de subtareas y el botón "Agregar subtarea" ahora aplican a
+      cualquier actividad con/sin subtareas
+- [x] `services/activities.service.ts`: eliminar `getActivitiesByType()`
+- [x] `grep` de residuos (`notionUrl`, `isRecurring`, `ActivityType`) en
+      `frontend/src` — sin residuos (las 4 ocurrencias de `isRecurring`
+      restantes son el estado local intencional de `ActivityForm.tsx`)
+- [x] `npm run lint` y `npm run build` en `frontend/` sin errores — build
+      limpio; lint scoped a los 4 archivos tocados sin hallazgos (los 4
+      errores que reporta `npm run lint` sobre todo el árbol son deuda
+      preexistente en `Login.tsx`, `ExpensesView.tsx` y `auth.service.ts`,
+      fuera de alcance de este spec)
 
 ### Fase 4 — MCP: actualizar `todo-api`
-- [ ] Quitar `type`/`notionUrl`/`isRecurring` de `create_activity`,
+- [x] Quitar `type`/`notionUrl`/`isRecurring` de `create_activity`,
       `update_activity` y `create_recurring_activity`
-- [ ] Eliminar la herramienta `get_activities_by_type`
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md`
-- [ ] Actualizar `docs/mcps/README.md`
-- [ ] Verificar que el MCP responde correctamente a las herramientas declaradas
+- [x] Eliminar la herramienta `get_activities_by_type`
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md`
+- [x] Actualizar `docs/mcps/README.md` — sin cambios necesarios: no enumera
+      tools individuales ni conteos, nada quedó desactualizado
+- [x] Verificar que el MCP responde correctamente a las herramientas
+      declaradas — backend levantado en local, `tools/list` confirma 69
+      tools, `get_activities_by_type` ausente, y `type`/`notionUrl`/
+      `isRecurring` fuera de los schemas de `create_activity`/`update_activity`
 
 ### Fase 5 — Pruebas
-- [ ] `docs/testing/test-027-limpieza-modelo-actividad.md` con casos `TC-027-xx`
-      y `TC-MCP-027-xx`
-- [ ] `backend/test/e2e-027-limpieza-modelo-actividad.e2e-spec.ts` en rojo
-- [ ] Actualizar `backend/src/activities/activities.service.spec.ts`
-- [ ] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`)
+- [x] `docs/testing/test-027-limpieza-modelo-actividad.md` con casos `TC-027-xx`
+      y `TC-MCP-027-xx` (redactado junto con el spec; pendiente de ejecución
+      manual por el usuario)
+- [x] `backend/test/e2e-027-limpieza-modelo-actividad.e2e-spec.ts` — 12/12 en
+      verde. `AC-027-01` se corrigió durante esta fase: el archivo seguía
+      esperando `201`/descarte silencioso a pesar de que el criterio de
+      aceptación del spec ya documentaba el `400` real (`forbidNonWhitelisted`);
+      se sincronizó el test con el criterio ya corregido, sin ampliar scope
+- [x] Actualizar `backend/src/activities/activities.service.spec.ts` — 9/9
+      casos `(spec-027)` en verde. `findActiveTemplates()` se reescribió de
+      `createQueryBuilder` a `find({ where: { isTemplate: true,
+      recurrenceFrequency: Not(IsNull()) } })` (más simple y ya devuelve el
+      relations `project`, mismo filtrado); `create()`/`update()` pasaron de
+      spread (`...rest`) a whitelist explícito campo por campo, así un
+      llamador que evite el `ValidationPipe` HTTP (llamada directa al
+      servicio, MCP) no puede colar un campo eliminado como `type`
+- [x] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`) — ver
+      resumen abajo; sin regresiones fuera de alcance (specs 028-032 siguen
+      en rojo como se espera, aún no implementados)
 
 ## Criterios de aceptación
 
@@ -298,5 +328,5 @@ con parámetros fantasma que rompen en runtime contra el DTO real.
 ## Aprobación de implementación
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{fecha}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-16

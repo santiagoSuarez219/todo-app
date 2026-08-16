@@ -17,12 +17,6 @@ export const ActivityStatus = {
 } as const;
 export type ActivityStatus = (typeof ActivityStatus)[keyof typeof ActivityStatus];
 
-export const ActivityType = {
-  REMINDER: 'reminder',
-  TASK: 'task',
-} as const;
-export type ActivityType = (typeof ActivityType)[keyof typeof ActivityType];
-
 export const Priority = {
   HIGH: 'high',
   MEDIUM: 'medium',
@@ -48,14 +42,6 @@ export type RecurrenceFrequency = (typeof RecurrenceFrequency)[keyof typeof Recu
 
 export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export interface RecurrenceConfig {
-  isRecurring: boolean;
-  recurrenceFrequency?: RecurrenceFrequency;
-  recurrenceDays?: WeekDay[];
-  recurrenceDayOfMonth?: number;
-  recurrenceEndDate?: string | null;
-}
-
 // ─── Entities ───────────────────────────────────────────────────────────────
 
 export interface Project {
@@ -77,13 +63,10 @@ export interface Activity {
   priority: Priority;
   status: ActivityStatus;
   energy: Energy;
-  type: ActivityType;
   parent: Activity | null;
   subtasks: Activity[];
   scheduledForToday: boolean;
-  notionUrl: string | null;
   isTemplate: boolean;
-  isRecurring: boolean;
   templateId: string | null;
   recurrenceFrequency: RecurrenceFrequency | null;
   recurrenceDays: WeekDay[] | null;
@@ -114,11 +97,8 @@ export interface CreateActivityDto {
   priority?: Priority;
   status?: ActivityStatus;
   energy?: Energy;
-  type?: ActivityType;
   scheduledForToday?: boolean;
-  notionUrl?: string | null;
-  isRecurring?: boolean;
-  recurrenceFrequency?: RecurrenceFrequency;
+  recurrenceFrequency?: RecurrenceFrequency | null;
   recurrenceDays?: WeekDay[];
   recurrenceDayOfMonth?: number;
   recurrenceEndDate?: string | null;

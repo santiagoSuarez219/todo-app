@@ -82,14 +82,6 @@ function SunIcon() {
   );
 }
 
-function NotionIcon() {
-  return (
-    <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
-    </svg>
-  );
-}
-
 function RecurringIcon() {
   return (
     <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -612,16 +604,13 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
   const { mutate: toggleSchedule, isPending: isScheduling } = useUpdateActivity();
   const { mutate: doCancelInstances, isPending: isCancelling } = useCancelFutureInstances();
 
-  const isTask     = activity.type === 'task';
-  const isReminder = activity.type === 'reminder';
-
   const now = new Date();
   const isOverdue =
     activity.status !== 'completed' &&
     activity.dueDate &&
     new Date(activity.dueDate) < now;
 
-  const totalSubtasks = isTask ? (activity.subtasks?.length ?? 0) : 0;
+  const totalSubtasks = activity.subtasks?.length ?? 0;
   const completedSubtasks =
     activity.subtasks?.filter((s) => s.status === 'completed').length ?? 0;
   const subtaskPercent =
@@ -718,20 +707,9 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
           )}
         </div>
 
-        {/* ── Row 3: project chip + notion chip ── */}
+        {/* ── Row 3: project chip ── */}
         <div className="flex flex-wrap gap-1.5">
           <InlineProjectEditor activity={activity} />
-          {activity.notionUrl && (
-            <a
-              href={activity.notionUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              <NotionIcon />
-              Notion
-            </a>
-          )}
         </div>
 
         {/* ── Separator ── */}
@@ -748,26 +726,16 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         {/* ── Row 5: fecha ── */}
         {activity.dueDate && (
           <div className="flex flex-col gap-1.5">
-            {/* TASK: fecha límite (sin hora) — editable inline */}
-            {isTask && (
-              <InlineDueDateEditor
-                activity={activity}
-                label="Vence"
-                overdue={!!isOverdue}
-              />
-            )}
-            {/* REMINDER: fecha + hora */}
-            {isReminder && (
-              <div className={`flex items-center gap-1.5 text-xs font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                {isOverdue ? <WarningIcon /> : <CalendarIcon />}
-                <span>Recordatorio: {fmt(activity.dueDate, true)}</span>
-              </div>
-            )}
+            <InlineDueDateEditor
+              activity={activity}
+              label="Vence"
+              overdue={!!isOverdue}
+            />
           </div>
         )}
 
-        {/* ── Row 6: subtask area (solo TASK) ── */}
-        {isTask && totalSubtasks > 0 ? (
+        {/* ── Row 6: subtask area ── */}
+        {totalSubtasks > 0 ? (
           <div className="pt-0.5">
             {/* Progress bar */}
             <div className="flex items-center justify-between mb-1.5">
@@ -799,7 +767,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
               </div>
             )}
           </div>
-        ) : isTask ? (
+        ) : (
           <button
             onClick={() => setCreateSubtaskOpen(true)}
             className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
@@ -807,9 +775,9 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
             <PlusIcon />
             Agregar subtarea
           </button>
-        ) : null}
+        )}
 
-        {/* Create subtask modal — only for tasks with no existing subtasks */}
+        {/* Create subtask modal */}
         {createSubtaskOpen && (
           <CreateSubtaskModal
             parentId={activity.id}

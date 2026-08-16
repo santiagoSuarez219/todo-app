@@ -3,7 +3,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
-import { ActivityType } from '../common/enums/activity-type.enum';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Priority } from '../common/enums/priority.enum';
 import { ProjectsService } from '../projects/projects.service';
@@ -22,7 +21,12 @@ import { DebtStatus } from '../common/enums/debt-status.enum';
 // ─── Shared schemas ──────────────────────────────────────────────────────────
 
 const paginationSchema = {
-  page: z.number().int().positive().optional().describe('Page number (default: 1)'),
+  page: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Page number (default: 1)'),
   limit: z
     .number()
     .int()
@@ -95,7 +99,9 @@ export class McpService {
       },
       async ({ status }) => {
         try {
-          const projects = await this.projectsService.findAll(status as ProjectStatus);
+          const projects = await this.projectsService.findAll(
+            status as ProjectStatus,
+          );
           return ok(projects);
         } catch (e) {
           return err(e);
@@ -127,7 +133,9 @@ export class McpService {
           .enum(['active', 'inactive', 'paused', 'completed'])
           .optional()
           .describe('Initial status (default: active)'),
-        startDate: z.string().describe('Start date in ISO 8601 format (e.g. 2026-04-13)'),
+        startDate: z
+          .string()
+          .describe('Start date in ISO 8601 format (e.g. 2026-04-13)'),
         endDate: z
           .string()
           .optional()
@@ -147,13 +155,22 @@ export class McpService {
       'Update an existing project',
       {
         id: z.string().uuid().describe('Project UUID'),
-        name: z.string().min(1).max(255).optional().describe('New project name'),
+        name: z
+          .string()
+          .min(1)
+          .max(255)
+          .optional()
+          .describe('New project name'),
         status: z
           .enum(['active', 'inactive', 'paused', 'completed'])
           .optional()
           .describe('New status'),
         startDate: z.string().optional().describe('New start date (ISO 8601)'),
-        endDate: z.string().nullable().optional().describe('New end date (ISO 8601), null to clear'),
+        endDate: z
+          .string()
+          .nullable()
+          .optional()
+          .describe('New end date (ISO 8601), null to clear'),
       },
       async ({ id, ...dto }) => {
         try {
@@ -192,7 +209,9 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.activitiesService.findAll(pagination as PaginationDto));
+          return ok(
+            await this.activitiesService.findAll(pagination as PaginationDto),
+          );
         } catch (e) {
           return err(e);
         }
@@ -216,7 +235,7 @@ export class McpService {
 
     server.tool(
       'create_activity',
-      'Create a new activity or subtask. Types: task (with deadline) or reminder (with date+time)',
+      'Create a new activity or subtask, optionally with a due date',
       {
         name: z.string().min(1).max(255).describe('Activity name'),
         projectId: z
@@ -228,7 +247,7 @@ export class McpService {
           .string()
           .optional()
           .describe(
-            'For task: deadline date (ISO 8601, e.g. 2026-04-13). For reminder: exact date+time (e.g. 2026-04-13T09:00:00Z)',
+            'Deadline date (ISO 8601, e.g. 2026-04-13 or 2026-04-13T09:00:00Z)',
           ),
         priority: z
           .enum(['high', 'medium', 'low'])
@@ -242,10 +261,6 @@ export class McpService {
           .enum(['high', 'medium', 'low'])
           .optional()
           .describe('Energy level required (default: medium)'),
-        type: z
-          .enum(['reminder', 'task'])
-          .optional()
-          .describe('Activity type (default: task)'),
         parentId: z
           .string()
           .uuid()
@@ -255,11 +270,6 @@ export class McpService {
           .boolean()
           .optional()
           .describe('Schedule this activity to appear in the Today view'),
-        notionUrl: z
-          .string()
-          .url()
-          .optional()
-          .describe('URL of an associated Notion page'),
         description: z.string().optional(),
       },
       async (dto) => {
@@ -277,27 +287,35 @@ export class McpService {
       {
         id: z.string().uuid().describe('Activity UUID'),
         name: z.string().min(1).max(255).optional(),
-        projectId: z.string().uuid().nullable().optional().describe('Set null to detach from project'),
+        projectId: z
+          .string()
+          .uuid()
+          .nullable()
+          .optional()
+          .describe('Set null to detach from project'),
         dueDate: z.string().nullable().optional(),
         priority: z.enum(['high', 'medium', 'low']).optional(),
-        status: z.enum(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold']).optional(),
+        status: z
+          .enum(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold'])
+          .optional(),
         energy: z.enum(['high', 'medium', 'low']).optional(),
-        type: z.enum(['reminder', 'task']).optional(),
-        parentId: z.string().uuid().nullable().optional().describe('Set null to remove from parent'),
+        parentId: z
+          .string()
+          .uuid()
+          .nullable()
+          .optional()
+          .describe('Set null to remove from parent'),
         scheduledForToday: z
           .boolean()
           .optional()
           .describe('Set or unset scheduling for Today view'),
-        notionUrl: z
-          .string()
-          .url()
-          .nullable()
-          .optional()
-          .describe('URL of an associated Notion page, null to clear'),
-        isRecurring: z.boolean().optional().describe('Enable or disable recurrence'),
         recurrenceFrequency: z
           .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
-          .optional(),
+          .nullable()
+          .optional()
+          .describe(
+            'Set to enable recurrence, null to turn this activity back into a non-template',
+          ),
         recurrenceDays: z
           .array(z.number().int().min(0).max(6))
           .optional()
@@ -339,7 +357,9 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.activitiesService.findToday(pagination as PaginationDto));
+          return ok(
+            await this.activitiesService.findToday(pagination as PaginationDto),
+          );
         } catch (e) {
           return err(e);
         }
@@ -352,7 +372,11 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.activitiesService.findTomorrow(pagination as PaginationDto));
+          return ok(
+            await this.activitiesService.findTomorrow(
+              pagination as PaginationDto,
+            ),
+          );
         } catch (e) {
           return err(e);
         }
@@ -365,7 +389,11 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.activitiesService.findThisWeek(pagination as PaginationDto));
+          return ok(
+            await this.activitiesService.findThisWeek(
+              pagination as PaginationDto,
+            ),
+          );
         } catch (e) {
           return err(e);
         }
@@ -378,7 +406,11 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.activitiesService.findOverdue(pagination as PaginationDto));
+          return ok(
+            await this.activitiesService.findOverdue(
+              pagination as PaginationDto,
+            ),
+          );
         } catch (e) {
           return err(e);
         }
@@ -408,7 +440,9 @@ export class McpService {
       async (pagination) => {
         try {
           return ok(
-            await this.activitiesService.findWithoutProject(pagination as PaginationDto),
+            await this.activitiesService.findWithoutProject(
+              pagination as PaginationDto,
+            ),
           );
         } catch (e) {
           return err(e);
@@ -426,25 +460,10 @@ export class McpService {
       async ({ projectId, ...pagination }) => {
         try {
           return ok(
-            await this.activitiesService.findByProject(projectId, pagination as PaginationDto),
-          );
-        } catch (e) {
-          return err(e);
-        }
-      },
-    );
-
-    server.tool(
-      'get_activities_by_type',
-      'Get activities filtered by type (task or reminder)',
-      {
-        type: z.enum(['reminder', 'task']).describe('Activity type'),
-        ...paginationSchema,
-      },
-      async ({ type, ...pagination }) => {
-        try {
-          return ok(
-            await this.activitiesService.findByType(type as ActivityType, pagination as PaginationDto),
+            await this.activitiesService.findByProject(
+              projectId,
+              pagination as PaginationDto,
+            ),
           );
         } catch (e) {
           return err(e);
@@ -501,13 +520,23 @@ export class McpService {
       'Search activities by name, description or project name (case-insensitive), optionally scoped to a project',
       {
         query: z.string().min(1).describe('Search term'),
-        projectId: z.string().uuid().optional().describe('Optional project UUID to scope search to a specific project'),
+        projectId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            'Optional project UUID to scope search to a specific project',
+          ),
         ...paginationSchema,
       },
       async ({ query, projectId, ...pagination }) => {
         try {
           return ok(
-            await this.activitiesService.search(query, pagination as PaginationDto, projectId),
+            await this.activitiesService.search(
+              query,
+              pagination as PaginationDto,
+              projectId,
+            ),
           );
         } catch (e) {
           return err(e);
@@ -525,7 +554,10 @@ export class McpService {
       async ({ id, ...pagination }) => {
         try {
           return ok(
-            await this.activitiesService.findSubtasks(id, pagination as PaginationDto),
+            await this.activitiesService.findSubtasks(
+              id,
+              pagination as PaginationDto,
+            ),
           );
         } catch (e) {
           return err(e);
@@ -540,17 +572,15 @@ export class McpService {
       'Create a recurring activity template that generates instances automatically (daily, weekly, biweekly, monthly or yearly)',
       {
         name: z.string().min(1).max(255).describe('Activity name'),
-        type: z
-          .enum(['reminder', 'task'])
-          .optional()
-          .describe('Activity type (default: task)'),
         recurrenceFrequency: z
           .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
           .describe('How often the activity repeats'),
         recurrenceDays: z
           .array(z.number().int().min(0).max(6))
           .optional()
-          .describe('Days of week (0=Sun, 1=Mon … 6=Sat). Required for weekly/biweekly.'),
+          .describe(
+            'Days of week (0=Sun, 1=Mon … 6=Sat). Required for weekly/biweekly.',
+          ),
         recurrenceDayOfMonth: z
           .number()
           .int()
@@ -561,22 +591,27 @@ export class McpService {
         recurrenceEndDate: z
           .string()
           .optional()
-          .describe('ISO 8601 date until which instances are generated (null = indefinite)'),
-        projectId: z.string().uuid().optional().describe('UUID of the associated project'),
+          .describe(
+            'ISO 8601 date until which instances are generated (null = indefinite)',
+          ),
+        projectId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('UUID of the associated project'),
         dueDate: z
           .string()
           .optional()
-          .describe('Reference date/time for biweekly/yearly cycle calculations (ISO 8601)'),
+          .describe(
+            'Reference date/time for biweekly/yearly cycle calculations (ISO 8601)',
+          ),
         priority: z.enum(['high', 'medium', 'low']).optional(),
         energy: z.enum(['high', 'medium', 'low']).optional(),
         description: z.string().optional(),
-        notionUrl: z.string().url().optional(),
       },
       async (dto) => {
         try {
-          return ok(
-            await this.activitiesService.create({ ...dto, isRecurring: true } as any),
-          );
+          return ok(await this.activitiesService.create(dto as any));
         } catch (e) {
           return err(e);
         }
@@ -587,11 +622,16 @@ export class McpService {
       'get_activity_instances',
       'Get all generated instances of a recurring activity template',
       {
-        templateId: z.string().uuid().describe('UUID of the recurring template activity'),
+        templateId: z
+          .string()
+          .uuid()
+          .describe('UUID of the recurring template activity'),
       },
       async ({ templateId }) => {
         try {
-          return ok(await this.activitiesService.getInstancesByTemplate(templateId));
+          return ok(
+            await this.activitiesService.getInstancesByTemplate(templateId),
+          );
         } catch (e) {
           return err(e);
         }
@@ -602,12 +642,17 @@ export class McpService {
       'cancel_future_instances',
       'Cancel all future pending instances of a recurring activity template',
       {
-        templateId: z.string().uuid().describe('UUID of the recurring template activity'),
+        templateId: z
+          .string()
+          .uuid()
+          .describe('UUID of the recurring template activity'),
       },
       async ({ templateId }) => {
         try {
           await this.activitiesService.cancelFutureInstances(templateId);
-          return ok({ message: `Future instances of template ${templateId} cancelled` });
+          return ok({
+            message: `Future instances of template ${templateId} cancelled`,
+          });
         } catch (e) {
           return err(e);
         }
@@ -622,12 +667,44 @@ export class McpService {
       'list_expenses',
       'List expenses with optional filtering by year, month, credit card, or description search',
       {
-        page: z.number().int().min(1).default(1).optional().describe('Page number (default: 1)'),
-        limit: z.number().int().min(1).max(100).default(20).optional().describe('Items per page, max 100 (default: 20)'),
-        year: z.number().int().min(2000).max(2100).optional().describe('Filter by year (2000-2100)'),
-        month: z.number().int().min(1).max(12).optional().describe('Filter by month (1-12)'),
-        creditCardId: z.string().uuid().optional().describe('Filter by credit card UUID'),
-        search: z.string().optional().describe('Search by expense description (case-insensitive)'),
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .default(1)
+          .optional()
+          .describe('Page number (default: 1)'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .default(20)
+          .optional()
+          .describe('Items per page, max 100 (default: 20)'),
+        year: z
+          .number()
+          .int()
+          .min(2000)
+          .max(2100)
+          .optional()
+          .describe('Filter by year (2000-2100)'),
+        month: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .optional()
+          .describe('Filter by month (1-12)'),
+        creditCardId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('Filter by credit card UUID'),
+        search: z
+          .string()
+          .optional()
+          .describe('Search by expense description (case-insensitive)'),
       },
       async (params) => {
         try {
@@ -709,12 +786,19 @@ export class McpService {
       'Duplicate an expense to another month with date shifted to destination month (day clamped to last day if necessary)',
       {
         expenseId: z.string().uuid().describe('Source expense UUID'),
-        month: z.number().int().min(1).max(12).describe('Destination month (1-12)'),
+        month: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .describe('Destination month (1-12)'),
         year: z.number().int().min(2020).describe('Destination year (>= 2020)'),
       },
       async ({ expenseId, month, year }) => {
         try {
-          return ok(await this.expensesService.duplicate(expenseId, { month, year }));
+          return ok(
+            await this.expensesService.duplicate(expenseId, { month, year }),
+          );
         } catch (e) {
           return err(e);
         }
@@ -731,7 +815,9 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.incomesService.findAll(pagination as PaginationDto));
+          return ok(
+            await this.incomesService.findAll(pagination as PaginationDto),
+          );
         } catch (e) {
           return err(e);
         }
@@ -760,7 +846,9 @@ export class McpService {
         date: z.string().describe('Date in ISO 8601 format (YYYY-MM-DD)'),
         type: z
           .enum(['sueldo', 'freelance', 'intereses', 'dividendos', 'otro'])
-          .describe('Income type: sueldo, freelance, intereses, dividendos or otro'),
+          .describe(
+            'Income type: sueldo, freelance, intereses, dividendos or otro',
+          ),
       },
       async (dto) => {
         try {
@@ -779,7 +867,9 @@ export class McpService {
         description: z.string().min(1).max(255).optional(),
         amount: z.number().positive().optional(),
         date: z.string().optional(),
-        type: z.enum(['sueldo', 'freelance', 'intereses', 'dividendos', 'otro']).optional(),
+        type: z
+          .enum(['sueldo', 'freelance', 'intereses', 'dividendos', 'otro'])
+          .optional(),
       },
       async ({ id, ...dto }) => {
         try {
@@ -850,7 +940,11 @@ export class McpService {
       'Add an item to the wishlist',
       {
         description: z.string().min(1).max(255).describe('Item description'),
-        estimatedPrice: z.number().positive().optional().describe('Estimated price in COP'),
+        estimatedPrice: z
+          .number()
+          .positive()
+          .optional()
+          .describe('Estimated price in COP'),
         priority: z
           .enum(['alta', 'media', 'baja'])
           .optional()
@@ -921,7 +1015,9 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.accountsService.findAll(pagination as PaginationDto));
+          return ok(
+            await this.accountsService.findAll(pagination as PaginationDto),
+          );
         } catch (e) {
           return err(e);
         }
@@ -1011,7 +1107,9 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.creditCardsService.findAll(pagination as PaginationDto));
+          return ok(
+            await this.creditCardsService.findAll(pagination as PaginationDto),
+          );
         } catch (e) {
           return err(e);
         }
@@ -1044,7 +1142,10 @@ export class McpService {
           .describe('Annual interest rate as decimal (e.g. 0.2800 = 28.00%)'),
         monthlyFee: z.number().min(0).describe('Monthly fee in COP'),
         totalLimit: z.number().positive().describe('Total credit limit in COP'),
-        availableLimit: z.number().min(0).describe('Available credit limit in COP'),
+        availableLimit: z
+          .number()
+          .min(0)
+          .describe('Available credit limit in COP'),
       },
       async (dto) => {
         try {
@@ -1100,7 +1201,9 @@ export class McpService {
       paginationSchema,
       async (pagination) => {
         try {
-          return ok(await this.cdtsService.findAll(pagination as PaginationDto));
+          return ok(
+            await this.cdtsService.findAll(pagination as PaginationDto),
+          );
         } catch (e) {
           return err(e);
         }
@@ -1138,7 +1241,10 @@ export class McpService {
       'Register a new CDT (certificate of deposit)',
       {
         bank: z.string().min(1).max(255).describe('Issuing bank'),
-        investedAmount: z.number().positive().describe('Invested amount in COP'),
+        investedAmount: z
+          .number()
+          .positive()
+          .describe('Invested amount in COP'),
         interestRate: z
           .number()
           .min(0)
@@ -1198,7 +1304,12 @@ export class McpService {
       'list_budgets',
       'List budgets, optionally filtered by year and/or month',
       {
-        year: z.number().int().positive().optional().describe('Filter by year (e.g. 2025)'),
+        year: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe('Filter by year (e.g. 2025)'),
         month: z
           .number()
           .int()
@@ -1210,7 +1321,13 @@ export class McpService {
       },
       async ({ year, month, ...pagination }) => {
         try {
-          return ok(await this.budgetsService.findAll(pagination as PaginationDto, year, month));
+          return ok(
+            await this.budgetsService.findAll(
+              pagination as PaginationDto,
+              year,
+              month,
+            ),
+          );
         } catch (e) {
           return err(e);
         }
@@ -1320,7 +1437,9 @@ export class McpService {
       },
       async ({ budgetId, itemId, ...dto }) => {
         try {
-          return ok(await this.budgetsService.updateItem(budgetId, itemId, dto as any));
+          return ok(
+            await this.budgetsService.updateItem(budgetId, itemId, dto as any),
+          );
         } catch (e) {
           return err(e);
         }
@@ -1364,18 +1483,30 @@ export class McpService {
       'duplicate_budget',
       'Duplicate a complete month of budgets, incomes and expenses from a source budget to a destination month/year. All items, incomes, and expenses are copied; dates are shifted to the destination month (clamped to month-end). Returns the duplicated budget and counts of copied records.',
       {
-        sourceBudgetId: z.string().uuid().describe('UUID of the source budget to duplicate from'),
-        month: z.number().int().min(1).max(12).describe('Destination month (1–12)'),
+        sourceBudgetId: z
+          .string()
+          .uuid()
+          .describe('UUID of the source budget to duplicate from'),
+        month: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .describe('Destination month (1–12)'),
         year: z.number().int().min(2020).describe('Destination year (>= 2020)'),
         name: z
           .string()
           .max(255)
           .optional()
-          .describe('Optional name for the duplicated budget; if omitted, uses the source name'),
+          .describe(
+            'Optional name for the duplicated budget; if omitted, uses the source name',
+          ),
       },
       async ({ sourceBudgetId, ...dto }) => {
         try {
-          return ok(await this.budgetsService.duplicate(sourceBudgetId, dto as any));
+          return ok(
+            await this.budgetsService.duplicate(sourceBudgetId, dto as any),
+          );
         } catch (e) {
           return err(e);
         }
@@ -1397,7 +1528,9 @@ export class McpService {
       },
       async ({ status }) => {
         try {
-          return ok(await this.debtsService.findAll(status as DebtStatus | undefined));
+          return ok(
+            await this.debtsService.findAll(status as DebtStatus | undefined),
+          );
         } catch (e) {
           return err(e);
         }
@@ -1408,10 +1541,24 @@ export class McpService {
       'create_debt',
       'Crea una nueva deuda a cuotas. productValue es el valor total del producto; installmentValue es el valor de cada cuota mensual; totalInstallments es el número de cuotas; initialPayment es la cuota inicial opcional. startMonth/startYear indican el mes de la primera cuota (por defecto, el mes siguiente al actual). IMPORTANTE: esta herramienta crea automáticamente un ítem de presupuesto (tipo pago_deuda) por cada cuota, uno en cada mes del plazo, y crea el presupuesto del mes si no existe — no uses add_budget_item para las cuotas de esta deuda.',
       {
-        description: z.string().min(1).max(255).describe('Descripción de la deuda (ej. "Nevera Samsung")'),
-        productValue: z.number().positive().describe('Valor total del producto en COP'),
-        installmentValue: z.number().positive().describe('Valor de cada cuota en COP'),
-        totalInstallments: z.number().int().min(1).describe('Número total de cuotas'),
+        description: z
+          .string()
+          .min(1)
+          .max(255)
+          .describe('Descripción de la deuda (ej. "Nevera Samsung")'),
+        productValue: z
+          .number()
+          .positive()
+          .describe('Valor total del producto en COP'),
+        installmentValue: z
+          .number()
+          .positive()
+          .describe('Valor de cada cuota en COP'),
+        totalInstallments: z
+          .number()
+          .int()
+          .min(1)
+          .describe('Número total de cuotas'),
         initialPayment: z
           .number()
           .positive()
@@ -1423,7 +1570,11 @@ export class McpService {
           .min(1)
           .max(12)
           .describe('Mes (1-12) de la primera cuota'),
-        startYear: z.number().int().min(2000).describe('Año de la primera cuota'),
+        startYear: z
+          .number()
+          .int()
+          .min(2000)
+          .describe('Año de la primera cuota'),
       },
       async (dto) => {
         try {
