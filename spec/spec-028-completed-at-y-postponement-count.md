@@ -233,7 +233,11 @@ se reciban como input directo.
   quedan `completed` **con `completedAt` seteado**.
 - Al reabrir esa tarea padre, el padre queda con `completedAt: null` y las
   subtareas **siguen** `completed` con su `completedAt` intacto.
-- `completedAt` enviado por el cliente en el body es ignorado.
+- `completedAt` enviado por el cliente en el body responde **400** — no se
+  agrega al DTO, y `main.ts` fija `forbidNonWhitelisted: true` junto con
+  `whitelist: true`, así que una propiedad no declarada rechaza toda la
+  petición en vez de descartarse en silencio (mismo criterio que spec-027; ver
+  `backend/test/e2e-028-*.e2e-spec.ts`).
 
 **`postponementCount`**
 
@@ -246,7 +250,7 @@ se reciban como input directo.
 - Actividad con `dueDate` a la que se le pone `dueDate: null` → no cambia.
 - Un `PATCH` que cambia `deferUntil`/`scheduledFor`/`priority` sin tocar
   `dueDate` → no cambia.
-- `postponementCount` enviado por el cliente en el body es ignorado.
+- `postponementCount` enviado por el cliente en el body responde **400**, mismo motivo.
 - **Ningún** comportamiento del sistema cambia por alcanzar 3 postergaciones.
 
 ## Pruebas asociadas

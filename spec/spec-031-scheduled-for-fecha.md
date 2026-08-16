@@ -232,8 +232,10 @@ tools si no se actualiza en el mismo spec.
 - Tras la migración, las actividades que tenían `scheduledForToday = true` y no
   estaban completadas siguen apareciendo hoy en la vista Hoy; las completadas
   quedan con `scheduledFor: null`.
-- La columna `scheduledForToday` ya no existe en la tabla y enviarla en el body
-  no produce error (se descarta por `whitelist`).
+- La columna `scheduledForToday` ya no existe en la tabla; enviarla en el body
+  responde **400** — `main.ts` fija `forbidNonWhitelisted: true` junto con
+  `whitelist: true`, así que una propiedad no declarada en el DTO rechaza toda
+  la petición en vez de descartarse en silencio (mismo criterio que spec-027).
 - El botón de sol de la card sigue funcionando con un solo clic y refleja
   correctamente su estado activo/inactivo.
 - Cambiar `scheduledFor` **no** modifica `postponementCount`.

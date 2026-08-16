@@ -241,9 +241,12 @@ con parámetros fantasma que rompen en runtime contra el DTO real.
 
 ## Criterios de aceptación
 
-- `POST /activities` con `type`, `notionUrl` o `isRecurring` en el body **no
-  falla**, pero esas propiedades se descartan (`whitelist` del `ValidationPipe`)
-  y no aparecen en la respuesta.
+- `POST /activities` con `type`, `notionUrl` o `isRecurring` en el body
+  responde **400** — `main.ts` fija `forbidNonWhitelisted: true` junto con
+  `whitelist: true`, así que una propiedad no declarada en el DTO **rechaza
+  toda la petición**, no se descarta en silencio. (Corregido tras la ronda de
+  pruebas: el borrador inicial del spec asumía descarte silencioso; ver
+  `backend/test/e2e-027-*.e2e-spec.ts`, que ya codifica el 400 real).
 - La respuesta de `GET /activities/:id` no contiene `type`, `notionUrl` ni
   `isRecurring`.
 - `GET /activities/type/:type` responde **404** (la ruta ya no existe).

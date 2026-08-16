@@ -103,8 +103,9 @@ donde `:today` es la fecha de calendario local de hoy en formato `YYYY-MM-DD`
 |---|---|
 | `activities/entities/activity.entity.ts` | Nueva columna `deferUntil: string \| null` (`date`, nullable) |
 | `activities/dto/create-activity.dto.ts` | Nueva prop opcional `deferUntil` con `@IsDateString()` + `@IsOptional()`, nullable para poder limpiarla |
-| `activities/activities.service.ts` | Nuevo helper privado que devuelve la fecha local de hoy como `YYYY-MM-DD` — **ya existe** `toDateOnlyString()` (~495) y debe reutilizarse; agregar la condición a `findToday`, `findTomorrow`, `findThisWeek`, `findOverdue` y `findWithoutProject`; `buildInstanceFromTemplate()` fija `deferUntil: null` |
-| `activities/activities.service.spec.ts` | Casos unitarios de las cinco consultas |
+| `activities/activities.service.ts` | Nuevo helper privado que devuelve la fecha local de hoy como `YYYY-MM-DD` — **ya existe** `toDateOnlyString()` (~495) y debe reutilizarse; agregar la condición a `findToday`, `findTomorrow`, `findThisWeek`, `findOverdue` y `findWithoutProject`; `buildInstanceFromTemplate()` fija `deferUntil: null`; nuevo método `findDeferred(pagination, projectId?)` (actividades con `deferUntil` no nulo y `> hoy`, orden `deferUntil ASC`) que respalda la tool MCP `get_deferred_activities` |
+| `activities/activities.controller.ts` | Nuevo endpoint **`GET /activities/deferred`** (paginación + `?projectId=` opcional) → `findDeferred()`, mismo patrón que `GET /activities/without-project`. Es el endpoint REST que envuelve la tool MCP; sin él, `get_deferred_activities` no tendría dónde apoyarse |
+| `activities/activities.service.spec.ts` | Casos unitarios de las cinco consultas afectadas y de `findDeferred()` |
 | `migrations/1787000000003-AddDeferUntilToActivities.ts` | **Nueva migración** |
 
 **Tipo de columna: `date` (fecha de calendario), no `timestamptz`.** Motivos:
@@ -201,6 +202,8 @@ sorprenda con actividades "desaparecidas".
 - [ ] `findWithoutProject()` (Backlog): agregar la condición
 - [ ] Verificar explícitamente que `findByMonth()`, `findByProject()`,
       `findSubtasks()`, `findAll()` y `search()` **no** quedaron filtrados
+- [ ] Agregar `findDeferred(pagination, projectId?)` y el endpoint
+      `GET /activities/deferred` en el controlador
 
 ### Fase 3 — Migración
 - [ ] Crear `migrations/1787000000003-AddDeferUntilToActivities.ts`
