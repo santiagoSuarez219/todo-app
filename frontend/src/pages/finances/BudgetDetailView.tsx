@@ -360,7 +360,19 @@ export default function BudgetDetailView() {
 
                 return (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
-                    <td className="px-4 py-3 text-gray-900 dark:text-white">{item.description}</td>
+                    <td className="px-4 py-3 text-gray-900 dark:text-white">
+                      <div className="flex items-center gap-2">
+                        <span>{item.description}</span>
+                        {item.debt && (
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
+                            title="Cuota generada automáticamente por una deuda — editable, pero se desincroniza del valor de la deuda hasta la próxima regeneración"
+                          >
+                            Deuda
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[item.type]}`}>
                         {TYPE_LABELS[item.type]}

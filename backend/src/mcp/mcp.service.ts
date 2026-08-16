@@ -1388,7 +1388,7 @@ export class McpService {
   private registerDebtTools(server: McpServer): void {
     server.tool(
       'list_debts',
-      'Lista las deudas registradas. Cada ítem incluye remainingValue (valor pendiente de pago). Usa status para filtrar por activa o pagada.',
+      'Lista las deudas registradas. Cada ítem incluye startMonth/startYear (mes de inicio del calendario de cuotas), paidInstallments y remainingValue derivados automáticamente del calendario (no requieren pago manual), y nextInstallment (la próxima cuota pendiente, o null si ya está pagada). Usa status para filtrar por activa o pagada.',
       {
         status: z
           .enum(['activa', 'pagada'])
@@ -1406,7 +1406,7 @@ export class McpService {
 
     server.tool(
       'create_debt',
-      'Crea una nueva deuda a cuotas. productValue es el valor total del producto; installmentValue es el valor de cada cuota mensual; totalInstallments es el número de cuotas; initialPayment es la cuota inicial opcional.',
+      'Crea una nueva deuda a cuotas. productValue es el valor total del producto; installmentValue es el valor de cada cuota mensual; totalInstallments es el número de cuotas; initialPayment es la cuota inicial opcional. startMonth/startYear indican el mes de la primera cuota (por defecto, el mes siguiente al actual). IMPORTANTE: esta herramienta crea automáticamente un ítem de presupuesto (tipo pago_deuda) por cada cuota, uno en cada mes del plazo, y crea el presupuesto del mes si no existe — no uses add_budget_item para las cuotas de esta deuda.',
       {
         description: z.string().min(1).max(255).describe('Descripción de la deuda (ej. "Nevera Samsung")'),
         productValue: z.number().positive().describe('Valor total del producto en COP'),
@@ -1417,6 +1417,13 @@ export class McpService {
           .positive()
           .optional()
           .describe('Cuota inicial en COP (opcional)'),
+        startMonth: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .describe('Mes (1-12) de la primera cuota'),
+        startYear: z.number().int().min(2000).describe('Año de la primera cuota'),
       },
       async (dto) => {
         try {
@@ -1428,14 +1435,14 @@ export class McpService {
     );
 
     server.tool(
-      'pay_debt_installment',
-      'Registra el pago de una cuota de una deuda: crea automáticamente un gasto de tipo pago_deuda por el valor de la cuota, incrementa las cuotas pagadas y, si se completaron todas, cambia el estado a pagada.',
+      'pay_debt_full',
+      'Paga una deuda por completo: elimina los ítems de cuota de los meses futuros (los ya vencidos, incluido el del mes en curso, se conservan), registra el saldo restante como un gasto de tipo pago_deuda en el mes en curso, y marca la deuda como pagada. Falla si la deuda ya estaba pagada o no tiene saldo pendiente.',
       {
         debtId: z.string().uuid().describe('UUID de la deuda'),
       },
       async ({ debtId }) => {
         try {
-          return ok(await this.debtsService.payInstallment(debtId));
+          return ok(await this.debtsService.payOff(debtId));
         } catch (e) {
           return err(e);
         }

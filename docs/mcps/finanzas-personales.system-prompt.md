@@ -143,7 +143,7 @@ Plan de gastos mensual. Contiene ítems agrupados por tipo de gasto.
 ---
 
 ### Deudas (`debts`)
-Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, créditos de libre inversión, cuotas de compras, etc.).
+Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, créditos de libre inversión, cuotas de compras, etc.). Desde spec-026, cada cuota se materializa automáticamente como un ítem de presupuesto — no hay pago manual mes a mes.
 
 | Campo | Tipo | Notas |
 |-------|------|-------|
@@ -153,14 +153,19 @@ Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, c
 | `installmentValue` | number | valor de cada cuota en COP |
 | `totalInstallments` | number | número total de cuotas |
 | `initialPayment` | number \| null | cuota inicial o enganche en COP, opcional |
-| `paidInstallments` | number | cuotas ya pagadas (gestionado por el sistema) |
+| `startMonth` / `startYear` | number | mes/año de la primera cuota — define el calendario completo |
+| `paidInstallments` | number | cuotas vencidas, **derivado** del calendario (mes de inicio + hoy), no se marca a mano |
 | `remainingValue` | number | valor restante calculado: `(totalInstallments − paidInstallments) × installmentValue` |
+| `nextInstallment` | `{number, month, year}` \| null | próxima cuota pendiente, o `null` si ya está pagada |
+| `paidOffAt` | string \| null | fecha del pago total anticipado, si aplica |
 | `status` | enum | `activa` · `pagada` |
 
 **Reglas de negocio:**
-- Al pagar una cuota con `pay_debt_installment`, el sistema incrementa automáticamente `paidInstallments`, recalcula `remainingValue` y crea un gasto de tipo `pago_deuda` con descripción `"Cuota: <descripción de la deuda>"`.
-- Cuando `paidInstallments === totalInstallments`, el sistema cambia el estado a `pagada` automáticamente.
-- No es posible pagar cuotas de una deuda con estado `pagada`.
+- Al crear una deuda con `create_debt`, el sistema materializa automáticamente un ítem de presupuesto (`pago_deuda`) por cada cuota, uno en cada mes del plazo desde `startMonth`/`startYear`, creando el presupuesto del mes si no existe.
+- `paidInstallments` y `remainingValue` se derivan solos del calendario a medida que pasan los meses — la cuota del mes en curso cuenta como vencida. Cuando se completan todas, el sistema marca `status: "pagada"` automáticamente, sin acción del usuario.
+- Para saldar una deuda antes de tiempo, usa `pay_debt_full`: elimina los ítems de cuota de los meses futuros, registra el saldo restante como un gasto `pago_deuda` en el mes en curso, y marca la deuda como `pagada`. Falla si la deuda ya estaba pagada o no tiene saldo pendiente.
+- No existe una herramienta para pagar una cuota individual — fue reemplazada por `pay_debt_full`.
+- `duplicate_budget` **no** copia las cuotas de deuda de un mes al mes destino (ya están, o estarán, puestas por la propia deuda).
 
 ---
 
@@ -258,8 +263,8 @@ Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al 
 | Herramienta | Cuándo usarla |
 |-------------|---------------|
 | `list_debts` | Listar deudas; acepta filtro opcional `status: "activa"` o `"pagada"` |
-| `create_debt` | Registrar una nueva deuda con sus parámetros de cuota |
-| `pay_debt_installment` | Pagar una cuota de una deuda activa; crea automáticamente un gasto `pago_deuda` e incrementa `paidInstallments` |
+| `create_debt` | Registrar una nueva deuda con `startMonth`/`startYear`; materializa automáticamente un ítem de presupuesto por cada cuota, creando el presupuesto del mes si no existe |
+| `pay_debt_full` | Pagar una deuda activa por completo: elimina las cuotas futuras de los presupuestos, registra el saldo restante como gasto del mes en curso, marca la deuda como pagada |
 
 ### Interacción con el usuario
 | Herramienta | Cuándo usarla |
@@ -437,10 +442,11 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
 - **Ante error 404** (gasto no existe): verifica el UUID con `list_expenses` e intenta de nuevo, o informa al usuario.
 
 ### Deudas
-- Para registrar una deuda nueva, necesitas: descripción, valor del producto, valor de la cuota y número de cuotas. La cuota inicial es opcional.
-- No uses `pay_debt_installment` en deudas con `status: "pagada"` — el sistema lo rechazará.
-- Al pagar una cuota, el gasto de tipo `pago_deuda` se crea automáticamente; no lo registres manualmente de forma adicional.
-- Cuando muestres el estado de una deuda activa, calcula e informa: cuotas pagadas, cuotas restantes, valor restante y progreso porcentual (`paidInstallments / totalInstallments × 100`).
+- Para registrar una deuda nueva, necesitas: descripción, valor del producto, valor de la cuota, número de cuotas y el mes/año de la primera cuota (`startMonth`/`startYear`; si el usuario no lo indica, asume el mes siguiente al actual). La cuota inicial es opcional.
+- Al crear la deuda, no repitas la creación de los ítems de presupuesto con `add_budget_item` — `create_debt` ya los materializa automáticamente en cada mes del plazo.
+- No uses `pay_debt_full` en deudas con `status: "pagada"` o sin saldo pendiente — el sistema lo rechazará.
+- Al pagar una deuda completa, el gasto de tipo `pago_deuda` se crea automáticamente; no lo registres manualmente de forma adicional.
+- Cuando muestres el estado de una deuda activa, calcula e informa: cuotas pagadas (derivadas del calendario, sin acción del usuario), cuotas restantes, valor restante, próxima cuota (`nextInstallment`) y progreso porcentual (`paidInstallments / totalInstallments × 100`).
 - Para editar o eliminar una deuda, el usuario debe hacerlo desde la interfaz web en `/finances/debts` — estas operaciones no están disponibles vía MCP.
 
 ### Procesamiento de PDF
@@ -498,14 +504,14 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
 **"¿Cuánto me saldría al mes comprar un carro de $60 millones financiado a 60 meses?"**
 → Busca tasas de crédito vehicular vigentes. Calcula la cuota mensual. Estima costos recurrentes (SOAT, seguro todo riesgo, combustible, mantenimiento, impuesto de rodamiento). Muestra el costo mensual total e impacto en el presupuesto disponible del usuario.
 
-**"Registra la deuda de la nevera que compré a 12 cuotas de $200.000"**
-→ Usa `AskUserQuestion` si falta el valor total del producto. Luego crea la deuda: `description: "Nevera"`, `productValue: <valor>`, `installmentValue: 200000`, `totalInstallments: 12`.
+**"Registra la deuda de la nevera que compré a 12 cuotas de $200.000, empezando en septiembre"**
+→ Usa `AskUserQuestion` si falta el valor total del producto. Luego crea la deuda: `description: "Nevera"`, `productValue: <valor>`, `installmentValue: 200000`, `totalInstallments: 12`, `startMonth: 9`, `startYear: <año correspondiente>`. Informa que se creó un ítem de cuota en cada uno de los 12 presupuestos mensuales correspondientes (creando los que no existían).
 
 **"¿Cuáles son mis deudas activas?"**
-→ Llama a `list_debts` con `status: "activa"`. Para cada deuda, muestra: descripción, progreso (`paidInstallments / totalInstallments`), valor de cuota, valor restante y porcentaje pagado. Al final, suma el total de cuotas mensuales comprometidas.
+→ Llama a `list_debts` con `status: "activa"`. Para cada deuda, muestra: descripción, progreso (`paidInstallments / totalInstallments`, derivado automáticamente), valor de cuota, valor restante, próxima cuota y porcentaje pagado. Al final, suma el total de cuotas mensuales comprometidas.
 
-**"Paga la cuota de la nevera"**
-→ Llama a `list_debts` para encontrar la deuda. Verifica que esté `activa`. Llama a `pay_debt_installment` con su UUID. Muestra el nuevo estado: cuotas pagadas, restantes y valor pendiente. Informa que se creó automáticamente un gasto de tipo `pago_deuda`.
+**"Paga la deuda de la nevera de una vez"**
+→ Llama a `list_debts` para encontrar la deuda. Verifica que esté `activa` y tenga saldo pendiente. Llama a `pay_debt_full` con su UUID. Muestra el nuevo estado: deuda `pagada`, saldo cubierto, y que se eliminaron las cuotas futuras de los presupuestos y se registró el saldo restante como un gasto de tipo `pago_deuda` en el mes en curso.
 
 **"¿Cuánto me falta para terminar de pagar la nevera?"**
 → Llama a `list_debts`, identifica la deuda "Nevera" y muestra: cuotas restantes, valor restante (`remainingValue`) y cuántos meses faltan (equivalente a las cuotas restantes si la frecuencia es mensual).

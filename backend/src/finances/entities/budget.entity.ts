@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -9,6 +10,7 @@ import {
 import { BudgetItem } from './budget-item.entity';
 
 @Entity('budgets')
+@Index('UQ_budgets_month_year', ['month', 'year'], { unique: true })
 export class Budget {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -332,6 +332,13 @@ export interface BudgetItem {
   description: string;
   plannedAmount: number;
   type: ExpenseType;
+  /**
+   * Presente cuando el ítem es una cuota generada automáticamente por una
+   * deuda (spec-026) — el backend devuelve la relación completa vía
+   * `leftJoinAndSelect`, no un `debtId` plano.
+   */
+  debt?: { id: string } | null;
+  installmentNumber?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -414,6 +421,12 @@ export const DebtStatus = {
 } as const;
 export type DebtStatus = (typeof DebtStatus)[keyof typeof DebtStatus];
 
+export interface NextInstallment {
+  number: number;
+  month: number;
+  year: number;
+}
+
 export interface Debt {
   id: string;
   description: string;
@@ -421,9 +434,14 @@ export interface Debt {
   installmentValue: number;
   totalInstallments: number;
   initialPayment: number | null;
+  /** Derivado del calendario de cuotas por el backend (spec-026) — no se marca a mano. */
   paidInstallments: number;
   status: DebtStatus;
   remainingValue: number;
+  startMonth: number;
+  startYear: number;
+  paidOffAt: string | null;
+  nextInstallment: NextInstallment | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -434,13 +452,21 @@ export interface CreateDebtDto {
   installmentValue: number;
   totalInstallments: number;
   initialPayment?: number;
+  startMonth: number;
+  startYear: number;
 }
 
 export type UpdateDebtDto = Partial<CreateDebtDto>;
 
-export interface PayInstallmentResult {
+export interface PayOffDebtResult {
   debt: Debt;
   expenseId: string;
+  itemsRemoved: number;
+}
+
+export interface SyncBudgetItemsResult {
+  itemsCreated: number;
+  budgetsCreated: number;
 }
 
 // ─── Pagination ──────────────────────────────────────────────────────────────

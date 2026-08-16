@@ -20,7 +20,12 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { DebtsService, DebtWithRemaining } from './debts.service';
+import {
+  DebtsService,
+  DebtWithRemaining,
+  PayOffResult,
+  SyncBudgetItemsResult,
+} from './debts.service';
 import { CreateDebtDto } from './dto/create-debt.dto';
 import { UpdateDebtDto } from './dto/update-debt.dto';
 import { DebtStatus } from '../common/enums/debt-status.enum';
@@ -73,15 +78,27 @@ export class DebtsController {
     return this.debtsService.remove(id);
   }
 
-  @Post(':id/pay')
+  @Post(':id/pay-off')
   @ApiOperation({
-    summary: 'Pay one installment: creates an expense and increments paidInstallments',
+    summary:
+      'Pay off a debt in full: removes future installment items, registers the remaining balance as an expense of the current month, and marks the debt as paid',
   })
-  @ApiOkResponse()
+  @ApiCreatedResponse()
   @ApiNotFoundResponse()
-  payInstallment(
+  payOff(@Param('id', ParseUUIDPipe) id: string): Promise<PayOffResult> {
+    return this.debtsService.payOff(id);
+  }
+
+  @Post(':id/sync-budget-items')
+  @ApiOperation({
+    summary:
+      'Idempotently recreate any missing future installment items for a debt (e.g. after deleting one manually, or for a legacy debt)',
+  })
+  @ApiCreatedResponse()
+  @ApiNotFoundResponse()
+  syncBudgetItems(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ debt: DebtWithRemaining; expenseId: string }> {
-    return this.debtsService.payInstallment(id);
+  ): Promise<SyncBudgetItemsResult> {
+    return this.debtsService.syncBudgetItems(id);
   }
 }

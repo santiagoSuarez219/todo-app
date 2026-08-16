@@ -152,8 +152,9 @@ de rutas y lógica de negocio: ver `backend/CLAUDE.md`.
 ### Finanzas — `/expenses`, `/incomes`, `/purchases`, `/accounts`, `/credit-cards`, `/cdts`, `/budgets`, `/debts`
 
 CRUD estándar por recurso, más `GET /cdts/active`, `GET /budgets/monthly-summary?year=&month=`,
-`POST/PATCH/DELETE /budgets/:id/items[...]` y `POST /debts/:id/pay`. Detalle
-completo: ver `backend/CLAUDE.md`.
+`POST/PATCH/DELETE /budgets/:id/items[...]`, `POST /debts/:id/pay-off` (pago
+total) y `POST /debts/:id/sync-budget-items` — desde spec-026 no existe pago de
+cuota individual. Detalle completo: ver `backend/CLAUDE.md`.
 
 ---
 
