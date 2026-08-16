@@ -73,6 +73,10 @@ export interface Activity {
   recurrenceDayOfMonth: number | null;
   recurrenceEndDate: string | null;
   instanceDate: string | null;
+  /** Derivado en el backend (spec-028) — nunca se envía en un DTO. */
+  completedAt: string | null;
+  /** Derivado en el backend (spec-028) — nunca se envía en un DTO. */
+  postponementCount: number;
   createdAt: string;
   updatedAt: string;
 }

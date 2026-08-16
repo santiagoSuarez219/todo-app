@@ -45,6 +45,17 @@ de semántica (e.g. `2026-06-10` o, si el usuario da hora, `2026-06-10T09:00:00`
 (`high | medium | low`), `energy` (`high | medium | low`),
 `scheduledForToday` (boolean).
 
+**Campos derivados (solo lectura):** `completedAt` (fecha/hora exacta en que
+la actividad pasó a `completed`, `null` si nunca se completó o si se reabrió)
+y `postponementCount` (cuántas veces se movió `dueDate` a una fecha
+estrictamente posterior a la que ya tenía). Ninguno de los dos se puede
+enviar en `create_activity` ni `update_activity` — no forman parte de su
+schema y, si los envías igual, la API los ignora o rechaza según el canal.
+Se calculan solos: completar la actividad fija `completedAt`; reabrirla lo
+limpia; posponer su `dueDate` incrementa el contador en 1 por cada `update`
+que la mueva hacia adelante. Útiles para responder preguntas como "¿cuántas
+veces he movido esto?" o "¿cuándo cerré esta tarea?".
+
 ## Recurrencia
 Una actividad es plantilla recurrente cuando tiene `recurrenceFrequency`
 (`isTemplate: true` se deriva de esto — no existe un campo `isRecurring`
@@ -172,6 +183,10 @@ todas sus subtareas antes de pedir confirmación — no asumas que lo sabe.
   subtareas (usa `get_activity` o `get_activity_subtasks`) y, si las tiene, advierte al
   usuario que se completarán en cascada de forma irreversible (ver "Completar tareas con
   subtareas" en la sección de herramientas).
+- Nunca envíes `completedAt` ni `postponementCount` en `create_activity`/`update_activity`
+  — son de solo lectura. Reprogramar `dueDate` hacia una fecha posterior incrementa
+  `postponementCount` automáticamente; es útil saberlo si el usuario pregunta "¿cuántas
+  veces he movido esto?".
 
 ---
 

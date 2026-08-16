@@ -185,6 +185,13 @@ export class ActivitiesService {
       recurrenceDayOfMonth,
       isTemplate: recurrenceFrequency != null,
       recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+      // spec-028: a rare path (imports, MCP) but an activity born `completed`
+      // should never carry `completedAt: null` — keeps the invariant that
+      // `completed` always has a real close instant. postponementCount is
+      // set explicitly (not left to the DB default) so it's always present
+      // on the object returned from create(), not just after a round-trip.
+      completedAt: status === ActivityStatus.COMPLETED ? new Date() : null,
+      postponementCount: 0,
     });
 
     if (projectId) {
@@ -222,6 +229,11 @@ export class ActivitiesService {
   async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
     const activity = await this.findOne(id);
     const previousStatus = activity.status;
+    // spec-028: captured before Object.assign, same as previousStatus above —
+    // needed to detect "posponer" (dueDate moving strictly later than a
+    // dueDate it already had), which only makes sense against the pre-update
+    // value.
+    const previousDueDate = activity.dueDate;
     // Whitelisted field-by-field — see the same note in create().
     const {
       projectId,
@@ -285,6 +297,36 @@ export class ActivitiesService {
       }
     }
 
+    // spec-028: completedAt follows the same transition trigger as the
+    // spec-024 cascade below — set on the way IN to completed, cleared on
+    // the way OUT. An activity that stays completed (or never touches
+    // status) keeps its original completedAt untouched.
+    if (
+      previousStatus !== ActivityStatus.COMPLETED &&
+      activity.status === ActivityStatus.COMPLETED
+    ) {
+      activity.completedAt = new Date();
+    } else if (
+      previousStatus === ActivityStatus.COMPLETED &&
+      activity.status !== ActivityStatus.COMPLETED
+    ) {
+      activity.completedAt = null;
+    }
+
+    // spec-028: "posponer" = had a dueDate already, and the new one is
+    // strictly later. First assignment, equal/earlier dates, clearing to
+    // null, or touching unrelated fields (including deferUntil/scheduledFor
+    // from later specs) never increment this. At most one increment per
+    // update(), regardless of how many fields the call touches.
+    if (
+      dueDate !== undefined &&
+      dueDate != null &&
+      previousDueDate != null &&
+      new Date(dueDate).getTime() > previousDueDate.getTime()
+    ) {
+      activity.postponementCount = (activity.postponementCount ?? 0) + 1;
+    }
+
     let saved = await this.activitiesRepository.save(activity);
 
     // spec-024: completing the parent completes its whole subtask tree.
@@ -334,6 +376,10 @@ export class ActivitiesService {
   private async completeSubtaskTree(rootId: string): Promise<void> {
     const visited = new Set<string>();
     let parentIds = [rootId];
+    // spec-028: a subtask completed by the cascade must not end up
+    // `completed` with `completedAt: null` — same instant reused for every
+    // level, since the whole cascade is one logical completion event.
+    const completedAt = new Date();
 
     while (parentIds.length > 0) {
       const children = await this.activitiesRepository.find({
@@ -354,7 +400,7 @@ export class ActivitiesService {
       await this.activitiesRepository
         .createQueryBuilder()
         .update(Activity)
-        .set({ status: ActivityStatus.COMPLETED })
+        .set({ status: ActivityStatus.COMPLETED, completedAt })
         .where('id IN (:...ids)', { ids: childIds })
         .execute();
 

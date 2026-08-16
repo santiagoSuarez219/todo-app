@@ -100,6 +100,12 @@ export class Activity {
   @Column({ type: 'date', nullable: true })
   instanceDate: string | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  completedAt: Date | null;
+
+  @Column({ type: 'integer', default: 0 })
+  postponementCount: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

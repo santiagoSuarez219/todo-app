@@ -1,4 +1,4 @@
-# spec-028 — [NOT STARTED] Trazabilidad de la actividad: `completedAt` y `postponementCount`
+# spec-028 — [DONE] Trazabilidad de la actividad: `completedAt` y `postponementCount`
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -183,39 +183,55 @@ se reciban como input directo.
 ## Fases de implementación
 
 ### Fase 1 — Backend: entidad y lógica
-- [ ] `activity.entity.ts`: agregar `completedAt` y `postponementCount`
-- [ ] `update()`: capturar `previousDueDate` antes del `Object.assign`
-- [ ] `update()`: setear `completedAt = now()` en la transición hacia `completed`
-- [ ] `update()`: limpiar `completedAt = null` en la transición saliente de
+- [x] `activity.entity.ts`: agregar `completedAt` y `postponementCount`
+- [x] `update()`: capturar `previousDueDate` antes del `Object.assign`
+- [x] `update()`: setear `completedAt = now()` en la transición hacia `completed`
+- [x] `update()`: limpiar `completedAt = null` en la transición saliente de
       `completed`
-- [ ] `update()`: incrementar `postponementCount` solo si había `dueDate` previo
+- [x] `update()`: incrementar `postponementCount` solo si había `dueDate` previo
       y el nuevo es estrictamente posterior
-- [ ] `completeSubtaskTree()`: incluir `completedAt` en el `UPDATE` masivo
-- [ ] `create()`: `completedAt = now()` si nace `completed`
-- [ ] Verificar que la cascada de spec-024 mantiene su comportamiento
-      (unidireccional, recursiva, arrastra `cancelled`)
-- [ ] `npm run build` y `npm run lint` en `backend/`
+- [x] `completeSubtaskTree()`: incluir `completedAt` en el `UPDATE` masivo
+- [x] `create()`: `completedAt = now()` si nace `completed`; `postponementCount: 0`
+      seteado explícito (no delegado al default de la DB, para que el objeto
+      devuelto por `create()` ya lo traiga sin depender de un round-trip)
+- [x] Verificar que la cascada de spec-024 mantiene su comportamiento
+      (unidireccional, recursiva, arrastra `cancelled`) — 6/6 casos de
+      regresión en verde
+- [x] `npm run build` y `npm run lint` en `backend/` — build limpio; lint
+      scoped a `activity.entity.ts`/`activities.service.ts` sin hallazgos
 
 ### Fase 2 — Migración
-- [ ] Crear
+- [x] Crear
       `migrations/1787000000001-AddCompletedAtAndPostponementCountToActivities.ts`
-- [ ] Ejecutar en local y verificar con `\d activities`
+- [x] Ejecutar en local y verificar con `\d activities`
 
 ### Fase 3 — MCP: actualizar `todo-api`
-- [ ] Revisar descripciones de tools de consulta para reflejar los campos nuevos
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md` (campos
-      derivados, no escribibles)
-- [ ] Actualizar `docs/mcps/README.md` si cambia el alcance declarado
-- [ ] Verificar que el MCP responde correctamente a las herramientas declaradas
+- [x] Revisar descripciones de tools de consulta para reflejar los campos
+      nuevos — sin cambios necesarios: son genéricas y no enumeran campos, el
+      output se enriquece solo al venir directo de la entidad
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` (campos
+      derivados, no escribibles) — sección "Campos comunes" y una línea en
+      "Reglas de comportamiento"
+- [x] Actualizar `docs/mcps/README.md` si cambia el alcance declarado — sin
+      cambios necesarios (descripción de alto nivel, no enumera campos)
+- [x] Verificar que el MCP responde correctamente a las herramientas
+      declaradas — backend local: `create_activity` devuelve
+      `completedAt: null`/`postponementCount: 0` automáticamente;
+      `update_activity` con esos campos en el input los ignora sin efecto
+      (no están en el schema Zod ni en el whitelist del servicio)
 
 ### Fase 4 — Frontend (contrato)
-- [ ] `types/index.ts`: agregar ambos campos a `Activity`
-- [ ] `npm run lint` y `npm run build` en `frontend/`
+- [x] `types/index.ts`: agregar ambos campos a `Activity`
+- [x] `npm run lint` y `npm run build` en `frontend/` — ambos limpios
 
 ### Fase 5 — Pruebas
-- [ ] `backend/test/e2e-028-completed-at-y-postponement-count.e2e-spec.ts` en rojo
-- [ ] Casos unitarios en `backend/src/activities/activities.service.spec.ts`
-- [ ] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`)
+- [x] `backend/test/e2e-028-completed-at-y-postponement-count.e2e-spec.ts` —
+      15/15 en verde
+- [x] Casos unitarios en `backend/src/activities/activities.service.spec.ts` —
+      17/17 en verde (bloque `completedAt y postponementCount (spec-028)`)
+- [x] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`) —
+      confirmado; suite completa sin regresiones fuera de alcance (los
+      fallos restantes son de specs 030-032, aún no implementados)
 
 > **Sin archivo de pruebas manuales**: este spec no toca UI, así que —según
 > `CLAUDE.md`— el artefacto de aceptación son las pruebas automáticas.
@@ -278,5 +294,5 @@ se reciban como input directo.
 ## Aprobación de implementación
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{fecha}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-16
