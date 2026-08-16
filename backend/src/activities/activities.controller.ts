@@ -27,6 +27,7 @@ import { UpdateActivityDto } from './dto/update-activity.dto';
 import { Activity } from './entities/activity.entity';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { SearchActivitiesQueryDto } from './dto/search-activities-query.dto';
+import { DeferredActivitiesQueryDto } from './dto/deferred-activities-query.dto';
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { Priority } from '../common/enums/priority.enum';
@@ -101,6 +102,18 @@ export class ActivitiesController {
   @ApiOkResponse({ type: [Activity] })
   findWithoutProject(@Query() pagination: PaginationDto): Promise<Activity[]> {
     return this.activitiesService.findWithoutProject(pagination);
+  }
+
+  @Get('deferred')
+  @ApiOperation({
+    summary:
+      'Get activities currently hidden by deferUntil (deferUntil set and still in the future), ordered soonest-first',
+  })
+  @ApiOkResponse({ type: [Activity] })
+  findDeferred(
+    @Query() { projectId, ...pagination }: DeferredActivitiesQueryDto,
+  ): Promise<Activity[]> {
+    return this.activitiesService.findDeferred(pagination, projectId);
   }
 
   @Get('project/:projectId')

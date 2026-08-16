@@ -538,6 +538,7 @@ describe('ActivitiesService - deferUntil filtering (spec-030)', () => {
     });
 
     it('compares deferUntil against a plain YYYY-MM-DD "today" string, not a Date/timestamptz', async () => {
+      await service.findToday({ page: 1, limit: 20 });
       const params = deferUntilCallParams();
       expect(params.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });

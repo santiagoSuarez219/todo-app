@@ -100,6 +100,11 @@ export class Activity {
   @Column({ type: 'date', nullable: true })
   instanceDate: string | null;
 
+  // spec-030: fecha de calendario (no timestamptz) — diferir es una decisión
+  // de día, no de instante; ver justificación en el spec.
+  @Column({ type: 'date', nullable: true })
+  deferUntil: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   completedAt: Date | null;
 

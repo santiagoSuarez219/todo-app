@@ -75,6 +75,15 @@ export class CreateActivityDto {
   @IsOptional()
   scheduledForToday?: boolean;
 
+  @ApiPropertyOptional({
+    example: '2026-04-20',
+    description:
+      'Hide this activity from active views (Today, Tomorrow, This Week, Overdue, Backlog) until this date. null clears it.',
+  })
+  @IsDateString()
+  @IsOptional()
+  deferUntil?: string | null;
+
   // ─── Recurrence ─────────────────────────────────────────────────────────────
 
   @ApiPropertyOptional({

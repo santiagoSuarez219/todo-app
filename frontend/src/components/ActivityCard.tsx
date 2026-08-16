@@ -98,6 +98,14 @@ function BanIcon() {
   );
 }
 
+function EyeOffIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+    </svg>
+  );
+}
+
 // ─── Recurrence helpers ───────────────────────────────────────────────────────
 
 const FREQUENCY_LABELS: Record<string, string> = {
@@ -294,6 +302,27 @@ function fmt(dateStr: string, withTime = false) {
     month: 'short',
     year: 'numeric',
     ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+  });
+}
+
+/** `YYYY-MM-DD` local (never `toISOString()`, que es UTC) — para comparar
+ * contra `deferUntil`, una columna `date` pura, con el mismo criterio que
+ * usa el backend (ver `toDateOnlyString()` en `activities.service.ts`). */
+function localDateOnly(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Formatea un `YYYY-MM-DD` (columna `date` pura, ej. `deferUntil`) sin pasar
+ * por `new Date(string)`, que lo interpreta como medianoche UTC y corre el
+ * día un lugar atrás en timezones negativos — mismo bug documentado en
+ * `lib/calendar.ts` (spec-025). Construye el `Date` con campos locales. */
+function fmtDateOnly(dateOnly: string) {
+  const [year, month, day] = dateOnly.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
@@ -609,6 +638,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
     activity.status !== 'completed' &&
     activity.dueDate &&
     new Date(activity.dueDate) < now;
+  const isDeferred = !!activity.deferUntil && activity.deferUntil > localDateOnly(now);
 
   const totalSubtasks = activity.subtasks?.length ?? 0;
   const completedSubtasks =
@@ -724,13 +754,24 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         </div>
 
         {/* ── Row 5: fecha ── */}
-        {activity.dueDate && (
+        {(activity.dueDate || isDeferred) && (
           <div className="flex flex-col gap-1.5">
-            <InlineDueDateEditor
-              activity={activity}
-              label="Vence"
-              overdue={!!isOverdue}
-            />
+            {activity.dueDate && (
+              <InlineDueDateEditor
+                activity={activity}
+                label="Vence"
+                overdue={!!isOverdue}
+              />
+            )}
+            {isDeferred && (
+              <span
+                title="No aparece en Hoy, Semana, Vencidas ni Backlog hasta esta fecha"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 w-fit"
+              >
+                <EyeOffIcon />
+                Diferida hasta {fmtDateOnly(activity.deferUntil!)}
+              </span>
+            )}
           </div>
         )}
 

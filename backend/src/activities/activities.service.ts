@@ -54,6 +54,16 @@ export class ActivitiesService {
     return { start, end };
   }
 
+  /**
+   * spec-030: `deferUntil` is a plain `date` column, compared as a calendar
+   * date string (never a `Date`/`timestamptz`) to avoid the same timezone
+   * promotion bug documented on `findByMonth()` — see `toDateOnlyString()`.
+   * Always compared against **today**, never a view's date window.
+   */
+  private notDeferredCondition(): string {
+    return '(activity.deferUntil IS NULL OR activity.deferUntil <= :today)';
+  }
+
   // ─── Recurrence helpers ──────────────────────────────────────────────────────
 
   buildInstanceFromTemplate(template: Activity, date: Date): Activity {
@@ -69,6 +79,10 @@ export class ActivitiesService {
       instanceDate: date.toISOString().split('T')[0],
       dueDate: null,
       scheduledForToday: this.isToday(date),
+      // spec-030: instances never inherit deferUntil from the template —
+      // deferring a recurring template affects the template, not instances
+      // already materialized.
+      deferUntil: null,
     });
     return instance;
   }
@@ -167,6 +181,7 @@ export class ActivitiesService {
       status,
       energy,
       scheduledForToday,
+      deferUntil,
       recurrenceFrequency,
       recurrenceDays,
       recurrenceDayOfMonth,
@@ -180,6 +195,7 @@ export class ActivitiesService {
       status,
       energy,
       scheduledForToday,
+      deferUntil,
       recurrenceFrequency,
       recurrenceDays,
       recurrenceDayOfMonth,
@@ -246,6 +262,7 @@ export class ActivitiesService {
       status,
       energy,
       scheduledForToday,
+      deferUntil,
       recurrenceFrequency,
       recurrenceDays,
       recurrenceDayOfMonth,
@@ -259,6 +276,9 @@ export class ActivitiesService {
       ...(status !== undefined && { status }),
       ...(energy !== undefined && { energy }),
       ...(scheduledForToday !== undefined && { scheduledForToday }),
+      // spec-030: deferring is never "posponer" — it's excluded from the
+      // postponementCount trigger below (which only looks at `dueDate`).
+      ...(deferUntil !== undefined && { deferUntil }),
       ...(recurrenceFrequency !== undefined && {
         recurrenceFrequency,
         isTemplate: recurrenceFrequency != null,
@@ -459,7 +479,11 @@ export class ActivitiesService {
 
   findWithoutProject(pagination: PaginationDto): Promise<Activity[]> {
     return this.paginate(
-      this.baseQuery().where('activity.project IS NULL'),
+      this.baseQuery()
+        .where('activity.project IS NULL')
+        .andWhere(this.notDeferredCondition(), {
+          today: this.toDateOnlyString(new Date()),
+        }),
       pagination,
     ).getMany();
   }
@@ -476,7 +500,10 @@ export class ActivitiesService {
             (activity.scheduledForToday = true AND activity.status != :completedStatus)
           )`,
           { start, end, completedStatus: ActivityStatus.COMPLETED },
-        ),
+        )
+        .andWhere(this.notDeferredCondition(), {
+          today: this.toDateOnlyString(new Date()),
+        }),
       pagination,
     ).getMany();
   }
@@ -491,7 +518,12 @@ export class ActivitiesService {
     return this.paginate(
       this.baseQuery()
         .where('activity.isTemplate = false')
-        .andWhere('activity.dueDate BETWEEN :start AND :end', { start, end }),
+        .andWhere('activity.dueDate BETWEEN :start AND :end', { start, end })
+        // spec-030: compared against TODAY, not tomorrow — same rule as
+        // every other active view.
+        .andWhere(this.notDeferredCondition(), {
+          today: this.toDateOnlyString(new Date()),
+        }),
       pagination,
     ).getMany();
   }
@@ -512,6 +544,12 @@ export class ActivitiesService {
         .andWhere('activity.dueDate BETWEEN :monday AND :sunday', {
           monday,
           sunday,
+        })
+        // spec-030: compared against TODAY, not the window's Monday/Sunday —
+        // a task deferred to Thursday does not show up today even though
+        // Thursday falls inside this week's range.
+        .andWhere(this.notDeferredCondition(), {
+          today: this.toDateOnlyString(new Date()),
         }),
       pagination,
     ).getMany();
@@ -526,6 +564,12 @@ export class ActivitiesService {
         .andWhere('activity.dueDate < :now', { now })
         .andWhere('activity.status != :status', {
           status: ActivityStatus.COMPLETED,
+        })
+        // spec-030: intentional consequence — a deferred-but-overdue task
+        // does not appear in Overdue, which is exactly the point of
+        // deferring it.
+        .andWhere(this.notDeferredCondition(), {
+          today: this.toDateOnlyString(new Date()),
         }),
       pagination,
     ).getMany();
@@ -604,6 +648,31 @@ export class ActivitiesService {
       )
       .take(500)
       .getMany();
+  }
+
+  /**
+   * spec-030: activities currently hidden by `deferUntil` — `deferUntil` is
+   * set and still strictly in the future, ordered soonest-first. Backs both
+   * `GET /activities/deferred` and the `get_deferred_activities` MCP tool.
+   * No UI view consumes it yet (out of scope); it exists so an agent (or a
+   * future "Diferidas" view) can see what's currently hidden.
+   */
+  findDeferred(
+    pagination: PaginationDto,
+    projectId?: string,
+  ): Promise<Activity[]> {
+    let qb = this.baseQuery()
+      .where('activity.deferUntil IS NOT NULL')
+      .andWhere('activity.deferUntil > :today', {
+        today: this.toDateOnlyString(new Date()),
+      })
+      .orderBy('activity.deferUntil', 'ASC');
+
+    if (projectId) {
+      qb = qb.andWhere('activity.projectId = :projectId', { projectId });
+    }
+
+    return this.paginate(qb, pagination).getMany();
   }
 
   findByPriority(

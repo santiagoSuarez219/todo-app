@@ -280,6 +280,12 @@ export class McpService {
           .boolean()
           .optional()
           .describe('Schedule this activity to appear in the Today view'),
+        deferUntil: z
+          .string()
+          .optional()
+          .describe(
+            'Defer this activity: hidden from active views (today, tomorrow, this week, overdue, without-project) until this date (ISO 8601 date, e.g. 2026-04-20)',
+          ),
         description: z.string().optional(),
       },
       async (dto) => {
@@ -319,6 +325,11 @@ export class McpService {
           .boolean()
           .optional()
           .describe('Set or unset scheduling for Today view'),
+        deferUntil: z
+          .string()
+          .nullable()
+          .optional()
+          .describe('Set or clear (null) the defer date (ISO 8601 date)'),
         recurrenceFrequency: z
           .enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'])
           .nullable()
@@ -363,7 +374,7 @@ export class McpService {
 
     server.tool(
       'get_today_activities',
-      'Get activities scheduled for today (by dueDate or scheduledForToday flag)',
+      'Get activities scheduled for today (by dueDate or scheduledForToday flag). Excludes deferred activities (deferUntil in the future) — use get_deferred_activities to see those.',
       paginationSchema,
       async (pagination) => {
         try {
@@ -378,7 +389,7 @@ export class McpService {
 
     server.tool(
       'get_tomorrow_activities',
-      'Get activities scheduled for tomorrow (by dueDate)',
+      'Get activities scheduled for tomorrow (by dueDate). Excludes deferred activities (deferUntil still in the future as of today).',
       paginationSchema,
       async (pagination) => {
         try {
@@ -395,7 +406,7 @@ export class McpService {
 
     server.tool(
       'get_this_week_activities',
-      'Get activities for the current week (Monday to Sunday, filtered by dueDate)',
+      'Get activities for the current week (Monday to Sunday, filtered by dueDate). Excludes deferred activities — even if deferUntil falls within this week, it does not show up until that day arrives.',
       paginationSchema,
       async (pagination) => {
         try {
@@ -412,7 +423,7 @@ export class McpService {
 
     server.tool(
       'get_overdue_activities',
-      'Get overdue activities (dueDate is in the past and status is not completed)',
+      'Get overdue activities (dueDate is in the past and status is not completed). A deferred activity never shows up here, even if overdue — that is the point of deferring it.',
       paginationSchema,
       async (pagination) => {
         try {
@@ -445,13 +456,38 @@ export class McpService {
 
     server.tool(
       'get_activities_without_project',
-      'Get all activities that are not associated with any project',
+      'Get all activities that are not associated with any project (Backlog). Excludes deferred activities (deferUntil in the future).',
       paginationSchema,
       async (pagination) => {
         try {
           return ok(
             await this.activitiesService.findWithoutProject(
               pagination as PaginationDto,
+            ),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'get_deferred_activities',
+      'Get activities currently hidden by deferUntil (deferUntil set and still in the future), ordered soonest-first. Use this to see what is deferred and when it will reappear — the same activities are invisible to get_today_activities, get_tomorrow_activities, get_this_week_activities, get_overdue_activities and get_activities_without_project until their deferUntil date arrives.',
+      {
+        projectId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('Optional project UUID to scope the results to'),
+        ...paginationSchema,
+      },
+      async ({ projectId, ...pagination }) => {
+        try {
+          return ok(
+            await this.activitiesService.findDeferred(
+              pagination as PaginationDto,
+              projectId,
             ),
           );
         } catch (e) {

@@ -16,15 +16,6 @@
 // query. Si la implementación final nombra el endpoint distinto, actualizar
 // este archivo junto con ella.
 //
-// **Hallazgo al redactar este archivo:** el spec declara spec-028
-// (`completedAt`/`postponementCount`) como dependencia ya `[DONE]`, pero el
-// código actual de `Activity` (`backend/src/activities/entities/activity.entity.ts`)
-// todavía no tiene esas columnas — `spec/spec-028-...md` sigue en
-// `[NOT STARTED]`. El criterio de aceptación "cambiar deferUntil no modifica
-// postponementCount" no puede probarse contra un campo que no existe todavía;
-// queda documentado aquí en vez de simulado con un campo inexistente. Debe
-// agregarse una vez spec-028 esté implementado.
-//
 // Los casos que dependen de "hoy" (Hoy/Mañana/Semana/Vencidas/Backlog) crean
 // las actividades con `deferUntil` = ayer/hoy/mañana vía API, igual que
 // indica el spec para las pruebas manuales — nunca esperan al día siguiente.
@@ -172,7 +163,6 @@ describe('spec-030 — Diferir actividades: deferUntil (e2e)', () => {
       .set('Cookie', authCookies)
       .send({
         name: '[E2E-030] Actividad de prueba spec-030',
-        type: 'task',
         ...overrides,
       })
       .expect(201);
@@ -586,13 +576,47 @@ describe('spec-030 — Diferir actividades: deferUntil (e2e)', () => {
     });
   });
 
+  // ─── AC: deferring is not posponer (spec-028) ──────────────────────────────
+  // spec-028 (postponementCount) ya está [DONE] al momento de completar esta
+  // fase — este caso quedó pendiente en la redacción original del archivo
+  // porque el campo todavía no existía en la entidad.
+
+  describe('Diferir no es posponer (postponementCount, spec-028)', () => {
+    it('AC: setting/changing deferUntil never increments postponementCount', async () => {
+      const activity = await createActivity({
+        name: '[E2E-030] deferUntil no toca postponementCount',
+      });
+      expect(activity.postponementCount).toBe(0);
+
+      const firstDefer = await api()
+        .patch(`/api/v1/activities/${activity.id}`)
+        .set('Cookie', authCookies)
+        .send({ deferUntil: deferDateOnly(3) })
+        .expect(200);
+      expect(firstDefer.body.data.postponementCount).toBe(0);
+
+      const secondDefer = await api()
+        .patch(`/api/v1/activities/${activity.id}`)
+        .set('Cookie', authCookies)
+        .send({ deferUntil: deferDateOnly(10) })
+        .expect(200);
+      expect(secondDefer.body.data.postponementCount).toBe(0);
+
+      const cleared = await api()
+        .patch(`/api/v1/activities/${activity.id}`)
+        .set('Cookie', authCookies)
+        .send({ deferUntil: null })
+        .expect(200);
+      expect(cleared.body.data.postponementCount).toBe(0);
+    });
+  });
+
   // ─── AC: recurring instances are born with deferUntil: null ───────────────
 
   describe('buildInstanceFromTemplate() — instances never inherit deferUntil from the template', () => {
     it('AC: an instance generated from a deferred recurring template is created with deferUntil: null', async () => {
       const template = await createActivity({
         name: '[E2E-030] Plantilla diferida',
-        isRecurring: true,
         recurrenceFrequency: 'daily',
         deferUntil: deferDateOnly(15),
       });

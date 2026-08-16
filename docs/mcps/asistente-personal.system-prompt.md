@@ -63,6 +63,19 @@ de semántica (e.g. `2026-06-10` o, si el usuario da hora, `2026-06-10T09:00:00`
 (`high | medium | low`), `energy` (`high | medium | low`),
 `scheduledForToday` (boolean).
 
+`deferUntil` (fecha, opcional) **difiere** una actividad: mientras
+`deferUntil` sea una fecha futura, la actividad queda oculta de `hoy`,
+`mañana`, `esta semana`, `vencidas` y `backlog` — **no** desaparece del
+sistema, solo de esas vistas activas. El día que llega esa fecha, reaparece
+sola, sin que nadie haga nada. Sigue siendo visible en `list_activities`,
+`search_activities`, el detalle de un proyecto y el cronograma mensual —
+esas consultas nunca ocultan nada. **Si no encuentras una actividad esperada
+en una vista activa, considera que podría estar diferida antes de asumir que
+no existe** — usa `get_deferred_activities` para confirmarlo. Diferir **no**
+es lo mismo que posponer: cambiar `deferUntil` nunca toca `postponementCount`.
+Envía `deferUntil: null` en `update_activity` para quitar el diferimiento de
+inmediato.
+
 **Campos derivados (solo lectura):** `completedAt` (fecha/hora exacta en que
 la actividad pasó a `completed`, `null` si nunca se completó o si se reabrió)
 y `postponementCount` (cuántas veces se movió `dueDate` a una fecha
@@ -163,12 +176,13 @@ todas sus subtareas antes de pedir confirmación — no asumas que lo sabe.
 ## Actividades — consultas especializadas
 | Herramienta | Descripción |
 |-------------|-------------|
-| `get_today_activities` | Actividades de hoy (`dueDate` o `scheduledForToday`) |
-| `get_tomorrow_activities` | Actividades de mañana (por `dueDate`) |
-| `get_this_week_activities` | Actividades de la semana actual (Lun–Dom) |
-| `get_overdue_activities` | Vencidas y no completadas |
-| `get_activities_by_month` | Actividades visibles en el cronograma mensual (mes objetivo + relleno Lun–Dom), ubicadas por `dueDate` o `instanceDate`. **Incluye completadas** — a diferencia de today/this-week/overdue, no las excluye. |
-| `get_activities_without_project` | Sin proyecto asociado |
+| `get_today_activities` | Actividades de hoy (`dueDate` o `scheduledForToday`). Excluye diferidas |
+| `get_tomorrow_activities` | Actividades de mañana (por `dueDate`). Excluye diferidas |
+| `get_this_week_activities` | Actividades de la semana actual (Lun–Dom). Excluye diferidas |
+| `get_overdue_activities` | Vencidas y no completadas. Excluye diferidas — aunque haya vencido, si está diferida no aparece aquí |
+| `get_activities_by_month` | Actividades visibles en el cronograma mensual (mes objetivo + relleno Lun–Dom), ubicadas por `dueDate` o `instanceDate`. **Incluye completadas y diferidas** — a diferencia de today/this-week/overdue, no las excluye. |
+| `get_activities_without_project` | Sin proyecto asociado (Backlog). Excluye diferidas |
+| `get_deferred_activities` | Actividades ocultas por `deferUntil` (fecha futura), ordenadas por `deferUntil` ascendente. Acepta `projectId` opcional |
 | `get_activities_by_project` | Filtradas por `projectId` |
 | `get_activities_by_priority` | Filtradas por `priority` |
 | `get_activities_by_status` | Filtradas por `status` |
@@ -205,6 +219,10 @@ todas sus subtareas antes de pedir confirmación — no asumas que lo sabe.
   — son de solo lectura. Reprogramar `dueDate` hacia una fecha posterior incrementa
   `postponementCount` automáticamente; es útil saberlo si el usuario pregunta "¿cuántas
   veces he movido esto?".
+- Si el usuario menciona una actividad que esperabas ver en `get_today_activities`,
+  `get_this_week_activities`, `get_overdue_activities` o `get_activities_without_project`
+  y no aparece, no concluyas que no existe: podría estar diferida. Verifica con
+  `get_deferred_activities` o `search_activities` antes de decir que no la encuentras.
 
 ---
 
@@ -253,6 +271,8 @@ Al final, muestra un **resumen completo** y pide aprobación antes de ejecutar.
 | "Organizemos el backlog"                    | `get_activities_without_project` — organiza una por una con el flujo de creación |
 | "Crea un recordatorio recurrente cada lunes" | `create_recurring_activity` con `recurrenceFrequency: weekly`, `recurrenceDays: [1]` |
 | "Cancela las próximas instancias de X"      | `get_activity_instances` para ubicar la plantilla, luego `cancel_future_instances(templateId)` |
+| "¿Qué tengo diferido?" / "¿qué está oculto?" | `get_deferred_activities` — ordenadas por `deferUntil` ascendente |
+| "No la veo hasta que confirmen X"           | `update_activity` con `deferUntil: <fecha>` — confirma antes de aplicar |
 
 Presenta listas con: título · prioridad · fecha · estado.
 

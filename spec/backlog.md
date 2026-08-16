@@ -63,3 +63,18 @@
   detectado durante la ronda manual de `test-027` (TC-027-006). Corregirlo
   requeriría cargar el conteo de instancias al abrir el modal de edición —
   bajo impacto, no bloquea nada.
+
+## spec-030 — Diferir actividades: `deferUntil`
+
+- **`findWithoutProject()` (Backlog) no excluye plantillas (`isTemplate = true`).**
+  A diferencia de `findToday()`, `findThisWeek()`, `findTomorrow()` y
+  `findOverdue()` (que sí filtran `activity.isTemplate = false`),
+  `findWithoutProject()` (`backend/src/activities/activities.service.ts`) no
+  tiene ese filtro — una plantilla recurrente sin proyecto aparece en el
+  Backlog junto con actividades normales. Es un comportamiento preexistente,
+  ajeno al alcance de `deferUntil` (spec-030 solo agregó el filtro de
+  diferidas a esta consulta, sin tocar su lógica de `isTemplate`). Detectado
+  al redactar spec-030 (ver "Decisiones ya resueltas", punto 2). Corregirlo
+  implicaría agregar `.andWhere('activity.isTemplate = false')` a
+  `findWithoutProject()` — bajo riesgo, pero cambia qué se ve hoy en Backlog,
+  por lo que requiere confirmación del usuario antes de aplicarlo.

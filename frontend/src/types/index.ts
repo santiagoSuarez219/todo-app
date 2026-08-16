@@ -82,6 +82,8 @@ export interface Activity {
   recurrenceDayOfMonth: number | null;
   recurrenceEndDate: string | null;
   instanceDate: string | null;
+  /** spec-030: oculta la actividad de las vistas activas mientras sea futura. */
+  deferUntil: string | null;
   /** Derivado en el backend (spec-028) — nunca se envía en un DTO. */
   completedAt: string | null;
   /** Derivado en el backend (spec-028) — nunca se envía en un DTO. */
@@ -112,6 +114,7 @@ export interface CreateActivityDto {
   status?: ActivityStatus;
   energy?: Energy;
   scheduledForToday?: boolean;
+  deferUntil?: string | null;
   recurrenceFrequency?: RecurrenceFrequency | null;
   recurrenceDays?: WeekDay[];
   recurrenceDayOfMonth?: number;

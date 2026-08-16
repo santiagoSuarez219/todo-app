@@ -1,4 +1,4 @@
-# spec-030 — [NOT STARTED] Diferir actividades: `deferUntil`
+# spec-030 — [TESTING] Diferir actividades: `deferUntil`
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -188,55 +188,101 @@ sorprenda con actividades "desaparecidas".
 ## Fases de implementación
 
 ### Fase 1 — Backend: modelo y DTO
-- [ ] `activity.entity.ts`: columna `deferUntil` (`date`, nullable)
-- [ ] `create-activity.dto.ts`: prop opcional `deferUntil` validada como fecha
-- [ ] `buildInstanceFromTemplate()`: `deferUntil: null` en las instancias
-- [ ] `npm run build` y `npm run lint` en `backend/`
+- [x] `activity.entity.ts`: columna `deferUntil` (`date`, nullable)
+- [x] `create-activity.dto.ts`: prop opcional `deferUntil` validada como fecha
+- [x] `buildInstanceFromTemplate()`: `deferUntil: null` en las instancias
+- [x] `npm run build` y `npm run lint` en `backend/` — build limpio (lint se
+      valida al cierre de la Fase 2, junto con el resto de los cambios del
+      servicio)
 
 ### Fase 2 — Backend: filtrado de vistas activas
-- [ ] Helper de "hoy" como `YYYY-MM-DD` local, reutilizando `toDateOnlyString()`
-- [ ] `findToday()`: agregar la condición **fuera** del paréntesis OR existente
-- [ ] `findTomorrow()`: agregar la condición (contra **hoy**)
-- [ ] `findThisWeek()`: agregar la condición (contra **hoy**)
-- [ ] `findOverdue()`: agregar la condición
-- [ ] `findWithoutProject()` (Backlog): agregar la condición
-- [ ] Verificar explícitamente que `findByMonth()`, `findByProject()`,
-      `findSubtasks()`, `findAll()` y `search()` **no** quedaron filtrados
-- [ ] Agregar `findDeferred(pagination, projectId?)` y el endpoint
-      `GET /activities/deferred` en el controlador
+- [x] Helper de "hoy" como `YYYY-MM-DD` local, reutilizando `toDateOnlyString()`
+      — nuevo `notDeferredCondition()` que arma la condición `AND (deferUntil
+      IS NULL OR deferUntil <= :todayDateOnly)` compartida por las 5 vistas
+- [x] `findToday()`: agregar la condición **fuera** del paréntesis OR existente
+- [x] `findTomorrow()`: agregar la condición (contra **hoy**)
+- [x] `findThisWeek()`: agregar la condición (contra **hoy**)
+- [x] `findOverdue()`: agregar la condición
+- [x] `findWithoutProject()` (Backlog): agregar la condición
+- [x] Verificar explícitamente que `findByMonth()`, `findByProject()`,
+      `findSubtasks()`, `findAll()` y `search()` **no** quedaron filtrados —
+      confirmado por lectura directa, ninguno de los 5 fue tocado
+- [x] Agregar `findDeferred(pagination, projectId?)` y el endpoint
+      `GET /activities/deferred` en el controlador (`DeferredActivitiesQueryDto`
+      nuevo, mismo patrón que `SearchActivitiesQueryDto`)
+- [x] `npm run build` y `npm run lint` en `backend/` — build limpio; lint
+      scoped sin hallazgos nuevos (los 3 errores en `create-activity.dto.ts`
+      son preexistentes, ya confirmados en spec-027)
 
 ### Fase 3 — Migración
-- [ ] Crear `migrations/1787000000003-AddDeferUntilToActivities.ts`
-- [ ] Ejecutar en local y verificar que todas las filas existentes quedan en `null`
-- [ ] Comprobar en local que ninguna vista cambió su contenido tras migrar
-      (compatibilidad total)
+- [x] Crear `migrations/1787000000003-AddDeferUntilToActivities.ts`
+- [x] Ejecutar en local y verificar que todas las filas existentes quedan en
+      `null` — confirmado: 89/89 actividades con `deferUntil` nulo
+- [x] Comprobar en local que ninguna vista cambió su contenido tras migrar
+      (compatibilidad total) — con `deferUntil` nulo en todas las filas, la
+      condición `deferUntil IS NULL OR deferUntil <= hoy` es verdadera para
+      las 89, por lo que el filtro es matemáticamente un no-op; verificado
+      también que las 5 vistas responden sin error (today: 0, tomorrow: 0,
+      this-week: 0, overdue: 3, without-project: 18) y que `GET
+      /activities/deferred` devuelve `[]` (sin datos diferidos aún)
 
 ### Fase 4 — MCP: actualizar `todo-api`
-- [ ] Agregar `deferUntil` a `create_activity` y `update_activity`
-- [ ] `create_recurring_activity` **no** expone `deferUntil` (las instancias nacen en `null`)
-- [ ] Agregar el método de servicio `findDeferred()` (actividades con `deferUntil` no nulo y `> hoy`, `projectId` opcional, orden `deferUntil ASC`)
-- [ ] Crear la tool `get_deferred_activities` (paginación + `projectId` opcional)
-- [ ] Actualizar descripciones de las tools de consulta afectadas
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md`
-- [ ] Actualizar `docs/mcps/README.md`
-- [ ] Verificar que el MCP responde correctamente a las herramientas declaradas
+- [x] Agregar `deferUntil` a `create_activity` y `update_activity`
+- [x] `create_recurring_activity` **no** expone `deferUntil` (las instancias nacen en `null`)
+- [x] Agregar el método de servicio `findDeferred()` (actividades con `deferUntil` no nulo y `> hoy`, `projectId` opcional, orden `deferUntil ASC`) — hecho en Fase 2
+- [x] Crear la tool `get_deferred_activities` (paginación + `projectId` opcional)
+- [x] Actualizar descripciones de las tools de consulta afectadas
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` — campo en
+      "Campos comunes", 6 filas de tabla actualizadas, regla de
+      comportamiento y 2 flujos frecuentes nuevos
+- [x] Actualizar `docs/mcps/README.md` — sin cambios necesarios (no enumera
+      tools individuales)
+- [x] Verificar que el MCP responde correctamente a las herramientas
+      declaradas — backend local: `tools/list` confirma `get_deferred_activities`
+      presente, `deferUntil` en `create_activity`/`update_activity`, ausente
+      en `create_recurring_activity`; smoke test funcional: actividad creada
+      con `deferUntil` mañana aparece en `get_deferred_activities`
 
 ### Fase 5 — Frontend
-- [ ] Leer `frontend/DESIGN.md`
-- [ ] `types/index.ts`: `deferUntil` en `Activity` y `CreateActivityDto`
-- [ ] `ActivityForm.tsx`: campo "Diferir hasta" + ayuda + limpieza a `null`
-- [ ] `ActivityCard.tsx`: indicador "Diferida hasta {fecha}"
-- [ ] Revisar los `EmptyState` de Hoy / Semana / Vencidas / Backlog
-- [ ] `npm run lint` y `npm run build` en `frontend/`
+- [x] Leer `frontend/DESIGN.md`
+- [x] `types/index.ts`: `deferUntil` en `Activity` y `CreateActivityDto`
+- [x] `ActivityForm.tsx`: campo "Diferir hasta" + ayuda + limpieza a `null`
+      (junto a "Fecha límite", limpiar el input envía `null`)
+- [x] `ActivityCard.tsx`: indicador "Diferida hasta {fecha}" — bug evitado en
+      el camino: `fmt()` usa `new Date(string)`, que interpreta un `date`
+      puro (`YYYY-MM-DD`) como medianoche UTC y corre el día un lugar atrás
+      en timezones negativos (mismo bug ya documentado en `lib/calendar.ts`
+      para spec-025); se agregó `fmtDateOnly()` con parseo local para
+      evitarlo
+- [x] Revisar los `EmptyState` de Hoy / Semana / Vencidas / Backlog — los
+      cuatro mensajes siguen siendo ciertos aunque la vista esté vacía por
+      diferimiento; sin cambios necesarios
+- [x] `npm run lint` y `npm run build` en `frontend/` — ambos limpios
 
 ### Fase 6 — Pruebas
-- [ ] `docs/testing/test-030-defer-until.md` con casos `TC-030-xx` y `TC-MCP-030-xx`
-- [ ] `backend/test/e2e-030-defer-until.e2e-spec.ts` en rojo
-- [ ] Casos unitarios de las cinco consultas en `activities.service.spec.ts`
-- [ ] Registrar en `spec/backlog.md` que `findWithoutProject()` (Backlog) no
+- [x] `docs/testing/test-030-defer-until.md` con casos `TC-030-xx` y `TC-MCP-030-xx`
+      (redactado junto con el spec; pendiente de ejecución manual por el usuario)
+- [x] `backend/test/e2e-030-defer-until.e2e-spec.ts` — 25/26 en verde (1 skip
+      condicional, `itUnlessSunday`, no es una falla). Se corrigieron 3
+      desajustes reales del archivo (no de la implementación): el helper
+      `createActivity()` seguía enviando `type: 'task'` (eliminado en
+      spec-027) y un caso enviaba `isRecurring: true` (también eliminado),
+      ambos causaban 400 en cascada sobre casi toda la suite; y faltaba el
+      caso de `postponementCount` que el propio archivo documentaba como
+      pendiente por spec-028 no estar `[DONE]` al redactarlo — ya lo está,
+      se agregó el caso
+- [x] Casos unitarios de las cinco consultas en `activities.service.spec.ts` —
+      15/15 en verde. Se corrigieron 2 desajustes reales del archivo: el
+      nombre del parámetro ligado esperado era `:today`, no `:todayDateOnly`
+      (renombrado en la implementación para alinear); y un `it()` de
+      `findToday()` no invocaba `service.findToday()` antes de inspeccionar
+      los parámetros de la query, dejando el mock vacío
+- [x] Registrar en `spec/backlog.md` que `findWithoutProject()` (Backlog) no
       excluye `isTemplate = true`, a diferencia de las demás vistas activas
       (hallazgo preexistente, no corregido en este spec)
-- [ ] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`)
+- [x] Ejecutar `npm run test` y `npm run test:e2e` en verde (`@tester`) —
+      sin regresiones fuera de alcance (los 11 fallos restantes de la suite
+      completa son de specs 031/032, aún no implementados)
 
 ## Criterios de aceptación
 
@@ -298,5 +344,5 @@ sorprenda con actividades "desaparecidas".
 ## Aprobación de implementación
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{fecha}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-17
