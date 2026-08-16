@@ -92,6 +92,7 @@ export class BudgetsService {
     const qb = this.budgetsRepository
       .createQueryBuilder('budget')
       .leftJoinAndSelect('budget.items', 'items')
+      .leftJoinAndSelect('items.debt', 'itemsDebt')
       .orderBy('budget.year', 'DESC')
       .addOrderBy('budget.month', 'DESC')
       .skip((page - 1) * limit)
@@ -107,6 +108,7 @@ export class BudgetsService {
     const budget = await this.budgetsRepository
       .createQueryBuilder('budget')
       .leftJoinAndSelect('budget.items', 'items')
+      .leftJoinAndSelect('items.debt', 'itemsDebt')
       .where('budget.id = :id', { id })
       .getOne();
 
@@ -282,9 +284,14 @@ export class BudgetsService {
       });
       const savedBudget = await manager.save(destBudget);
 
-      // Clone budget items
-      if (sourceBudget.items && sourceBudget.items.length > 0) {
-        const items = sourceBudget.items.map((item) =>
+      // Clone budget items — excluyendo ítems de cuota de deuda (spec-026,
+      // decisión 9): esas cuotas ya están (o estarán) materializadas por la
+      // propia deuda en el mes destino; copiarlas las duplicaría.
+      const nonDebtItems = (sourceBudget.items ?? []).filter(
+        (item) => item.debt == null,
+      );
+      if (nonDebtItems.length > 0) {
+        const items = nonDebtItems.map((item) =>
           manager.create(BudgetItem, {
             description: item.description,
             plannedAmount: item.plannedAmount,

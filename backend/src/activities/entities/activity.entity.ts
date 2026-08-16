@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ActivityStatus } from '../../common/enums/activity-status.enum';
-import { ActivityType } from '../../common/enums/activity-type.enum';
 import { Priority } from '../../common/enums/priority.enum';
 import { Energy } from '../../common/enums/energy.enum';
 import { RecurrenceFrequency } from '../../common/enums/recurrence-frequency.enum';
@@ -56,18 +55,11 @@ export class Activity {
   })
   energy: Energy;
 
-  @Column({
-    type: 'enum',
-    enum: ActivityType,
-    default: ActivityType.TASK,
-  })
-  type: ActivityType;
-
-  @Column({ type: 'boolean', default: false })
-  scheduledForToday: boolean;
-
-  @Column({ type: 'varchar', nullable: true })
-  notionUrl: string | null;
+  // spec-031: reemplaza al booleano scheduledForToday — una fecha caduca
+  // sola (mañana ya no es hoy), el booleano necesitaba un job de limpieza
+  // que nunca existió.
+  @Column({ type: 'date', nullable: true })
+  scheduledFor: string | null;
 
   @ManyToOne(() => Activity, (activity) => activity.subtasks, {
     nullable: true,
@@ -82,9 +74,6 @@ export class Activity {
 
   @Column({ type: 'boolean', default: false })
   isTemplate: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  isRecurring: boolean;
 
   @Column({ type: 'uuid', nullable: true })
   templateId: string | null;
@@ -113,6 +102,25 @@ export class Activity {
 
   @Column({ type: 'date', nullable: true })
   instanceDate: string | null;
+
+  // spec-030: fecha de calendario (no timestamptz) — diferir es una decisión
+  // de día, no de instante; ver justificación en el spec.
+  @Column({ type: 'date', nullable: true })
+  deferUntil: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  completedAt: Date | null;
+
+  @Column({ type: 'integer', default: 0 })
+  postponementCount: number;
+
+  // spec-032: solo tienen sentido con status === 'waiting'; el servicio los
+  // limpia a null en cualquier otro estado.
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  waitingFor: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  waitingSince: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

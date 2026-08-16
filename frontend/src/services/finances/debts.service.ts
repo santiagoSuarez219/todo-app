@@ -4,7 +4,8 @@ import type {
   CreateDebtDto,
   UpdateDebtDto,
   DebtStatus,
-  PayInstallmentResult,
+  PayOffDebtResult,
+  SyncBudgetItemsResult,
 } from '../../types';
 
 export async function getDebts(status?: DebtStatus): Promise<Debt[]> {
@@ -33,9 +34,16 @@ export async function deleteDebt(id: string): Promise<void> {
   await apiClient.delete(`/finances/debts/${id}`);
 }
 
-export async function payInstallment(id: string): Promise<PayInstallmentResult> {
-  const { data } = await apiClient.post<{ data: PayInstallmentResult }>(
-    `/finances/debts/${id}/pay`,
+export async function payOffDebt(id: string): Promise<PayOffDebtResult> {
+  const { data } = await apiClient.post<{ data: PayOffDebtResult }>(
+    `/finances/debts/${id}/pay-off`,
+  );
+  return data.data;
+}
+
+export async function syncDebtBudgetItems(id: string): Promise<SyncBudgetItemsResult> {
+  const { data } = await apiClient.post<{ data: SyncBudgetItemsResult }>(
+    `/finances/debts/${id}/sync-budget-items`,
   );
   return data.data;
 }

@@ -4,7 +4,8 @@ import {
   useCreateDebt,
   useUpdateDebt,
   useDeleteDebt,
-  usePayInstallment,
+  usePayOffDebt,
+  useSyncBudgetItems,
 } from '../../hooks/finances/useDebts';
 import DebtCard from '../../components/finances/DebtCard';
 import DebtForm from '../../components/finances/DebtForm';
@@ -21,6 +22,8 @@ const FILTERS: { label: string; value: Filter }[] = [
   { label: 'Pagadas', value: 'pagada' },
 ];
 
+const cop = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+
 export default function DebtsView() {
   const [filter, setFilter] = useState<Filter>('all');
   const { data: debts = [], isLoading, isError } = useDebts(
@@ -30,11 +33,13 @@ export default function DebtsView() {
   const { mutateAsync: create, isPending: isCreating } = useCreateDebt();
   const { mutateAsync: update, isPending: isUpdating } = useUpdateDebt();
   const { mutate: remove, isPending: isDeleting } = useDeleteDebt();
-  const { mutate: pay, isPending: isPaying, variables: payingId } = usePayInstallment();
+  const { mutate: payOff, isPending: isPayingOff, variables: payingOffId } = usePayOffDebt();
+  const { mutate: sync, isPending: isSyncing, variables: syncingId } = useSyncBudgetItems();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Debt | null>(null);
   const [toDelete, setToDelete] = useState<Debt | null>(null);
+  const [toPayOff, setToPayOff] = useState<Debt | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -109,8 +114,10 @@ export default function DebtsView() {
             debt={debt}
             onEdit={openEdit}
             onDelete={setToDelete}
-            onPay={(d) => pay(d.id)}
-            isPaying={isPaying && payingId === debt.id}
+            onPayOff={setToPayOff}
+            onSync={(d) => sync(d.id)}
+            isPayingOff={isPayingOff && payingOffId === debt.id}
+            isSyncing={isSyncing && syncingId === debt.id}
           />
         ))}
       </div>
@@ -129,11 +136,25 @@ export default function DebtsView() {
       <ConfirmDialog
         open={!!toDelete}
         title="Eliminar deuda"
-        message={`¿Eliminar "${toDelete?.description}"? Esta acción no se puede deshacer.`}
+        message={`¿Eliminar "${toDelete?.description}"? Las cuotas futuras se eliminan de los presupuestos; las ya vencidas se conservan como ítem manual. Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         onConfirm={() => remove(toDelete!.id, { onSuccess: () => setToDelete(null) })}
         onCancel={() => setToDelete(null)}
         loading={isDeleting}
+      />
+
+      <ConfirmDialog
+        open={!!toPayOff}
+        title="Pagar deuda completa"
+        message={
+          toPayOff
+            ? `Se eliminarán las cuotas futuras de "${toPayOff.description}" de los presupuestos y se registrará un gasto de ${cop.format(toPayOff.remainingValue)} en el mes en curso. La deuda quedará marcada como pagada. Esta acción no se puede deshacer.`
+            : ''
+        }
+        confirmLabel="Pagar deuda completa"
+        onConfirm={() => payOff(toPayOff!.id, { onSuccess: () => setToPayOff(null) })}
+        onCancel={() => setToPayOff(null)}
+        loading={isPayingOff}
       />
     </div>
   );

@@ -48,3 +48,85 @@
   (ej. un campo `truncated: boolean` o un total aparte) evitaría el
   silencio. Detectado en revisión de código de spec-025, no bloqueó el
   `[DONE]`.
+
+## spec-027 — Limpieza del modelo de Activity: eliminar `notionUrl`, `isRecurring` y `type`
+
+- **Aviso "tiene instancias generadas" no comprueba el conteo real.**
+  `ActivityForm.tsx` (`hasInstances = initial?.isTemplate && initial?.id`)
+  muestra el aviso "Este template tiene instancias generadas. Los cambios
+  afectarán las instancias futuras pendientes." con solo comprobar que la
+  actividad es plantilla (`isTemplate`) y tiene `id` — no consulta
+  `GET /activities/:id/instances` ni ningún conteo real. El aviso aparece
+  igual aunque la plantilla no tenga ninguna instancia generada todavía
+  (por ejemplo, recién creada, antes de que corra el cron de medianoche).
+  No es un bug introducido por spec-027 (el componente ya existía así antes),
+  detectado durante la ronda manual de `test-027` (TC-027-006). Corregirlo
+  requeriría cargar el conteo de instancias al abrir el modal de edición —
+  bajo impacto, no bloquea nada.
+
+## spec-030 — Diferir actividades: `deferUntil`
+
+- **`findWithoutProject()` (Backlog) no excluye plantillas (`isTemplate = true`).**
+  A diferencia de `findToday()`, `findThisWeek()`, `findTomorrow()` y
+  `findOverdue()` (que sí filtran `activity.isTemplate = false`),
+  `findWithoutProject()` (`backend/src/activities/activities.service.ts`) no
+  tiene ese filtro — una plantilla recurrente sin proyecto aparece en el
+  Backlog junto con actividades normales. Es un comportamiento preexistente,
+  ajeno al alcance de `deferUntil` (spec-030 solo agregó el filtro de
+  diferidas a esta consulta, sin tocar su lógica de `isTemplate`). Detectado
+  al redactar spec-030 (ver "Decisiones ya resueltas", punto 2). Corregirlo
+  implicaría agregar `.andWhere('activity.isTemplate = false')` a
+  `findWithoutProject()` — bajo riesgo, pero cambia qué se ve hoy en Backlog,
+  por lo que requiere confirmación del usuario antes de aplicarlo.
+
+- **El `EmptyState` de Hoy/Semana/Vencidas/Backlog no distingue "vacío de
+  verdad" de "todo diferido".** Cuando todas las actividades que
+  corresponderían a una vista quedan ocultas por `deferUntil`, la vista
+  muestra el mismo mensaje genérico que cuando no hay datos en absoluto (ej.
+  Backlog: "El backlog está vacío. Agrega tu primera tarea."), sin ningún
+  matiz que indique que hay actividades diferidas. Detectado en la ronda
+  manual de `test-030` (TC-030-011), vaciando temporalmente el Backlog real
+  (con autorización explícita del usuario, datos restaurados de inmediato
+  tras la verificación). Es un hallazgo de copy/UX, no de lógica — el
+  filtrado de `deferUntil` funciona correctamente. Corregirlo requeriría que
+  `EmptyState` (o las vistas que lo consumen) sepa distinguir "sin datos" de
+  "datos ocultos por diferimiento", fuera del scope de spec-030.
+
+- **`create_activity`/`create_recurring_activity` corregidas — el resto de
+  tools de escritura del servidor MCP puede tener el mismo gap latente, sin
+  confirmar.** Se detectó (rondas manuales de `test-030`/`test-031`,
+  `TC-MCP-030-004` y `TC-MCP-031-003`) que ninguna tool MCP rechazaba claves
+  no declaradas en su input — las descartaba silenciosamente en vez de dar
+  un error de validación:
+  - `create_recurring_activity` no rechazaba `deferUntil` (`TC-MCP-030-004`,
+    criterio 2): el spec esperaba `MCP error -32602`, igual que con un valor
+    fuera de enum (ej. `TC-MCP-029-003`), pero la plantilla se creaba con
+    éxito y el campo simplemente no se persistía.
+  - `create_activity` no rechazaba `scheduledForToday` (nombre viejo del
+    campo, `TC-MCP-031-003`): mismo patrón — la actividad se creaba con
+    éxito y el campo se descartaba sin aviso.
+
+  Causa raíz: ningún `server.tool(...)` de `backend/src/mcp/mcp.service.ts`
+  usa `.strict()` en su shape Zod, así que por defecto Zod descarta
+  cualquier clave no declarada del input en lugar de lanzar un error —
+  a diferencia del rechazo por **valor** inválido dentro de un campo sí
+  declarado (ej. `horizon` en `TC-MCP-029-003`), que sí funciona porque ahí
+  el rechazo lo hace el propio `z.enum()`.
+
+  **Corregido (2026-08-17), alcance quirúrgico aprobado por el usuario:**
+  `create_activity` y `create_recurring_activity` migradas de `server.tool()`
+  a `server.registerTool()` con `z.object({...}).strict()` — ambas rechazan
+  ahora explícitamente cualquier clave no declarada (`MCP error -32602:
+  Unrecognized key: "..."`). `TC-MCP-030-004` y `TC-MCP-031-003`
+  re-verificados en verde; suite completa confirmada por `@tester` sin
+  fallos nuevos. `docs/mcps/asistente-personal.system-prompt.md` actualizado
+  para reflejar el rechazo explícito.
+
+  **Pendiente (deuda técnica, sin resolver):** el fix se limitó a las 2
+  tools probadas como rotas, por decisión explícita del usuario de mantener
+  el alcance quirúrgico. El resto de tools de escritura de `mcp.service.ts`
+  (`update_activity`, `create_project`, `update_project`, `create_expense`,
+  `update_expense`, y las demás `create_*`/`update_*` de finanzas — unas
+  ~30 en total) usan el mismo patrón `server.tool()` sin `.strict()` y
+  podrían tener el mismo gap latente, sin confirmar caso por caso. Evaluar
+  el alcance completo antes de decidir si conviene una pasada sistémica.

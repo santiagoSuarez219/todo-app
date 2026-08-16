@@ -8,20 +8,24 @@ export const ProjectStatus = {
 } as const;
 export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus];
 
+export const ProjectHorizon = {
+  NOW: 'now',
+  NEXT: 'next',
+  LATER: 'later',
+  SOMEDAY: 'someday',
+} as const;
+export type ProjectHorizon = (typeof ProjectHorizon)[keyof typeof ProjectHorizon];
+
 export const ActivityStatus = {
   PENDING: 'pending',
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   ON_HOLD: 'on_hold',
+  // spec-032: coexiste con ON_HOLD, no lo reemplaza.
+  WAITING: 'waiting',
 } as const;
 export type ActivityStatus = (typeof ActivityStatus)[keyof typeof ActivityStatus];
-
-export const ActivityType = {
-  REMINDER: 'reminder',
-  TASK: 'task',
-} as const;
-export type ActivityType = (typeof ActivityType)[keyof typeof ActivityType];
 
 export const Priority = {
   HIGH: 'high',
@@ -48,20 +52,13 @@ export type RecurrenceFrequency = (typeof RecurrenceFrequency)[keyof typeof Recu
 
 export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export interface RecurrenceConfig {
-  isRecurring: boolean;
-  recurrenceFrequency?: RecurrenceFrequency;
-  recurrenceDays?: WeekDay[];
-  recurrenceDayOfMonth?: number;
-  recurrenceEndDate?: string | null;
-}
-
 // ─── Entities ───────────────────────────────────────────────────────────────
 
 export interface Project {
   id: string;
   name: string;
   status: ProjectStatus;
+  horizon: ProjectHorizon;
   startDate: string;
   endDate: string | null;
   createdAt: string;
@@ -77,19 +74,27 @@ export interface Activity {
   priority: Priority;
   status: ActivityStatus;
   energy: Energy;
-  type: ActivityType;
   parent: Activity | null;
   subtasks: Activity[];
-  scheduledForToday: boolean;
-  notionUrl: string | null;
+  /** spec-031: reemplaza al booleano `scheduledForToday` — caduca sola. */
+  scheduledFor: string | null;
   isTemplate: boolean;
-  isRecurring: boolean;
   templateId: string | null;
   recurrenceFrequency: RecurrenceFrequency | null;
   recurrenceDays: WeekDay[] | null;
   recurrenceDayOfMonth: number | null;
   recurrenceEndDate: string | null;
   instanceDate: string | null;
+  /** spec-030: oculta la actividad de las vistas activas mientras sea futura. */
+  deferUntil: string | null;
+  /** Derivado en el backend (spec-028) — nunca se envía en un DTO. */
+  completedAt: string | null;
+  /** Derivado en el backend (spec-028) — nunca se envía en un DTO. */
+  postponementCount: number;
+  /** spec-032: solo tienen sentido con status === 'waiting'; el backend los
+   * limpia a null en cualquier otro estado. */
+  waitingFor: string | null;
+  waitingSince: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -99,6 +104,7 @@ export interface Activity {
 export interface CreateProjectDto {
   name: string;
   status?: ProjectStatus;
+  horizon?: ProjectHorizon;
   startDate: string;
   endDate?: string | null;
 }
@@ -114,11 +120,11 @@ export interface CreateActivityDto {
   priority?: Priority;
   status?: ActivityStatus;
   energy?: Energy;
-  type?: ActivityType;
-  scheduledForToday?: boolean;
-  notionUrl?: string | null;
-  isRecurring?: boolean;
-  recurrenceFrequency?: RecurrenceFrequency;
+  scheduledFor?: string | null;
+  deferUntil?: string | null;
+  waitingFor?: string | null;
+  waitingSince?: string | null;
+  recurrenceFrequency?: RecurrenceFrequency | null;
   recurrenceDays?: WeekDay[];
   recurrenceDayOfMonth?: number;
   recurrenceEndDate?: string | null;
@@ -332,6 +338,13 @@ export interface BudgetItem {
   description: string;
   plannedAmount: number;
   type: ExpenseType;
+  /**
+   * Presente cuando el ítem es una cuota generada automáticamente por una
+   * deuda (spec-026) — el backend devuelve la relación completa vía
+   * `leftJoinAndSelect`, no un `debtId` plano.
+   */
+  debt?: { id: string } | null;
+  installmentNumber?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -414,6 +427,12 @@ export const DebtStatus = {
 } as const;
 export type DebtStatus = (typeof DebtStatus)[keyof typeof DebtStatus];
 
+export interface NextInstallment {
+  number: number;
+  month: number;
+  year: number;
+}
+
 export interface Debt {
   id: string;
   description: string;
@@ -421,9 +440,14 @@ export interface Debt {
   installmentValue: number;
   totalInstallments: number;
   initialPayment: number | null;
+  /** Derivado del calendario de cuotas por el backend (spec-026) — no se marca a mano. */
   paidInstallments: number;
   status: DebtStatus;
   remainingValue: number;
+  startMonth: number;
+  startYear: number;
+  paidOffAt: string | null;
+  nextInstallment: NextInstallment | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -434,13 +458,21 @@ export interface CreateDebtDto {
   installmentValue: number;
   totalInstallments: number;
   initialPayment?: number;
+  startMonth: number;
+  startYear: number;
 }
 
 export type UpdateDebtDto = Partial<CreateDebtDto>;
 
-export interface PayInstallmentResult {
+export interface PayOffDebtResult {
   debt: Debt;
   expenseId: string;
+  itemsRemoved: number;
+}
+
+export interface SyncBudgetItemsResult {
+  itemsCreated: number;
+  budgetsCreated: number;
 }
 
 // ─── Pagination ──────────────────────────────────────────────────────────────

@@ -32,7 +32,6 @@ import { AppModule } from './../src/app.module';
 import { HttpExceptionFilter } from './../src/common/filters/http-exception.filter';
 import { TransformInterceptor } from './../src/common/interceptors/transform.interceptor';
 import { Activity } from './../src/activities/entities/activity.entity';
-import { ActivityType } from './../src/common/enums/activity-type.enum';
 import { ActivityStatus } from './../src/common/enums/activity-status.enum';
 
 const TEST_EMAIL = 'test@example.com';
@@ -105,7 +104,6 @@ describe('spec-025 — Cronograma: GET /activities/schedule (e2e)', () => {
       .set('Cookie', authCookies)
       .send({
         name: 'Actividad de prueba spec-025',
-        type: 'task',
         ...overrides,
       })
       .expect(201);
@@ -125,10 +123,8 @@ describe('spec-025 — Cronograma: GET /activities/schedule (e2e)', () => {
     const saved = await activityRepository.save(
       activityRepository.create({
         name: 'Instancia de tarea recurrente spec-025',
-        type: ActivityType.TASK,
         status: ActivityStatus.PENDING,
         isTemplate: false,
-        isRecurring: false,
         dueDate: null,
         ...overrides,
       }),
@@ -164,7 +160,6 @@ describe('spec-025 — Cronograma: GET /activities/schedule (e2e)', () => {
       const template = await createActivity({
         name: 'AC1 — plantilla recurrente',
         dueDate: '2031-03-17T12:00:00.000Z',
-        isRecurring: true,
         recurrenceFrequency: 'daily',
       });
       expect(template.isTemplate).toBe(true);

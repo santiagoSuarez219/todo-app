@@ -1,11 +1,12 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ProjectStatus, type CreateProjectDto, type Project } from '../types';
+import { ProjectStatus, ProjectHorizon, type CreateProjectDto, type Project } from '../types';
 
 const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(255),
   status: z.nativeEnum(ProjectStatus).optional(),
+  horizon: z.nativeEnum(ProjectHorizon).optional(),
   startDate: z.string().min(1, 'La fecha de inicio es requerida'),
   endDate: z.string().optional().nullable().transform(v => v === '' ? undefined : v),
 });
@@ -26,6 +27,13 @@ const STATUS_LABELS: Record<ProjectStatus, string> = {
   completed: 'Completado',
 };
 
+const HORIZON_LABELS: Record<ProjectHorizon, string> = {
+  now:     'Ahora',
+  next:    'Siguiente',
+  later:   'Después',
+  someday: 'Algún día',
+};
+
 const inputCls =
   'w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-colors';
 
@@ -37,6 +45,7 @@ export default function ProjectForm({ initial, onSubmit, onCancel, loading }: Pr
     defaultValues: {
       name: initial?.name ?? '',
       status: initial?.status ?? ProjectStatus.ACTIVE,
+      horizon: initial?.horizon ?? ProjectHorizon.NEXT,
       startDate: initial?.startDate ? initial.startDate.slice(0, 10) : '',
       endDate: initial?.endDate ? initial.endDate.slice(0, 10) : '',
     },
@@ -57,14 +66,24 @@ export default function ProjectForm({ initial, onSubmit, onCancel, loading }: Pr
         {errors.name && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.name.message}</p>}
       </div>
 
-      {/* Estado */}
-      <div>
-        <label className={labelCls}>Estado</label>
-        <select {...register('status')} className={inputCls}>
-          {Object.values(ProjectStatus).map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
+      {/* Estado / Horizonte */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelCls}>Estado</label>
+          <select {...register('status')} className={inputCls}>
+            {Object.values(ProjectStatus).map((s) => (
+              <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Horizonte</label>
+          <select {...register('horizon')} className={inputCls}>
+            {Object.values(ProjectHorizon).map((h) => (
+              <option key={h} value={h}>{HORIZON_LABELS[h]}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Fechas */}
