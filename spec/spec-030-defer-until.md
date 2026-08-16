@@ -1,4 +1,4 @@
-# spec-030 — [TESTING] Diferir actividades: `deferUntil`
+# spec-030 — [DONE] Diferir actividades: `deferUntil`
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -347,21 +347,34 @@ sorprenda con actividades "desaparecidas".
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-17
 
-## Cierre de la ronda de pruebas (2026-08-16) — spec queda en `[TESTING]`
+## Cierre de la ronda de pruebas (2026-08-16)
 
-- **Manuales:** 12/15 casos aprobados. `TC-030-002` diferido (hoy cayó
+- **Manuales:** 13/15 casos aprobados. `TC-030-002` diferido (hoy cayó
   domingo, sin día válido "de esta semana + futuro"). `TC-030-010` diferido
   (el cron diario no corrió durante la ventana de la ronda). `TC-MCP-030-004`
-  **falló en su criterio 2**: `create_recurring_activity` no rechaza
-  `deferUntil` con error — lo descarta silenciosamente porque su schema Zod
-  no usa `.strict()`. Detalle completo en
-  `docs/testing/test-030-defer-until.md`.
-- **Decisión del usuario:** el spec **permanece en `[TESTING]`**, no pasa a
-  `[DONE]` todavía. Pendiente: agregar `.strict()` (u otro mecanismo
-  equivalente) al schema de `create_recurring_activity` en
-  `backend/src/mcp/mcp.service.ts` y re-ejecutar `TC-MCP-030-004`. Hallazgo
-  registrado en `spec/backlog.md`.
+  falló inicialmente en su criterio 2 (`create_recurring_activity` no
+  rechazaba `deferUntil`, lo descartaba en silencio por falta de `.strict()`
+  en su schema Zod) — **corregido y re-verificado en verde**, ver más abajo.
+  Detalle completo en `docs/testing/test-030-defer-until.md`.
+- **Fix aplicado (2026-08-17):** `backend/src/mcp/mcp.service.ts` —
+  `create_activity` y `create_recurring_activity` migradas de `server.tool()`
+  (shape Zod crudo) a `server.registerTool()` con `z.object({...}).strict()`,
+  para que rechacen explícitamente parámetros no declarados en vez de
+  descartarlos en silencio. Alcance quirúrgico aprobado por el usuario:
+  solo estas dos tools (las probadas como rotas); el resto de tools de
+  escritura de `mcp.service.ts` (~30) puede tener el mismo gap latente, sin
+  confirmar — registrado en `spec/backlog.md` como candidato a una pasada
+  sistémica futura, fuera de alcance de este spec. `TC-MCP-030-004`
+  re-ejecutado tras el fix: ahora responde `MCP error -32602` como se
+  esperaba originalmente.
+- **Automáticas:** confirmadas por `@tester` tras el fix — unit 105/105,
+  e2e 151/154 (incluye `e2e-027`, único archivo que ejercita
+  `create_activity`/`create_recurring_activity` vía MCP), sin fallos nuevos.
+  Únicos 2 fallos de la suite completa son preexistentes y no relacionados
+  (`app.e2e-spec.ts`, `auth.e2e-spec.ts` TC-014).
 - Hallazgo adicional (no bloqueante, ya en `spec/backlog.md`): el
   `EmptyState` de Hoy/Semana/Vencidas/Backlog no distingue "vacío de
-  verdad" de "todo diferido" — es un hallazgo de copy, no de lógica.
+  verdad" de "todo diferido" — es un hallazgo de copy, no de lógica, sin
+  corregir en esta sesión.
 - Datos de prueba de la ronda eliminados y verificados `404` por API.
+- Spec marcado como `[DONE]`.

@@ -231,8 +231,8 @@ contrato anterior tras el cambio.
 `scheduledForToday` — el parámetro es rechazado (error de validación del
 schema, no un `201` silencioso como en REST, porque la tool no tiene
 `whitelist`, tiene un schema explícito sin ese campo).
-**Estado:** ❌ Fallido
-**Hallazgos:** Mismo hallazgo que `TC-MCP-030-004`: la tool **no** rechazó `scheduledForToday` — lo aceptó, creó la actividad con éxito (`id: 5ae4922c-26bd-4285-8827-5063d73922f8`) y descartó el campo silenciosamente (`scheduledFor: null`, ningún error). Confirma que el problema es **sistémico**, no aislado a `create_recurring_activity`: ningún schema de `mcp.service.ts` usa `.strict()`, así que Zod descarta cualquier clave no declarada del input en cualquier tool, en vez de rechazarla. Actualizado el hallazgo de `spec/backlog.md` para reflejar que afecta a las tools en general, no solo a una.
+**Estado:** ✅ Aprobado (re-verificado tras fix)
+**Hallazgos:** En la primera ejecución de esta ronda, la tool **no** rechazó `scheduledForToday` — lo aceptó, creó la actividad con éxito (`id: 5ae4922c-26bd-4285-8827-5063d73922f8`) y descartó el campo silenciosamente. Mismo hallazgo que `TC-MCP-030-004`, confirmando que el problema era sistémico (ningún schema de `mcp.service.ts` usaba `.strict()`). Corregido en `backend/src/mcp/mcp.service.ts` (`server.tool` → `server.registerTool` con `z.object({...}).strict()`, alcance quirúrgico aprobado por el usuario: solo `create_activity` y `create_recurring_activity`, las dos tools probadas como rotas — el resto de tools de escritura queda como deuda técnica pendiente de evaluación en `spec/backlog.md`). Re-ejecutado con el input original tras el fix: la tool ahora responde `MCP error -32602: Unrecognized key: "scheduledForToday"`, sin crear ninguna actividad. Suite completa re-confirmada por `@tester` sin fallos nuevos.
 
 ### TC-MCP-031-004 — `get_today_activities` describe correctamente su criterio
 **Herramienta probada:** `get_today_activities` en `todo-api`
@@ -245,6 +245,6 @@ describe el criterio como `dueDate` de hoy o `scheduledFor` = hoy.
 **Hallazgos:** Verificado vía `tools/list` del propio servidor MCP: la descripción es "Get activities scheduled for today (by dueDate or scheduledFor = today). Excludes deferred activities...", sin mención al flag booleano viejo. Sin observaciones.
 
 ## Resumen de la ronda
-- Aprobados: 13 (TC-031-001 a 009, TC-031-011, TC-MCP-031-001, 002, 004) — Fallidos: 1 (TC-MCP-031-003) — Pendientes: 1 (TC-031-010, diferido — ya verificado en Fase 2 del spec, no repetible sin datos legacy reales)
-- Hallazgos escalados a `spec/backlog.md`: (1) confirmación de que ninguna tool MCP rechaza claves no declaradas — problema sistémico (`.strict()` ausente en todos los schemas de `mcp.service.ts`), ahora confirmado en dos tools distintas; (2) TC-031-011 tenía una expectativa desactualizada (esperaba `201`, la config real de `main.ts` con `forbidNonWhitelisted: true` produce `400`) — no requiere corrección de código, solo del texto del spec
+- Aprobados: 14 (TC-031-001 a 009, TC-031-011, TC-MCP-031-001 a 004) — Fallidos: 0 — Pendientes: 1 (TC-031-010, diferido — ya verificado en Fase 2 del spec, no repetible sin datos legacy reales)
+- Hallazgos escalados a `spec/backlog.md`: (1) confirmación de que `create_activity` no rechazaba claves no declaradas (`.strict()` ausente en su schema Zod), mismo patrón que `TC-MCP-030-004` — **corregido** en `backend/src/mcp/mcp.service.ts` junto con `create_recurring_activity`, re-verificado en verde (alcance quirúrgico: solo estas dos tools, el resto de tools de escritura queda pendiente de evaluación sistémica); (2) TC-031-011 tenía una expectativa desactualizada (esperaba `201`, la config real de `main.ts` con `forbidNonWhitelisted: true` produce `400`) — no requería corrección de código, solo del texto del spec
 - Limpieza de datos de prueba: ✅ Completada (10 actividades verificadas 404 por REST tras el DELETE)

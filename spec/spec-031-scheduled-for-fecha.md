@@ -1,4 +1,4 @@
-# spec-031 — [TESTING] De `scheduledForToday` (booleano) a `scheduledFor` (fecha)
+# spec-031 — [DONE] De `scheduledForToday` (booleano) a `scheduledFor` (fecha)
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -306,19 +306,26 @@ tools si no se actualiza en el mismo spec.
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-17
 
-## Cierre de la ronda de pruebas (2026-08-16) — spec queda en `[TESTING]`
+## Cierre de la ronda de pruebas (2026-08-16)
 
-- **Manuales:** 13/15 casos aprobados (incluye `TC-031-011`, aprobado con
+- **Manuales:** 14/15 casos aprobados (incluye `TC-031-011`, aprobado con
   corrección de expectativa: `main.ts` con `forbidNonWhitelisted: true`
   produce `400`, no el `201` que el caso asumía — comportamiento más seguro
   de lo esperado, texto del spec desactualizado). `TC-031-010` diferido (ya
   verificado en Fase 2, no repetible sin datos legacy reales). `TC-MCP-031-003`
-  **falló**: `create_activity` no rechaza `scheduledForToday` (nombre viejo)
-  — mismo problema sistémico detectado en `TC-MCP-030-004` (ningún schema
-  Zod de `mcp.service.ts` usa `.strict()`). Detalle completo en
+  falló inicialmente (`create_activity` no rechazaba `scheduledForToday`,
+  mismo problema sistémico detectado en `TC-MCP-030-004`) — **corregido y
+  re-verificado en verde**, ver más abajo. Detalle completo en
   `docs/testing/test-031-scheduled-for-fecha.md`.
-- **Decisión del usuario:** mismo criterio aplicado en spec-030 — el spec
-  **permanece en `[TESTING]`**, no pasa a `[DONE]` todavía. Pendiente:
-  aplicar el fix sistémico de `.strict()` en `mcp.service.ts` (spec-030) y
-  re-ejecutar `TC-MCP-031-003` junto con `TC-MCP-030-004`.
+- **Fix aplicado (2026-08-17), mismo cambio que spec-030:**
+  `backend/src/mcp/mcp.service.ts` — `create_activity` y
+  `create_recurring_activity` migradas a `server.registerTool()` con
+  `z.object({...}).strict()`, alcance quirúrgico aprobado por el usuario
+  (solo estas dos tools; el resto queda como deuda técnica pendiente en
+  `spec/backlog.md`). `TC-MCP-031-003` re-ejecutado tras el fix: ahora
+  responde `MCP error -32602` como se esperaba originalmente.
+- **Automáticas:** confirmadas por `@tester` tras el fix — unit 105/105,
+  e2e 151/154, sin fallos nuevos. Únicos 2 fallos de la suite completa son
+  preexistentes y no relacionados.
 - Datos de prueba de la ronda eliminados y verificados `404` por API.
+- Spec marcado como `[DONE]`.

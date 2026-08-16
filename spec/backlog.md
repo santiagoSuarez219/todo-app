@@ -92,30 +92,41 @@
   `EmptyState` (o las vistas que lo consumen) sepa distinguir "sin datos" de
   "datos ocultos por diferimiento", fuera del scope de spec-030.
 
-- **Ninguna tool MCP rechaza claves no declaradas en su input — las
-  descarta silenciosamente en vez de dar un error de validación.**
-  Confirmado en dos tools distintas, por lo que es un problema **sistémico**
-  del servidor MCP, no aislado a una sola herramienta:
-  - `create_recurring_activity` no rechaza `deferUntil` (`TC-MCP-030-004`,
+- **`create_activity`/`create_recurring_activity` corregidas — el resto de
+  tools de escritura del servidor MCP puede tener el mismo gap latente, sin
+  confirmar.** Se detectó (rondas manuales de `test-030`/`test-031`,
+  `TC-MCP-030-004` y `TC-MCP-031-003`) que ninguna tool MCP rechazaba claves
+  no declaradas en su input — las descartaba silenciosamente en vez de dar
+  un error de validación:
+  - `create_recurring_activity` no rechazaba `deferUntil` (`TC-MCP-030-004`,
     criterio 2): el spec esperaba `MCP error -32602`, igual que con un valor
-    fuera de enum (ej. `TC-MCP-029-003`), pero la plantilla se crea con
-    éxito y el campo simplemente no se persiste.
-  - `create_activity` no rechaza `scheduledForToday` (nombre viejo del
-    campo, `TC-MCP-031-003`): mismo patrón — la actividad se crea con éxito
-    y el campo se descarta sin aviso.
+    fuera de enum (ej. `TC-MCP-029-003`), pero la plantilla se creaba con
+    éxito y el campo simplemente no se persistía.
+  - `create_activity` no rechazaba `scheduledForToday` (nombre viejo del
+    campo, `TC-MCP-031-003`): mismo patrón — la actividad se creaba con
+    éxito y el campo se descartaba sin aviso.
 
   Causa raíz: ningún `server.tool(...)` de `backend/src/mcp/mcp.service.ts`
   usa `.strict()` en su shape Zod, así que por defecto Zod descarta
   cualquier clave no declarada del input en lugar de lanzar un error —
   a diferencia del rechazo por **valor** inválido dentro de un campo sí
-  declarado (ej. `horizon` en `TC-MCP-029-003`), que si funciona porque ahí
-  el rechazo lo hace el propio `z.enum()`. Funcionalmente inofensivo en los
-  dos casos detectados (el campo descartado nunca se persiste ni se
-  hereda), pero el agente no recibe ninguna señal de que el parámetro fue
-  ignorado — un uso real del contrato viejo (`scheduledForToday`) pasaría
-  desapercibido. Detectado en las rondas manuales de `test-030`
-  (`TC-MCP-030-004`, `❌ Fallido`) y `test-031` (`TC-MCP-031-003`, `❌
-  Fallido`). Corregirlo implicaría agregar `.strict()` (o un `.refine()`
-  equivalente) a los shapes de todas las tools de escritura del servidor
-  MCP — evaluar el alcance completo (cuántas tools se ven afectadas) antes
-  de decidir el fix, no solo estas dos.
+  declarado (ej. `horizon` en `TC-MCP-029-003`), que sí funciona porque ahí
+  el rechazo lo hace el propio `z.enum()`.
+
+  **Corregido (2026-08-17), alcance quirúrgico aprobado por el usuario:**
+  `create_activity` y `create_recurring_activity` migradas de `server.tool()`
+  a `server.registerTool()` con `z.object({...}).strict()` — ambas rechazan
+  ahora explícitamente cualquier clave no declarada (`MCP error -32602:
+  Unrecognized key: "..."`). `TC-MCP-030-004` y `TC-MCP-031-003`
+  re-verificados en verde; suite completa confirmada por `@tester` sin
+  fallos nuevos. `docs/mcps/asistente-personal.system-prompt.md` actualizado
+  para reflejar el rechazo explícito.
+
+  **Pendiente (deuda técnica, sin resolver):** el fix se limitó a las 2
+  tools probadas como rotas, por decisión explícita del usuario de mantener
+  el alcance quirúrgico. El resto de tools de escritura de `mcp.service.ts`
+  (`update_activity`, `create_project`, `update_project`, `create_expense`,
+  `update_expense`, y las demás `create_*`/`update_*` de finanzas — unas
+  ~30 en total) usan el mismo patrón `server.tool()` sin `.strict()` y
+  podrían tener el mismo gap latente, sin confirmar caso por caso. Evaluar
+  el alcance completo antes de decidir si conviene una pasada sistémica.
