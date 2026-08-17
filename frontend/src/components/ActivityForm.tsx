@@ -76,6 +76,7 @@ interface Props {
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente',
   in_progress: 'En progreso',
+  testing: 'En pruebas',
   completed: 'Completada',
   cancelled: 'Cancelada',
   on_hold: 'En pausa',

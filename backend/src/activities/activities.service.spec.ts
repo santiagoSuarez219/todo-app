@@ -1775,3 +1775,127 @@ describe('ActivitiesService - ciclo de vida de `waiting` (spec-032)', () => {
     });
   });
 });
+
+// spec-033 — Estado `testing`: trabajo hecho, pendiente de probar.
+// A diferencia de spec-032, `testing` no tiene campos asociados ni ciclo de
+// vida propio: lo único que hay que verificar es que NO dispare lo que
+// pertenece a `completed` (cascada de spec-024, `completedAt` de spec-028).
+describe('ActivitiesService - `testing` no dispara lo que pertenece a `completed` (spec-033)', () => {
+  let service: ActivitiesService;
+  let mockRepository: any;
+  let mockProjectsService: any;
+
+  beforeEach(async () => {
+    mockRepository = {
+      create: jest.fn((data: any) => data),
+      findOne: jest.fn(),
+      save: jest.fn((a: any) => Promise.resolve({ ...a })),
+      find: jest.fn(),
+      createQueryBuilder: jest.fn(),
+    };
+
+    mockProjectsService = {
+      findOne: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ActivitiesService,
+        {
+          provide: getRepositoryToken(Activity),
+          useValue: mockRepository,
+        },
+        {
+          provide: ProjectsService,
+          useValue: mockProjectsService,
+        },
+      ],
+    }).compile();
+
+    service = module.get<ActivitiesService>(ActivitiesService);
+  });
+
+  function baseActivity(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'activity-1',
+      name: 'Actividad',
+      description: null,
+      status: ActivityStatus.PENDING,
+      priority: 'medium',
+      energy: 'medium',
+      isTemplate: false,
+      project: null,
+      parent: null,
+      subtasks: [],
+      completedAt: null,
+      ...overrides,
+    };
+  }
+
+  it('pasar a testing NO dispara la cascada de subtareas de spec-024', async () => {
+    const activity = baseActivity({ status: ActivityStatus.PENDING });
+    mockRepository.findOne.mockResolvedValue(activity);
+
+    const cascadeSpy = jest
+      .spyOn(service as any, 'completeSubtaskTree')
+      .mockResolvedValue(undefined);
+
+    await service.update('activity-1', {
+      status: ActivityStatus.TESTING,
+    } as any);
+
+    expect(cascadeSpy).not.toHaveBeenCalled();
+  });
+
+  it('pasar a testing NO fija completedAt (spec-028)', async () => {
+    const activity = baseActivity({ status: ActivityStatus.PENDING });
+    mockRepository.findOne.mockResolvedValue(activity);
+
+    const result = await service.update('activity-1', {
+      status: ActivityStatus.TESTING,
+    } as any);
+
+    expect((result as any).status).toEqual(ActivityStatus.TESTING);
+    expect((result as any).completedAt).toBeNull();
+  });
+
+  it('completed → testing limpia completedAt (spec-028) sin revertir la cascada de spec-024', async () => {
+    const activity = baseActivity({
+      status: ActivityStatus.COMPLETED,
+      completedAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    mockRepository.findOne.mockResolvedValue(activity);
+
+    const cascadeSpy = jest
+      .spyOn(service as any, 'completeSubtaskTree')
+      .mockResolvedValue(undefined);
+
+    const result = await service.update('activity-1', {
+      status: ActivityStatus.TESTING,
+    } as any);
+
+    expect((result as any).status).toEqual(ActivityStatus.TESTING);
+    expect((result as any).completedAt).toBeNull();
+    // completed → testing no es una transición HACIA completed: la cascada
+    // de spec-024 no debe dispararse en este sentido.
+    expect(cascadeSpy).not.toHaveBeenCalled();
+  });
+
+  it('testing → completed SÍ dispara la cascada y fija completedAt — es una transición normal hacia completed', async () => {
+    const activity = baseActivity({ status: ActivityStatus.TESTING });
+    mockRepository.findOne.mockResolvedValue(activity);
+
+    const cascadeSpy = jest
+      .spyOn(service as any, 'completeSubtaskTree')
+      .mockResolvedValue(undefined);
+
+    const result = await service.update('activity-1', {
+      status: ActivityStatus.COMPLETED,
+    } as any);
+
+    expect((result as any).status).toEqual(ActivityStatus.COMPLETED);
+    expect((result as any).completedAt).not.toBeNull();
+    expect(cascadeSpy).toHaveBeenCalledTimes(1);
+    expect(cascadeSpy).toHaveBeenCalledWith('activity-1');
+  });
+});

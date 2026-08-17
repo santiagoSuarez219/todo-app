@@ -5,6 +5,10 @@ type Status = ActivityStatus | ProjectStatus;
 const colorMap: Record<string, string> = {
   pending:     'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
   in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  // spec-033: único color de la paleta primitiva sin usar por otro estado —
+  // agregar un color nuevo (teal) quedó descartado para no ampliar el
+  // sistema de diseño fuera de este spec.
+  testing:     'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
   completed:   'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
   cancelled:   'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
   on_hold:     'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
@@ -19,6 +23,7 @@ const colorMap: Record<string, string> = {
 const labelMap: Record<string, string> = {
   pending:     'Pendiente',
   in_progress: 'En progreso',
+  testing:     'En pruebas',
   completed:   'Completado',
   cancelled:   'Cancelado',
   // spec-032: renombrado de "En espera" a "En pausa" — esa etiqueta pasa a
