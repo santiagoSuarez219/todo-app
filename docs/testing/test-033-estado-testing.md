@@ -13,16 +13,16 @@
 
 | Recurso | Endpoint de creación | Identificador | Eliminado |
 |---------|----------------------|---------------|-----------|
-| Proyecto "Proyecto pruebas spec-033" | `POST /projects` | `{{id}}` | ⬜ |
-| Actividad A — "Implementar login" (`in_progress`, `dueDate` = hoy, con 2 subtareas pendientes) | `POST /activities` | `{{id}}` | ⬜ |
-| Subtarea A.1 — "Escribir el endpoint" (`pending`) | `POST /activities` (`parentId` = A) | `{{id}}` | ⬜ |
-| Subtarea A.2 — "Conectar el formulario" (`pending`) | `POST /activities` (`parentId` = A) | `{{id}}` | ⬜ |
-| Actividad B — "Corregir cálculo de cuotas" (`completed`, `dueDate` = hoy) | `POST /activities` | `{{id}}` | ⬜ |
-| Actividad C — "Migrar tabla de gastos" (`pending`, `dueDate` = hace 3 días) | `POST /activities` | `{{id}}` | ⬜ |
-| Actividad D — "Ajustar responsive del tabbar" (`pending`, `dueDate` = en 2 días, mismo mes) | `POST /activities` | `{{id}}` | ⬜ |
+| Proyecto "Proyecto pruebas spec-033" | `POST /projects` | `53abb34e-fb52-49e6-83fd-23e827b05523` | ⬜ |
+| Actividad A — "Implementar login" (`in_progress`, `dueDate` = hoy, con 2 subtareas pendientes) | `POST /activities` | `2988e1fa-e286-49f0-bde4-da891e28ecfb` | ⬜ |
+| Subtarea A.1 — "Escribir el endpoint" (`pending`) | `POST /activities` (`parentId` = A) | `8d484996-dbaf-4838-8e0e-3568f56f1bc8` | ⬜ |
+| Subtarea A.2 — "Conectar el formulario" (`pending`) | `POST /activities` (`parentId` = A) | `ca4cf6da-99ef-4801-80a8-314936c31e49` | ⬜ |
+| Actividad B — "Corregir cálculo de cuotas" (`completed`, `dueDate` = hoy) | `POST /activities` | `f8210b82-1b5f-411e-b048-2a996eb0c211` | ⬜ |
+| Actividad C — "Migrar tabla de gastos" (`pending`, `dueDate` = hace 3 días) | `POST /activities` | `ef54ad8f-9bf4-42d3-8192-234891011c7e` | ⬜ |
+| Actividad D — "Ajustar responsive del tabbar" (`pending`, `dueDate` = en 2 días, mismo mes) | `POST /activities` | `34b1140a-4282-4393-bea4-90f42b4a7221` | ⬜ |
 
 **Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`, frontend en `http://localhost:5173`)
-**Fecha de la ronda:** {{pendiente}}
+**Fecha de la ronda:** 2026-08-17
 
 ## Casos de prueba
 
@@ -33,8 +33,8 @@
 1. Abrir la actividad A en el formulario de edición.
 2. Desplegar el selector "Estado".
 **Resultado esperado:** Aparece la opción **"En pruebas"**, ubicada **entre "En progreso" y "Completada"**. Las demás opciones conservan su texto actual ("Pendiente", "En progreso", "Completada", "Cancelada", "En pausa", "Esperando").
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado vía árbol de accesibilidad del formulario: el `<select>` de Estado ofrece exactamente `Pendiente → En progreso → En pruebas → Completada → Cancelada → En pausa → Esperando`, con `value="testing"` en la nueva opción. Sin observaciones.
 
 ### TC-033-002 — Guardar una actividad en "En pruebas"
 **Precondición:** TC-033-001 aprobado.
@@ -44,8 +44,8 @@
 2. Guardar.
 3. Volver a abrir la actividad.
 **Resultado esperado:** Se guarda sin errores; al reabrir, el selector sigue mostrando "En pruebas". No aparece ningún campo extra en el formulario (a diferencia de "Esperando", que muestra "Esperando a" / "Esperando desde").
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** El estado se guardó correctamente como `testing` y persistió al reabrir; sin campos extra en el formulario, tal como se esperaba. **Hallazgo fuera de scope, no bloqueante:** al guardar, la fecha límite se corrió un día hacia atrás en la UI (17→16 de ago) — bug preexistente de `ActivityForm.tsx` en el manejo de `dueDate` (trunca la hora a `slice(0,10)` y el backend persiste el date-only como medianoche UTC, que en Colombia, UTC-5, cae en el día anterior). Reproducido de forma determinística guardando sin tocar ningún campo. Sin relación con el estado `testing` — afecta cualquier guardado del formulario. Registrado en `spec/backlog.md` bajo spec-033; dato de prueba restaurado vía API tras la verificación.
 
 ### TC-033-003 — El badge distingue "En pruebas" visualmente
 **Precondición:** Actividad A en estado `testing` (TC-033-002).
