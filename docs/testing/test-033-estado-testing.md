@@ -104,8 +104,8 @@
 1. Cambiar la actividad A a "En pruebas".
 2. Abrir el detalle de la actividad A y revisar sus subtareas.
 **Resultado esperado:** A.1 y A.2 **siguen en "Pendiente"**. La cascada de completado (spec-024) solo se dispara al pasar a "Completada", no a "En pruebas".
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Restaurada la precondición (A → "En progreso") y luego cambiada a "En pruebas" vía edición rápida. Contador del padre "0/2", ambas subtareas ("Escribir el endpoint", "Conectar el formulario") siguen en "Pendiente". La cascada de spec-024 no se disparó. Sin observaciones.
 
 ### TC-033-009 — De "Completada" a "En pruebas" reabre la actividad
 **Precondición:** Actividad B en `completed`.
