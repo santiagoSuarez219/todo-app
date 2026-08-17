@@ -1,4 +1,4 @@
-# spec-033 — [NOT STARTED] Estado `testing`: trabajo hecho, pendiente de probar
+# spec-033 — [IN PROGRESS] Estado `testing`: trabajo hecho, pendiente de probar
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -170,22 +170,34 @@ que no requiere cambios — reconfirmar antes de cerrar la fase.
 ## Fases de implementación
 
 ### Fase 1 — Backend: enum
-- [ ] `activity-status.enum.ts`: agregar `TESTING = 'testing'` tras `IN_PROGRESS`
-- [ ] Verificar por lectura que ninguna consulta de `activities.service.ts`
+- [x] `activity-status.enum.ts`: agregar `TESTING = 'testing'` tras `IN_PROGRESS`
+- [x] Verificar por lectura que ninguna consulta de `activities.service.ts`
       enumera estados "activos" a mano, y que la cascada de spec-024 y el
-      `completedAt` de spec-028 solo reaccionan a `completed`
-- [ ] `npm run build` y `npm run lint` en `backend/`
+      `completedAt` de spec-028 solo reaccionan a `completed` — confirmado:
+      todas las comparaciones son contra `COMPLETED`, `PENDING`, `CANCELLED`
+      o `WAITING`, ninguna enumera "activos" a mano
+- [x] `npm run build` y `npm run lint` en `backend/` — build limpio, lint
+      scoped sin hallazgos
 
 ### Fase 2 — Migración
-- [ ] Crear `migrations/1787000000006-AddTestingToActivities.ts` con el patrón
+- [x] Crear `migrations/1787000000006-AddTestingToActivities.ts` con el patrón
       `CREATE TYPE nuevo` + `ALTER COLUMN … USING` + `DROP TYPE` + `RENAME`
-- [ ] `down()` con conversión previa de `testing` → `in_progress`, documentada
-- [ ] Ejecutar en local y verificar con un conteo por estado antes/después que
-      ninguna actividad cambió de estado
+- [x] `down()` con conversión previa de `testing` → `in_progress`, documentada
+- [x] Ejecutar en local y verificar con un conteo por estado antes/después que
+      ninguna actividad cambió de estado — snapshot idéntico (66 pending,
+      1 in_progress, 22 completed, 1 cancelled, 1 on_hold, 2 waiting); enum
+      ahora incluye `testing` (`\dT+` confirmado)
 
 ### Fase 3 — Pruebas automáticas del backend
-- [ ] Poner en verde `backend/test/e2e-033-estado-testing.e2e-spec.ts`
-- [ ] Poner en verde los casos nuevos de `activities.service.spec.ts`
+- [x] Poner en verde `backend/test/e2e-033-estado-testing.e2e-spec.ts` —
+      14/14 en verde solo con el enum + la migración, sin tocar el servicio
+- [x] Poner en verde los casos nuevos de `activities.service.spec.ts` — 4
+      casos agregados (no dispara cascada, no fija completedAt, `completed →
+      testing` limpia completedAt sin revertir la cascada, `testing →
+      completed` sí dispara la cascada normal); 75/75 en el archivo
+- [x] `npm run test`: 109/109. `npm run test:e2e`: 166/168 — únicos 2 fallos
+      son los preexistentes ya confirmados en spec-032 (`app.e2e-spec.ts`,
+      `auth.e2e-spec.ts` TC-014), sin relación con esta rama
 
 ### Fase 4 — MCP: actualizar `todo-api`
 - [ ] Ampliar el `z.enum` de `status` en `create_activity`, `update_activity`
@@ -263,5 +275,5 @@ que no requiere cambios — reconfirmar antes de cerrar la fase.
 ## Aprobación de implementación
 
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
-- [ ] Paquete (spec + pruebas) aprobado por el usuario
-- **Fecha de aprobación:** {{pendiente}}
+- [x] Paquete (spec + pruebas) aprobado por el usuario
+- **Fecha de aprobación:** 2026-08-17
