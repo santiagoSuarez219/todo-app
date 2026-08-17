@@ -54,8 +54,8 @@
 1. Ir a la vista donde se lista la actividad A (Dashboard o detalle del proyecto).
 2. Observar el badge de estado de la actividad A y compararlo con actividades en "En progreso" y "Completada".
 **Resultado esperado:** El badge dice **"En pruebas"** y su color se distingue a simple vista del azul de "En progreso" y del verde de "Completada". Legible tanto en tema claro como oscuro.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Badge rojo, claramente distinguible del verde de "Completado" (comparado en la pestaña Completadas) y del azul de "En progreso". Verificado en ambos temas: claro (fondo rojo suave, texto rojo oscuro) y oscuro (fondo rojo oscuro translúcido, texto rojo claro) — legible en los dos. Sin observaciones.
 
 ### TC-033-004 — Edición rápida de estado desde la card
 **Precondición:** Actividad D existe en `pending`.
