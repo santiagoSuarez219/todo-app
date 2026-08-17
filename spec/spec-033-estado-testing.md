@@ -1,4 +1,4 @@
-# spec-033 — [TESTING] Estado `testing`: trabajo hecho, pendiente de probar
+# spec-033 — [DONE] Estado `testing`: trabajo hecho, pendiente de probar
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -229,8 +229,9 @@ que no requiere cambios — reconfirmar antes de cerrar la fase.
       confirmados idénticos con `git stash`; `npm run build` limpio
 
 ### Fase 6 — Cierre de pruebas
-- [ ] El usuario ejecuta los casos manuales de
-      `docs/testing/test-033-estado-testing.md`
+- [x] El usuario ejecuta los casos manuales de
+      `docs/testing/test-033-estado-testing.md` — 14/14 aprobados
+      (`TC-033-001` a `TC-033-010`, `TC-MCP-033-001` a `TC-MCP-033-004`)
 - [x] `@tester` ejecuta `npm run test` y `npm run test:e2e` y reporta —
       109/109 unit, 166/168 e2e (los 2 fallos son los preexistentes ya
       documentados, sin relación con esta rama); `e2e-033-estado-testing.e2e-spec.ts`
@@ -291,3 +292,23 @@ que no requiere cambios — reconfirmar antes de cerrar la fase.
 > Claude no escribe código de implementación hasta que esta sección esté marcada.
 - [x] Paquete (spec + pruebas) aprobado por el usuario
 - **Fecha de aprobación:** 2026-08-17
+
+## Cierre de la ronda de pruebas (2026-08-17)
+
+- **Manuales:** 14/14 casos aprobados (`TC-033-001` a `TC-033-010`,
+  `TC-MCP-033-001` a `TC-MCP-033-004`). Detalle completo en
+  `docs/testing/test-033-estado-testing.md`.
+- **Automáticas:** confirmadas por `@tester` — `e2e-033-estado-testing.e2e-spec.ts`
+  14/14, unit 109/109. Únicos fallos de la suite e2e completa son los 2
+  preexistentes y no relacionados (`app.e2e-spec.ts`,
+  `auth.e2e-spec.ts` TC-014), ya documentados en spec-032.
+- **Hallazgo fuera de scope registrado en `spec/backlog.md`:** bug
+  preexistente de `ActivityForm.tsx` — cualquier guardado del formulario de
+  actividad reescribe `dueDate` a medianoche UTC (trunca la hora al
+  reconstruir el payload desde el `<input type="date">`), lo que corre la
+  fecha un día hacia atrás en la UI para zonas horarias de offset negativo
+  (Colombia, UTC-5). Detectado y reproducido de forma determinística en
+  TC-033-002; no bloquea este spec.
+- Datos de prueba de la ronda eliminados y verificados `404` por API (7
+  actividades + 1 proyecto).
+- Spec marcado como `[DONE]`.

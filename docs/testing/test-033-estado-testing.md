@@ -13,14 +13,14 @@
 
 | Recurso | Endpoint de creación | Identificador | Eliminado |
 |---------|----------------------|---------------|-----------|
-| Proyecto "Proyecto pruebas spec-033" | `POST /projects` | `53abb34e-fb52-49e6-83fd-23e827b05523` | ⬜ |
-| Actividad A — "Implementar login" (`in_progress`, `dueDate` = hoy, con 2 subtareas pendientes) | `POST /activities` | `2988e1fa-e286-49f0-bde4-da891e28ecfb` | ⬜ |
-| Subtarea A.1 — "Escribir el endpoint" (`pending`) | `POST /activities` (`parentId` = A) | `8d484996-dbaf-4838-8e0e-3568f56f1bc8` | ⬜ |
-| Subtarea A.2 — "Conectar el formulario" (`pending`) | `POST /activities` (`parentId` = A) | `ca4cf6da-99ef-4801-80a8-314936c31e49` | ⬜ |
-| Actividad B — "Corregir cálculo de cuotas" (`completed`, `dueDate` = hoy) | `POST /activities` | `f8210b82-1b5f-411e-b048-2a996eb0c211` | ⬜ |
-| Actividad C — "Migrar tabla de gastos" (`pending`, `dueDate` = hace 3 días) | `POST /activities` | `ef54ad8f-9bf4-42d3-8192-234891011c7e` | ⬜ |
-| Actividad D — "Ajustar responsive del tabbar" (`pending`, `dueDate` = en 2 días, mismo mes) | `POST /activities` | `34b1140a-4282-4393-bea4-90f42b4a7221` | ⬜ |
-| Actividad E — "Actividad MCP spec-033 TC-MCP-003" (creada por el agente vía MCP, `testing`) | `create_activity` (MCP) | `79be63c9-b78b-4b04-9ff5-8ee21c91d982` | ⬜ |
+| Proyecto "Proyecto pruebas spec-033" | `POST /projects` | `53abb34e-fb52-49e6-83fd-23e827b05523` | ✅ |
+| Actividad A — "Implementar login" (`in_progress`, `dueDate` = hoy, con 2 subtareas pendientes) | `POST /activities` | `2988e1fa-e286-49f0-bde4-da891e28ecfb` | ✅ |
+| Subtarea A.1 — "Escribir el endpoint" (`pending`) | `POST /activities` (`parentId` = A) | `8d484996-dbaf-4838-8e0e-3568f56f1bc8` | ✅ |
+| Subtarea A.2 — "Conectar el formulario" (`pending`) | `POST /activities` (`parentId` = A) | `ca4cf6da-99ef-4801-80a8-314936c31e49` | ✅ |
+| Actividad B — "Corregir cálculo de cuotas" (`completed`, `dueDate` = hoy) | `POST /activities` | `f8210b82-1b5f-411e-b048-2a996eb0c211` | ✅ |
+| Actividad C — "Migrar tabla de gastos" (`pending`, `dueDate` = hace 3 días) | `POST /activities` | `ef54ad8f-9bf4-42d3-8192-234891011c7e` | ✅ |
+| Actividad D — "Ajustar responsive del tabbar" (`pending`, `dueDate` = en 2 días, mismo mes) | `POST /activities` | `34b1140a-4282-4393-bea4-90f42b4a7221` | ✅ |
+| Actividad E — "Actividad MCP spec-033 TC-MCP-003" (creada por el agente vía MCP, `testing`) | `create_activity` (MCP) | `79be63c9-b78b-4b04-9ff5-8ee21c91d982` | ✅ |
 
 **Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`, frontend en `http://localhost:5173`)
 **Fecha de la ronda:** 2026-08-17
@@ -162,6 +162,11 @@
 
 ## Resumen de la ronda
 
-- Aprobados: {{n}} — Fallidos: {{n}} — Pendientes: 14
-- Hallazgos escalados a `spec/backlog.md`: {{lista o "ninguno"}}
-- Limpieza de datos de prueba: ⬜ Pendiente
+- Aprobados: 14 — Fallidos: 0 — Pendientes: 0
+- Hallazgos escalados a `spec/backlog.md`: 1 — bug preexistente de
+  `ActivityForm.tsx` que corre `dueDate` un día hacia atrás en cada
+  guardado del formulario (registrado bajo "spec-033" en el backlog,
+  detectado en TC-033-002, sin relación con el estado `testing` en sí).
+- Limpieza de datos de prueba: ✅ Completada — 7 actividades (A, B, C, D, E
+  y las 2 subtareas de A) y el proyecto de pruebas eliminados, `404`
+  confirmado en los 8 vía API.
