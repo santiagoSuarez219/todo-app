@@ -94,8 +94,8 @@
 1. Ir a la vista "Semana".
 2. Ir al Cronograma (calendario mensual) del mes actual.
 **Resultado esperado:** La actividad D aparece en ambas vistas, en su día correspondiente, con el badge "En pruebas" y sin atenuar (no se muestra como completada).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado por el usuario. Sin observaciones.
 
 ### TC-033-008 — Pasar a `testing` no completa las subtareas
 **Precondición:** Actividad A con las subtareas A.1 y A.2 en `pending`. Si A ya quedó en `testing` por casos anteriores, devolverla primero a "En progreso".
