@@ -157,8 +157,8 @@
 **Precondición:** Actividad A existe.
 **Input de prueba:** Pedirle al agente, en lenguaje natural: *"Ya terminé de programar 'Implementar login', pero todavía no la he probado"*.
 **Output esperado:** El agente la mueve a `testing`, **no** a `completed` ni la deja en `in_progress`, y lo explica.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado por el usuario. Verificación basada en la revisión del texto del system prompt (`docs/mcps/asistente-personal.system-prompt.md`), que distingue explícitamente `testing` de `in_progress`/`completed` e instruye a no marcar `completed` cuando solo falta probar — no se simuló una sesión real del agente dentro de esta conversación.
 
 ## Resumen de la ronda
 
