@@ -65,8 +65,8 @@
 2. Abrir el desplegable de estado de la card (edición rápida, spec-012).
 3. Seleccionar "En pruebas".
 **Resultado esperado:** La opción aparece en el desplegable con su punto de color, entre "En progreso" y "Completada". Al seleccionarla, la card se actualiza al nuevo estado sin recargar la página.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** El desplegable de edición rápida muestra "En pruebas" con punto rojo, exactamente entre "En progreso" y "Completada". Al seleccionarla, la card se actualiza de inmediato sin recargar. Verificado por API que persistió (`status: testing`) y que, a diferencia del formulario completo (ver TC-033-002), esta vía **no** reenvía `dueDate` — la fecha límite de la actividad quedó intacta. Sin observaciones.
 
 ### TC-033-005 — `testing` no oculta la actividad de la vista Hoy
 **Precondición:** Actividad A en `testing` con `dueDate` = hoy.
