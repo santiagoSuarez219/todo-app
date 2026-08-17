@@ -84,8 +84,8 @@
 1. Poner la actividad C en "En pruebas" (desde la card o el formulario).
 2. Ir a la vista "Vencidas".
 **Resultado esperado:** La actividad C aparece entre las vencidas, con el badge "En pruebas".
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Cambiada a `testing` desde la edición rápida de la card; el contador "Atrasadas" no bajó al cambiar el estado. En `/activities/overdue` aparece junto a las otras 3 vencidas, con el badge "En pruebas" y "Vence: 14 de ago de 2026". Sin observaciones.
 
 ### TC-033-007 — `testing` aparece en Semana y en el Cronograma
 **Precondición:** Actividad D en `testing` (TC-033-004), con `dueDate` dentro de la semana y del mes en curso.
