@@ -231,7 +231,10 @@ que no requiere cambios — reconfirmar antes de cerrar la fase.
 ### Fase 6 — Cierre de pruebas
 - [ ] El usuario ejecuta los casos manuales de
       `docs/testing/test-033-estado-testing.md`
-- [ ] `@tester` ejecuta `npm run test` y `npm run test:e2e` y reporta
+- [x] `@tester` ejecuta `npm run test` y `npm run test:e2e` y reporta —
+      109/109 unit, 166/168 e2e (los 2 fallos son los preexistentes ya
+      documentados, sin relación con esta rama); `e2e-033-estado-testing.e2e-spec.ts`
+      14/14 en verde
 
 ## Criterios de aceptación
 
