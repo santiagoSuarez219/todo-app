@@ -20,6 +20,7 @@
 | Actividad B — "Corregir cálculo de cuotas" (`completed`, `dueDate` = hoy) | `POST /activities` | `f8210b82-1b5f-411e-b048-2a996eb0c211` | ⬜ |
 | Actividad C — "Migrar tabla de gastos" (`pending`, `dueDate` = hace 3 días) | `POST /activities` | `ef54ad8f-9bf4-42d3-8192-234891011c7e` | ⬜ |
 | Actividad D — "Ajustar responsive del tabbar" (`pending`, `dueDate` = en 2 días, mismo mes) | `POST /activities` | `34b1140a-4282-4393-bea4-90f42b4a7221` | ⬜ |
+| Actividad E — "Actividad MCP spec-033 TC-MCP-003" (creada por el agente vía MCP, `testing`) | `create_activity` (MCP) | `79be63c9-b78b-4b04-9ff5-8ee21c91d982` | ⬜ |
 
 **Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`, frontend en `http://localhost:5173`)
 **Fecha de la ronda:** 2026-08-17
@@ -132,24 +133,24 @@
 **Precondición:** Actividad C existe.
 **Input de prueba:** `update_activity({ id: "<id de C>", status: "testing" })`
 **Output esperado:** Respuesta exitosa con la actividad en `status: "testing"`. Sin error de validación del esquema Zod.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Verificado por llamada JSON-RPC directa a `/mcp` (`tools/call update_activity`): respuesta exitosa, `status: "testing"` persistido. Nota de herramienta: la tool `mcp__to-do-api__update_activity` disponible en esta sesión de Claude Code tenía el esquema Zod cacheado de antes de la implementación (rechazó `testing` con -32602) — es un caché del lado del cliente MCP de esta sesión, no del servidor; el servidor real responde correctamente, confirmado por la llamada directa al endpoint.
 
 ### TC-MCP-033-002 — El agente puede consultar lo pendiente de probar
 **Herramienta probada:** `get_activities_by_status` en `todo-api`
 **Precondición:** TC-MCP-033-001 ejecutado (al menos una actividad en `testing`).
 **Input de prueba:** `get_activities_by_status({ status: "testing" })`
 **Output esperado:** La lista incluye la actividad C y **solo** actividades en `testing`.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Verificado por llamada JSON-RPC directa: devuelve exactamente las 4 actividades de la ronda (A, B, C, D), todas con `status: "testing"`, ninguna otra.
 
 ### TC-MCP-033-003 — El agente puede crear una actividad ya en `testing`
 **Herramienta probada:** `create_activity` en `todo-api`
 **Precondición:** Ninguna.
 **Input de prueba:** `create_activity({ name: "Actividad MCP spec-033", status: "testing" })`
 **Output esperado:** Actividad creada con `status: "testing"`. **Registrar el ID devuelto en la tabla de datos de prueba** para eliminarlo en la limpieza.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Creada con éxito (`id: 79be63c9-b78b-4b04-9ff5-8ee21c91d982`), `status: "testing"` desde el nacimiento. Registrada como Actividad E en la tabla de datos de prueba.
 
 ### TC-MCP-033-004 — El agente distingue `testing` de `completed`
 **Herramienta probada:** `update_activity` (vía el system prompt de `asistente-personal`)
