@@ -1,4 +1,4 @@
-# spec-033 — [IN PROGRESS] Estado `testing`: trabajo hecho, pendiente de probar
+# spec-033 — [TESTING] Estado `testing`: trabajo hecho, pendiente de probar
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -113,9 +113,9 @@ migración:
 | Archivo | Cambio |
 |---|---|
 | `types/index.ts` | Agregar `TESTING: 'testing'` al const `ActivityStatus` (líneas ~19-27), **en la misma posición que en el enum del backend** (tras `IN_PROGRESS`) |
-| `components/StatusBadge.tsx` | Entrada nueva en `colorMap` y en `labelMap`. Etiqueta propuesta: **"En pruebas"** (no colisiona con "En progreso", "En pausa" ni "Esperando"). Color propuesto: **teal**, siguiendo la forma de las entradas existentes (`bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300`) — libre hoy y distinguible del azul de `in_progress` y del verde de `completed` |
+| `components/StatusBadge.tsx` | Entrada nueva en `colorMap` y en `labelMap`. Etiqueta: **"En pruebas"** (no colisiona con "En progreso", "En pausa" ni "Esperando"). Color: **red** (`bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300`) — decidido con el usuario durante la implementación: es el único color de la paleta primitiva de `DESIGN.md` (gray/blue/green/red/yellow/purple/pink) sin usar todavía por otro estado (pending=yellow, in_progress=blue, completed=green, cancelled=gray, on_hold=purple, waiting=pink); agregar un color nuevo (teal) requería ampliar la paleta primitiva y quedó descartado para no tocar el sistema de diseño fuera de este spec |
 | `components/ActivityForm.tsx` | Solo agregar la etiqueta a `STATUS_LABELS` (~línea 76): el `<select>` (~línea 253) itera `Object.values(ActivityStatus)`, así que la opción aparece sola y en la posición que dicte el orden del const |
-| `components/ActivityCard.tsx` | Agregar `{ value: 'testing', label: 'En pruebas', dot: 'bg-teal-500' }` a `STATUS_OPTIONS` (~línea 129), entre `in_progress` y `completed`. **Sin chip nuevo**: al no haber campos asociados, no hay nada extra que mostrar en la card |
+| `components/ActivityCard.tsx` | Agregar `{ value: 'testing', label: 'En pruebas', dot: 'bg-red-500' }` a `STATUS_OPTIONS` (~línea 129), entre `in_progress` y `completed`. **Sin chip nuevo**: al no haber campos asociados, no hay nada extra que mostrar en la card |
 | `pages/*`, `hooks/`, `services/` | Sin cambios esperados. Verificar con `npx tsc -b` que ningún `Record<ActivityStatus, …>` quede incompleto (en spec-032 no existía ninguno tipado estrictamente; reconfirmar) |
 
 > **Leer `frontend/DESIGN.md` antes de tocar la UI.** El color debe salir de
@@ -217,12 +217,16 @@ que no requiere cambios — reconfirmar antes de cerrar la fase.
       transiciona a `in_progress`; dato de prueba eliminado y verificado
 
 ### Fase 5 — Frontend
-- [ ] Leer `frontend/DESIGN.md`
-- [ ] `types/index.ts`: agregar `TESTING`
-- [ ] `StatusBadge.tsx`: color y etiqueta "En pruebas"
-- [ ] `ActivityForm.tsx`: etiqueta en `STATUS_LABELS`
-- [ ] `ActivityCard.tsx`: opción en `STATUS_OPTIONS`
-- [ ] `npx tsc -b`, `npm run lint` y `npm run build` en `frontend/`
+- [x] Leer `frontend/DESIGN.md`
+- [x] `types/index.ts`: agregar `TESTING` (entre `IN_PROGRESS` y `COMPLETED`)
+- [x] `StatusBadge.tsx`: color `red` (decidido con el usuario, ver Frontend
+      arriba) y etiqueta "En pruebas"
+- [x] `ActivityForm.tsx`: etiqueta en `STATUS_LABELS`
+- [x] `ActivityCard.tsx`: opción en `STATUS_OPTIONS` (`bg-red-500`)
+- [x] `npx tsc -b` limpio (ningún `Record<ActivityStatus, …>` incompleto,
+      igual que en spec-032); `npm run lint` — 4 errores preexistentes sin
+      relación (`Login.tsx`, `ExpensesView.tsx`, `auth.service.ts`),
+      confirmados idénticos con `git stash`; `npm run build` limpio
 
 ### Fase 6 — Cierre de pruebas
 - [ ] El usuario ejecuta los casos manuales de

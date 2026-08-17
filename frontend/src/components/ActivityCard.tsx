@@ -129,6 +129,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
 const STATUS_OPTIONS: { value: ActivityStatus; label: string; dot: string }[] = [
   { value: 'pending', label: 'Pendiente', dot: 'bg-yellow-400' },
   { value: 'in_progress', label: 'En progreso', dot: 'bg-blue-500' },
+  { value: 'testing', label: 'En pruebas', dot: 'bg-red-500' },
   { value: 'completed', label: 'Completada', dot: 'bg-green-500' },
   { value: 'on_hold', label: 'En pausa', dot: 'bg-purple-500' },
   { value: 'waiting', label: 'Esperando', dot: 'bg-pink-500' },
