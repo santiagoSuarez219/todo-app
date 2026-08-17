@@ -19,6 +19,9 @@ export type ProjectHorizon = (typeof ProjectHorizon)[keyof typeof ProjectHorizon
 export const ActivityStatus = {
   PENDING: 'pending',
   IN_PROGRESS: 'in_progress',
+  // spec-033: trabajo hecho, pendiente de verificar. Entre IN_PROGRESS y
+  // COMPLETED — sin campos asociados.
+  TESTING: 'testing',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   ON_HOLD: 'on_hold',

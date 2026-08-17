@@ -270,6 +270,7 @@ export class McpService {
               .enum([
                 'pending',
                 'in_progress',
+                'testing',
                 'completed',
                 'cancelled',
                 'on_hold',
@@ -277,7 +278,7 @@ export class McpService {
               ])
               .optional()
               .describe(
-                "Initial status (default: pending). 'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
+                "Initial status (default: pending). 'testing' means the work is done but not yet verified — it sits between in_progress and completed. 'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
               ),
             energy: z
               .enum(['high', 'medium', 'low'])
@@ -343,6 +344,7 @@ export class McpService {
           .enum([
             'pending',
             'in_progress',
+            'testing',
             'completed',
             'cancelled',
             'on_hold',
@@ -350,7 +352,7 @@ export class McpService {
           ])
           .optional()
           .describe(
-            "'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
+            "'testing' means the work is done but not yet verified — it sits between in_progress and completed. 'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
           ),
         energy: z.enum(['high', 'medium', 'low']).optional(),
         parentId: z
@@ -601,6 +603,7 @@ export class McpService {
           .enum([
             'pending',
             'in_progress',
+            'testing',
             'completed',
             'cancelled',
             'on_hold',

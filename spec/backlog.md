@@ -130,3 +130,30 @@
   ~30 en total) usan el mismo patrón `server.tool()` sin `.strict()` y
   podrían tener el mismo gap latente, sin confirmar caso por caso. Evaluar
   el alcance completo antes de decidir si conviene una pasada sistémica.
+
+## spec-033 — Estado `testing`: trabajo hecho, pendiente de probar
+
+- **`ActivityForm.tsx` corre `dueDate` un día hacia atrás en cada guardado,
+  para cualquier actividad con hora distinta de medianoche.**
+  Detectado en la ronda manual de `test-033` (TC-033-002), sin relación con
+  el estado `testing` en sí — es un bug del manejo de `dueDate` en el
+  formulario, preexistente, expuesto al guardar cualquier cambio de estado.
+  - `initial.dueDate.slice(0, 10)` (línea ~135) trunca el `dueDate` original
+    a `YYYY-MM-DD` para poblar el `<input type="date">`, descartando
+    cualquier componente de hora que tuviera (ej. `T12:00:00`).
+  - Al guardar, `values.dueDate || null` (línea ~182) reenvía ese string
+    "solo fecha" tal cual al backend — **en todo guardado del formulario**,
+    haya cambiado o no el campo Fecha límite.
+  - El backend persiste ese string date-only como medianoche UTC
+    (`2026-08-17T00:00:00.000Z`). En una zona horaria de offset negativo
+    (Colombia, UTC-5), medianoche UTC es las 7pm del día anterior — la UI
+    muestra "16 de ago" para una actividad guardada como "17 de ago".
+  - Reproducido de forma determinística: una actividad con `dueDate:
+    "2026-08-17T12:00:00"` guardada sin tocar ningún campo (solo abrir el
+    formulario y pulsar Guardar) queda con `dueDate:
+    "2026-08-17T00:00:00.000Z"`, un día antes en la UI.
+  - Corregirlo implica que `ActivityForm` preserve el componente de hora
+    original al reconstruir el payload (o que el backend interprete
+    fechas-solo-día en la zona horaria de la app, no en UTC) — fuera del
+    alcance de spec-033, que no toca `dueDate` ni `ActivityForm` más allá de
+    agregar la opción de estado.
