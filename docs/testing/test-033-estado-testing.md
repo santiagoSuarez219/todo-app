@@ -114,8 +114,8 @@
 1. Cambiar la actividad B de "Completada" a "En pruebas".
 2. Ir a la vista "Hoy" (su `dueDate` es hoy).
 **Resultado esperado:** La actividad B vuelve a aparecer como activa en "Hoy" con el badge "En pruebas"; deja de mostrarse como completada (tachado / atenuado, según la vista).
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Cambiada de "Completada" a "En pruebas" vía edición rápida. Reaparece en `/activities/today` junto a la actividad A, ambas con badge rojo "En pruebas", sin ningún resto visual de "completada". Nota aparte (no bug): la pestaña "Todas" del buscador del Dashboard excluye actividades completadas por defecto — solo aparecen en la pestaña "Completadas"; comportamiento preexistente, no introducido por este spec. Sin observaciones sobre el criterio de aceptación.
 
 ### TC-033-010 — Los estados existentes no cambiaron
 **Precondición:** Todas las actividades de la tabla de datos de prueba creadas, más las actividades reales previas del entorno.
