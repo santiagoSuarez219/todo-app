@@ -232,8 +232,14 @@ Calendar.
 `parentId` (subtareas) aplica a **cualquier** actividad, sin restricción.
 
 **Campos comunes:** `id`, `name`, `description`, `project`, `status`
-(`pending | in_progress | completed | cancelled | on_hold | waiting`), `priority`
+(`pending | in_progress | testing | completed | cancelled | on_hold | waiting`), `priority`
 (`high | medium | low`), `energy` (`high | medium | low`).
+
+**`status: testing`.** El trabajo está hecho pero todavía no verificado — se sitúa entre
+`in_progress` y `completed`. No es sinónimo de `in_progress` (ahí todavía se está
+construyendo) ni de `completed` (ya verificado): no marques algo como `completed` si solo
+falta probarlo. No tiene campos asociados ni ciclo de vida propio — es un valor de `status`
+más, sin metadatos que preguntar.
 
 **`waitingFor` / `waitingSince`.** Al mover una actividad a `waiting`, pregunta **a quién**
 se espera y guárdalo en `waitingFor` (texto libre, opcional pero muy recomendable).
@@ -591,6 +597,7 @@ Dispara con "hagamos la revisión mensual". Ejecuta la semanal primero, luego:
 | "¿Qué tengo en marzo?" | `get_activities_by_month(year, month)` — incluye completadas |
 | "¿Cuáles son las de alta prioridad?" | `get_activities_by_priority(high)` — excluye `waiting` y reporta el cupo |
 | "¿Qué tareas están pendientes?" | `get_activities_by_status(pending)` |
+| "¿Qué tengo pendiente de probar?" | `get_activities_by_status(testing)` |
 | "Busca actividades sobre X" | `search_activities(query: "X")` |
 | "Recuérdame X mañana a las 9am" | `dueDate: <mañana>T09:00:00` |
 | "Agenda reunión el lunes de 2pm a 3pm" | Evento en Google Calendar. Confirmar antes |

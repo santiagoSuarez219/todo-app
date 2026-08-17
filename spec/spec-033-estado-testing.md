@@ -200,14 +200,21 @@ que no requiere cambios — reconfirmar antes de cerrar la fase.
       `auth.e2e-spec.ts` TC-014), sin relación con esta rama
 
 ### Fase 4 — MCP: actualizar `todo-api`
-- [ ] Ampliar el `z.enum` de `status` en `create_activity`, `update_activity`
+- [x] Ampliar el `z.enum` de `status` en `create_activity`, `update_activity`
       y `get_activities_by_status`, y extender sus `.describe()`
-- [ ] Reconfirmar que `create_recurring_activity` no expone `status`
-- [ ] Actualizar `docs/mcps/asistente-personal.system-prompt.md`
-- [ ] Revisar si `docs/mcps/README.md` requiere cambios (en spec-032 no, por no
-      enumerar campos)
-- [ ] Verificar contra el backend local que el MCP acepta `testing` en las tres
-      tools
+- [x] Reconfirmar que `create_recurring_activity` no expone `status` —
+      confirmado, sin `status` en su schema
+- [x] Actualizar `docs/mcps/asistente-personal.system-prompt.md` — nota de
+      desambiguación `testing` vs `in_progress`/`completed` en "Campos
+      comunes" y flujo frecuente "¿Qué tengo pendiente de probar?"
+      (`get_activities_by_status(testing)`). Resuelto antes el cambio previo
+      sin commitear del archivo (commit `6882a86`, aparte de este spec)
+- [x] Revisar si `docs/mcps/README.md` requiere cambios — no, no enumera
+      campos (igual que en spec-032)
+- [x] Verificar contra el backend local que el MCP acepta `testing` en las
+      tres tools: `create_activity` con `status: testing` la crea,
+      `get_activities_by_status(testing)` la recupera, `update_activity` la
+      transiciona a `in_progress`; dato de prueba eliminado y verificado
 
 ### Fase 5 — Frontend
 - [ ] Leer `frontend/DESIGN.md`
