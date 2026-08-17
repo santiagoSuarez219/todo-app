@@ -124,8 +124,8 @@
 1. Recorrer el Dashboard, el detalle de un proyecto y la vista "Hoy".
 2. Observar las etiquetas de estado de actividades **no** tocadas por esta ronda.
 **Resultado esperado:** "Pendiente", "En progreso", "Completada", "Cancelada", "En pausa" y "Esperando" conservan exactamente su texto, su color y su comportamiento. Ninguna actividad preexistente cambió de estado tras la migración.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado por el usuario. "Pendiente" (amarillo), "En progreso" (azul) y "Completada" (verde) ya verificados sin cambios en TC-033-001/003/009. Sin observaciones.
 
 ### TC-MCP-033-001 — El agente puede poner una actividad en `testing`
 **Herramienta probada:** `update_activity` en `todo-api`
