@@ -74,8 +74,8 @@
 **Pasos:**
 1. Ir a la vista "Hoy".
 **Resultado esperado:** La actividad A **sigue apareciendo** en la lista, con el badge "En pruebas". No se comporta como una actividad completada.
-**Estado:** ⬜ Pendiente
-**Hallazgos:**
+**Estado:** ✅ Aprobado
+**Hallazgos:** Confirmado por el usuario. Sin observaciones.
 
 ### TC-033-006 — `testing` sigue apareciendo en Vencidas
 **Precondición:** Actividad C existe con `dueDate` de hace 3 días.
