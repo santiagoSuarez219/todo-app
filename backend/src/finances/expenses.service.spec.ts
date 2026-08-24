@@ -1,14 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { Expense } from './entities/expense.entity';
 import { CreditCard } from './entities/credit-card.entity';
+import { Budget } from './entities/budget.entity';
 
 describe('ExpensesService - Search', () => {
   let service: ExpensesService;
   let mockRepository: any;
   let mockCreditCardsRepository: any;
+  let mockBudgetsRepository: any;
 
   beforeEach(async () => {
     mockRepository = {
@@ -17,6 +18,13 @@ describe('ExpensesService - Search', () => {
 
     mockCreditCardsRepository = {
       findOneBy: jest.fn(),
+    };
+
+    // spec-034: applyMonthScope() consulta el presupuesto del mes antes de
+    // filtrar — por defecto, sin presupuesto para ese mes (comportamiento
+    // "gasto suelto por fecha").
+    mockBudgetsRepository = {
+      findOneBy: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -29,6 +37,10 @@ describe('ExpensesService - Search', () => {
         {
           provide: getRepositoryToken(CreditCard),
           useValue: mockCreditCardsRepository,
+        },
+        {
+          provide: getRepositoryToken(Budget),
+          useValue: mockBudgetsRepository,
         },
       ],
     }).compile();
@@ -43,6 +55,7 @@ describe('ExpensesService - Search', () => {
         description: 'Almuerzo comida rápida',
         amount: 25000,
         date: new Date('2026-07-15'),
+        plannedAmount: null,
         type: 'basico',
         creditCard: null,
       },
@@ -51,6 +64,7 @@ describe('ExpensesService - Search', () => {
         description: 'Comida en restaurante',
         amount: 80000,
         date: new Date('2026-07-20'),
+        plannedAmount: null,
         type: 'lujo',
         creditCard: { id: 'cc1', name: 'Visa' },
       },
@@ -59,6 +73,7 @@ describe('ExpensesService - Search', () => {
         description: 'Pago de servicios',
         amount: 150000,
         date: new Date('2026-07-10'),
+        plannedAmount: null,
         type: 'basico',
         creditCard: null,
       },
@@ -109,7 +124,10 @@ describe('ExpensesService - Search', () => {
       expect(result).toEqual([mockExpenses[1]]);
     });
 
-    it('should filter expenses by year and month', async () => {
+    // spec-034: year+month ya no filtra con dos EXTRACT sueltos — pasa por
+    // applyMonthScope(), que resuelve el presupuesto del mes primero y arma
+    // un único andWhere (con o sin presupuesto existente).
+    it('should filter expenses by year and month via applyMonthScope (no budget for that month)', async () => {
       const mockQb = {
         andWhere: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -121,6 +139,7 @@ describe('ExpensesService - Search', () => {
       };
 
       mockRepository.createQueryBuilder.mockReturnValue(mockQb);
+      mockBudgetsRepository.findOneBy.mockResolvedValue(null);
 
       const result = await service.findAll({
         page: 1,
@@ -129,15 +148,37 @@ describe('ExpensesService - Search', () => {
         month: 7,
       });
 
+      expect(mockBudgetsRepository.findOneBy).toHaveBeenCalledWith({
+        month: 7,
+        year: 2026,
+      });
       expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'EXTRACT(year FROM expense.date) = :year',
-        { year: 2026 },
-      );
-      expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'EXTRACT(month FROM expense.date) = :month',
-        { month: 7 },
+        'expense.budgetId IS NULL AND EXTRACT(YEAR FROM expense.date) = :scopeYear AND EXTRACT(MONTH FROM expense.date) = :scopeMonth',
+        { scopeYear: 2026, scopeMonth: 7 },
       );
       expect(result).toEqual(mockExpenses);
+    });
+
+    it('should scope by budgetId when the month already has a budget', async () => {
+      const mockQb = {
+        andWhere: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockExpenses),
+      };
+
+      mockRepository.createQueryBuilder.mockReturnValue(mockQb);
+      mockBudgetsRepository.findOneBy.mockResolvedValue({ id: 'budget-1' });
+
+      await service.findAll({ page: 1, limit: 20, year: 2026, month: 7 });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        '(expense.budgetId = :scopeBudgetId OR (expense.budgetId IS NULL AND EXTRACT(YEAR FROM expense.date) = :scopeYear AND EXTRACT(MONTH FROM expense.date) = :scopeMonth))',
+        { scopeBudgetId: 'budget-1', scopeYear: 2026, scopeMonth: 7 },
+      );
     });
 
     it('should combine search with year and month filters', async () => {
@@ -152,6 +193,7 @@ describe('ExpensesService - Search', () => {
       };
 
       mockRepository.createQueryBuilder.mockReturnValue(mockQb);
+      mockBudgetsRepository.findOneBy.mockResolvedValue(null);
 
       const result = await service.findAll({
         page: 1,
@@ -161,14 +203,9 @@ describe('ExpensesService - Search', () => {
         search: 'comida',
       });
 
-      // Verify all filters are applied
       expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'EXTRACT(year FROM expense.date) = :year',
-        { year: 2026 },
-      );
-      expect(mockQb.andWhere).toHaveBeenCalledWith(
-        'EXTRACT(month FROM expense.date) = :month',
-        { month: 7 },
+        'expense.budgetId IS NULL AND EXTRACT(YEAR FROM expense.date) = :scopeYear AND EXTRACT(MONTH FROM expense.date) = :scopeMonth',
+        { scopeYear: 2026, scopeMonth: 7 },
       );
       expect(mockQb.andWhere).toHaveBeenCalledWith(
         'expense.description ILIKE :search',

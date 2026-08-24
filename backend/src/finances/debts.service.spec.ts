@@ -164,7 +164,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DebtsService } from './debts.service';
 import { Debt } from './entities/debt.entity';
 import { Expense } from './entities/expense.entity';
-import { BudgetItem } from './entities/budget-item.entity';
 import { Budget } from './entities/budget.entity';
 import { DataSource } from 'typeorm';
 
@@ -172,7 +171,6 @@ describe('spec-026 — DebtsService lazy status normalization', () => {
   let service: DebtsService;
   let mockDebtsRepository: any;
   let mockExpensesRepository: any;
-  let mockBudgetItemsRepository: any;
   let mockBudgetsRepository: any;
   let mockDataSource: any;
 
@@ -187,13 +185,6 @@ describe('spec-026 — DebtsService lazy status normalization', () => {
       create: jest.fn((dto: unknown) => dto),
       save: jest.fn((expense: unknown) => Promise.resolve(expense)),
       findOneBy: jest.fn(),
-    };
-    mockBudgetItemsRepository = {
-      create: jest.fn((dto: unknown) => dto),
-      save: jest.fn((item: unknown) => Promise.resolve(item)),
-      find: jest.fn(),
-      findOne: jest.fn(),
-      remove: jest.fn(),
     };
     mockBudgetsRepository = {
       create: jest.fn((dto: unknown) => dto),
@@ -210,7 +201,6 @@ describe('spec-026 — DebtsService lazy status normalization', () => {
         DebtsService,
         { provide: getRepositoryToken(Debt), useValue: mockDebtsRepository },
         { provide: getRepositoryToken(Expense), useValue: mockExpensesRepository },
-        { provide: getRepositoryToken(BudgetItem), useValue: mockBudgetItemsRepository },
         { provide: getRepositoryToken(Budget), useValue: mockBudgetsRepository },
         { provide: DataSource, useValue: mockDataSource },
       ],
