@@ -152,9 +152,11 @@ de rutas y lógica de negocio: ver `backend/CLAUDE.md`.
 ### Finanzas — `/expenses`, `/incomes`, `/purchases`, `/accounts`, `/credit-cards`, `/cdts`, `/budgets`, `/debts`
 
 CRUD estándar por recurso, más `GET /cdts/active`, `GET /budgets/monthly-summary?year=&month=`,
-`POST/PATCH/DELETE /budgets/:id/items[...]`, `POST /debts/:id/pay-off` (pago
-total) y `POST /debts/:id/sync-budget-items` — desde spec-026 no existe pago de
-cuota individual. Detalle completo: ver `backend/CLAUDE.md`.
+`POST /debts/:id/pay-off` (pago total) y `POST /debts/:id/sync-budget-items`
+— desde spec-026 no existe pago de cuota individual. Desde spec-034 no
+existen `POST/PATCH/DELETE /budgets/:id/items[...]`: un ítem de presupuesto
+es un `Expense` con `plannedAmount` + `budgetId`, gestionado con los
+endpoints estándar de `/expenses`. Detalle completo: ver `backend/CLAUDE.md`.
 
 ---
 
@@ -263,9 +265,12 @@ interface Activity {
 ```
 
 Las entidades y DTOs financieros (`Expense`, `Income`, `Purchase`, `Account`,
-`CreditCard`, `Cdt`, `Budget`/`BudgetItem`, `Debt`, `MonthlySummary`,
-`CardTotal`) viven en el mismo archivo — consultarlo directamente antes de
-asumir un shape, no reproducirlo aquí para evitar que ambos se desincronicen.
+`CreditCard`, `Cdt`, `Budget`, `Debt`, `MonthlySummary`, `CardTotal`) viven en
+el mismo archivo — consultarlo directamente antes de asumir un shape, no
+reproducirlo aquí para evitar que ambos se desincronicen. Desde spec-034 no
+existe `BudgetItem`: un ítem de presupuesto es un `Expense` con
+`plannedAmount` + `budgetId` (ver `Expense`, que ahora también incluye
+`plannedAmount`, `budget`, `debt`, `installmentNumber` y `executionStatus`).
 
 ---
 
@@ -297,8 +302,10 @@ asumir un shape, no reproducirlo aquí para evitar que ambos se desincronicen.
 
 ### Finanzas (`components/finances/`)
 - Un `*Card.tsx` + `*Form.tsx` por recurso: `Account`, `CreditCard`, `Cdt`,
-  `Debt`, `Expense`, `Income`, `Purchase`, más `BudgetForm.tsx` /
-  `BudgetItemForm.tsx`.
+  `Debt`, `Expense`, `Income`, `Purchase`, más `BudgetForm.tsx`.
+- `PlannedExpenseForm.tsx` (spec-034, reemplaza a `BudgetItemForm.tsx`):
+  agrega un gasto planeado a un presupuesto — crea un `Expense` con
+  `plannedAmount` + `budgetId`, sin `amount`/`date`.
 
 ---
 
