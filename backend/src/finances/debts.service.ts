@@ -8,7 +8,6 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Debt } from './entities/debt.entity';
 import { Expense } from './entities/expense.entity';
 import { Budget } from './entities/budget.entity';
-import { BudgetItem } from './entities/budget-item.entity';
 import { CreateDebtDto } from './dto/create-debt.dto';
 import { UpdateDebtDto } from './dto/update-debt.dto';
 import { DebtStatus } from '../common/enums/debt-status.enum';
@@ -142,6 +141,10 @@ export function buildInstallmentSchedule(
   return schedule;
 }
 
+// spec-034: las cuotas de deuda se materializan ahora como `Expense`
+// (plannedAmount seteado, amount/date en null hasta que se paguen) en vez
+// de `BudgetItem` — la entidad se eliminó. Toda la lógica de spec-026 se
+// conserva 1:1 sobre el modelo nuevo.
 @Injectable()
 export class DebtsService {
   constructor(
@@ -149,8 +152,6 @@ export class DebtsService {
     private readonly debtsRepository: Repository<Debt>,
     @InjectRepository(Expense)
     private readonly expensesRepository: Repository<Expense>,
-    @InjectRepository(BudgetItem)
-    private readonly budgetItemsRepository: Repository<BudgetItem>,
     @InjectRepository(Budget)
     private readonly budgetsRepository: Repository<Budget>,
     private readonly dataSource: DataSource,
@@ -198,7 +199,9 @@ export class DebtsService {
       await this.debtsRepository.save(debt);
     }
 
-    const paidInstallments = effectivelyPaid ? debt.totalInstallments : calendarPaid;
+    const paidInstallments = effectivelyPaid
+      ? debt.totalInstallments
+      : calendarPaid;
     const remainingValue = computeRemainingValue(
       paidInstallments,
       debt.totalInstallments,
@@ -251,7 +254,7 @@ export class DebtsService {
           entry.year,
           entry.month,
         );
-        const item = manager.create(BudgetItem, {
+        const expense = manager.create(Expense, {
           budget,
           description: this.installmentDescription(
             entry.installmentNumber,
@@ -259,11 +262,13 @@ export class DebtsService {
             savedDebt.description,
           ),
           plannedAmount: savedDebt.installmentValue,
+          amount: null,
+          date: null,
           type: ExpenseType.PAGO_DEUDA,
           debt: savedDebt,
           installmentNumber: entry.installmentNumber,
         });
-        await manager.save(item);
+        await manager.save(expense);
       }
 
       return savedDebt.id;
@@ -285,11 +290,11 @@ export class DebtsService {
       }
 
       if (touchesCalendar) {
-        const items = await this.findDebtItems(manager, id);
-        const futureItems = items.filter((item) =>
-          isFutureMonth(item.budget.year, item.budget.month),
+        const expenses = await this.findDebtExpenses(manager, id);
+        const futureExpenses = expenses.filter((expense) =>
+          isFutureMonth(expense.budget!.year, expense.budget!.month),
         );
-        if (futureItems.length) await manager.remove(futureItems);
+        if (futureExpenses.length) await manager.remove(futureExpenses);
       }
 
       Object.assign(debt, dto);
@@ -310,7 +315,7 @@ export class DebtsService {
             entry.year,
             entry.month,
           );
-          const item = manager.create(BudgetItem, {
+          const expense = manager.create(Expense, {
             budget,
             description: this.installmentDescription(
               entry.installmentNumber,
@@ -318,23 +323,25 @@ export class DebtsService {
               savedDebt.description,
             ),
             plannedAmount: savedDebt.installmentValue,
+            amount: null,
+            date: null,
             type: ExpenseType.PAGO_DEUDA,
             debt: savedDebt,
             installmentNumber: entry.installmentNumber,
           });
-          await manager.save(item);
+          await manager.save(expense);
         }
       }
 
       if ('description' in dto) {
-        const items = await this.findDebtItems(manager, id);
-        for (const item of items) {
-          item.description = this.installmentDescription(
-            item.installmentNumber!,
+        const expenses = await this.findDebtExpenses(manager, id);
+        for (const expense of expenses) {
+          expense.description = this.installmentDescription(
+            expense.installmentNumber!,
             savedDebt.totalInstallments,
             savedDebt.description,
           );
-          await manager.save(item);
+          await manager.save(expense);
         }
       }
     });
@@ -343,42 +350,44 @@ export class DebtsService {
   }
 
   /**
-   * Elimina una deuda: los ítems de cuota vencidos (incluido el del mes en
-   * curso) quedan desasociados en el presupuesto histórico; los futuros se
-   * eliminan. Ver spec-026, decisión 7.
+   * Elimina una deuda: las cuotas vencidas (incluida la del mes en curso)
+   * quedan desasociadas en el presupuesto histórico (siguen siendo gastos
+   * planeados válidos); las futuras se eliminan. Ver spec-026, decisión 7.
    */
   async remove(id: string): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const debt = await manager.findOneBy(Debt, { id });
       if (!debt) throw new NotFoundException(`Debt ${id} not found`);
 
-      const items = await this.findDebtItems(manager, id);
-      const pastItems = items.filter(
-        (item) => !isFutureMonth(item.budget.year, item.budget.month),
+      const expenses = await this.findDebtExpenses(manager, id);
+      const pastExpenses = expenses.filter(
+        (expense) =>
+          !isFutureMonth(expense.budget!.year, expense.budget!.month),
       );
-      const futureItems = items.filter((item) =>
-        isFutureMonth(item.budget.year, item.budget.month),
+      const futureExpenses = expenses.filter((expense) =>
+        isFutureMonth(expense.budget!.year, expense.budget!.month),
       );
 
-      for (const item of pastItems) {
-        item.debt = null;
-        item.installmentNumber = null;
+      for (const expense of pastExpenses) {
+        expense.debt = null;
+        expense.installmentNumber = null;
       }
-      if (pastItems.length) await manager.save(pastItems);
-      if (futureItems.length) await manager.remove(futureItems);
+      if (pastExpenses.length) await manager.save(pastExpenses);
+      if (futureExpenses.length) await manager.remove(futureExpenses);
 
       await manager.remove(debt);
     });
   }
 
   /**
-   * Pago total anticipado: borra los ítems de cuota de meses estrictamente
-   * futuros, registra el saldo restante como gasto del mes en curso y marca
-   * la deuda como `pagada`. Ver spec-026, decisión 2 y Fase 3.
+   * Pago total anticipado: borra las cuotas de meses estrictamente futuros,
+   * registra el saldo restante como gasto ejecutado del mes en curso
+   * (pasando por el mismo auto-vínculo que ExpensesService.create()) y
+   * marca la deuda como `pagada`. Ver spec-026, decisión 2 y Fase 3.
    */
   async payOff(id: string): Promise<PayOffResult> {
-    const { debtId, expenseId, itemsRemoved } = await this.dataSource.transaction(
-      async (manager) => {
+    const { debtId, expenseId, itemsRemoved } =
+      await this.dataSource.transaction(async (manager) => {
         const debt = await manager.findOneBy(Debt, { id });
         if (!debt) throw new NotFoundException(`Debt ${id} not found`);
 
@@ -403,17 +412,28 @@ export class DebtsService {
           );
         }
 
-        const items = await this.findDebtItems(manager, id);
-        const futureItems = items.filter((item) =>
-          isFutureMonth(item.budget.year, item.budget.month),
+        const expenses = await this.findDebtExpenses(manager, id);
+        const futureExpenses = expenses.filter((expense) =>
+          isFutureMonth(expense.budget!.year, expense.budget!.month),
         );
-        if (futureItems.length) await manager.remove(futureItems);
+        if (futureExpenses.length) await manager.remove(futureExpenses);
+
+        const today = this.todayDateOnly();
+        const [todayYear, todayMonth] = today.split('-').map(Number);
+        // Auto-vínculo (spec-034, decisión 4): mismo criterio que
+        // ExpensesService.create() — si el mes en curso ya tiene
+        // presupuesto, el pago se le asigna; si no, queda suelto.
+        const budgetForToday = await manager.findOne(Budget, {
+          where: { month: todayMonth, year: todayYear },
+        });
 
         const expense = manager.create(Expense, {
           description: `Pago total: ${debt.description}`,
+          plannedAmount: null,
           amount: remainingValue,
-          date: this.todayDateOnly(),
+          date: today,
           type: ExpenseType.PAGO_DEUDA,
+          budget: budgetForToday ?? null,
         });
         const savedExpense = await manager.save(expense);
 
@@ -424,10 +444,9 @@ export class DebtsService {
         return {
           debtId: savedDebt.id,
           expenseId: savedExpense.id,
-          itemsRemoved: futureItems.length,
+          itemsRemoved: futureExpenses.length,
         };
-      },
-    );
+      });
 
     const debt = await this.findOne(debtId);
     return { debt, expenseId, itemsRemoved };
@@ -436,7 +455,9 @@ export class DebtsService {
   /**
    * Idempotente: recrea únicamente las cuotas futuras que falten (creando
    * presupuestos si hace falta). No toca cuotas vencidas ni deudas `pagada`.
-   * Ver spec-026, decisión 8 y Fase 3 — usado para deudas heredadas.
+   * Ver spec-026, decisión 8 y Fase 3 — usado para deudas heredadas. La ruta
+   * `POST /debts/:id/sync-budget-items` conserva su nombre (spec-034,
+   * decisión 13) aunque internamente ya no hable de "budget items".
    */
   async syncBudgetItems(id: string): Promise<SyncBudgetItemsResult> {
     return this.dataSource.transaction(async (manager) => {
@@ -466,9 +487,9 @@ export class DebtsService {
         isFutureMonth(entry.year, entry.month),
       );
 
-      const existingItems = await this.findDebtItems(manager, id);
+      const existingExpenses = await this.findDebtExpenses(manager, id);
       const existingNumbers = new Set(
-        existingItems.map((item) => item.installmentNumber),
+        existingExpenses.map((expense) => expense.installmentNumber),
       );
 
       let itemsCreated = 0;
@@ -491,7 +512,7 @@ export class DebtsService {
             return manager.save(created);
           })());
 
-        const item = manager.create(BudgetItem, {
+        const expense = manager.create(Expense, {
           budget,
           description: this.installmentDescription(
             entry.installmentNumber,
@@ -499,11 +520,13 @@ export class DebtsService {
             debt.description,
           ),
           plannedAmount: debt.installmentValue,
+          amount: null,
+          date: null,
           type: ExpenseType.PAGO_DEUDA,
           debt,
           installmentNumber: entry.installmentNumber,
         });
-        await manager.save(item);
+        await manager.save(expense);
         itemsCreated++;
       }
 
@@ -528,14 +551,14 @@ export class DebtsService {
     return manager.save(created);
   }
 
-  private async findDebtItems(
+  private async findDebtExpenses(
     manager: EntityManager,
     debtId: string,
-  ): Promise<BudgetItem[]> {
+  ): Promise<Expense[]> {
     return manager
-      .createQueryBuilder(BudgetItem, 'item')
-      .innerJoinAndSelect('item.budget', 'budget')
-      .where('item."debtId" = :debtId', { debtId })
+      .createQueryBuilder(Expense, 'expense')
+      .innerJoinAndSelect('expense.budget', 'budget')
+      .where('expense."debtId" = :debtId', { debtId })
       .getMany();
   }
 

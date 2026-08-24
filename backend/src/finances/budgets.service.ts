@@ -1,50 +1,75 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Budget } from './entities/budget.entity';
-import { BudgetItem } from './entities/budget-item.entity';
 import { Income } from './entities/income.entity';
 import { Expense } from './entities/expense.entity';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { DuplicateBudgetDto } from './dto/duplicate-budget.dto';
-import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
-import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ExpenseType } from '../common/enums/expense-type.enum';
+import { ExpensesService } from './expenses.service';
+import { withExecutionStatus } from './expense-execution-status.util';
 
-export interface BudgetTypeSummary {
+// spec-034: reemplaza a BudgetTypeSummary (que sumaba plannedAmount de
+// BudgetItem y amount de Expense en el mismo acumulador — la causa del
+// doble conteo). Ahora planeado y ejecutado se reportan por separado.
+export interface TypeBreakdown {
   type: ExpenseType;
-  total: number;
-  percentage: number;
+  planned: number;
+  executed: number;
+  variance: number;
+  plannedPct: number;
+  executedPct: number;
 }
 
 export interface BudgetDetail extends Budget {
-  typeSummary: BudgetTypeSummary[];
   totalIncome: number;
+  plannedTotal: number;
+  executedTotal: number;
+  variance: number;
+  byType: TypeBreakdown[];
+}
+
+export interface BudgetListItem extends Budget {
+  plannedTotal: number;
 }
 
 export interface CardTotal {
   creditCardId: string;
   name: string;
-  total: number;
+  planned: number;
+  executed: number;
 }
 
 export interface MonthlySummary {
   year: number;
   month: number;
-  budgetTotal: number;
-  expensesTotal: number;
-  combinedTotal: number;
   budgetId: string | null;
+  totalIncome: number;
+  plannedTotal: number;
+  executedTotal: number;
+  variance: number;
+  pendingPlannedTotal: number;
+  unplannedTotal: number;
+  byType: TypeBreakdown[];
   cardTotals: CardTotal[];
 }
 
 export interface DuplicateBudgetResult {
   budget: BudgetDetail;
-  itemsCopied: number;
+  plannedExpensesCopied: number;
   incomesCopied: number;
-  expensesCopied: number;
+}
+
+export interface RemoveBudgetResult {
+  executedExpensesRemoved: number;
+  executedTotalRemoved: number;
 }
 
 @Injectable()
@@ -52,47 +77,34 @@ export class BudgetsService {
   constructor(
     @InjectRepository(Budget)
     private readonly budgetsRepository: Repository<Budget>,
-    @InjectRepository(BudgetItem)
-    private readonly budgetItemsRepository: Repository<BudgetItem>,
     @InjectRepository(Income)
     private readonly incomesRepository: Repository<Income>,
     @InjectRepository(Expense)
     private readonly expensesRepository: Repository<Expense>,
+    private readonly expensesService: ExpensesService,
     private readonly dataSource: DataSource,
   ) {}
 
   async create(dto: CreateBudgetDto): Promise<Budget> {
-    return this.dataSource.transaction(async (manager) => {
-      const budget = manager.create(Budget, {
-        name: dto.name,
-        month: dto.month,
-        year: dto.year,
-      });
-      const savedBudget = await manager.save(budget);
-
-      if (dto.items?.length) {
-        const items = dto.items.map((item) =>
-          manager.create(BudgetItem, { ...item, budget: savedBudget }),
-        );
-        await manager.save(items);
-        savedBudget.items = items;
-      } else {
-        savedBudget.items = [];
-      }
-
-      return savedBudget;
+    const budget = this.budgetsRepository.create({
+      name: dto.name,
+      month: dto.month,
+      year: dto.year,
     });
+    const savedBudget = await this.budgetsRepository.save(budget);
+    savedBudget.expenses = [];
+    return savedBudget;
   }
 
-  findAll(
+  async findAll(
     { page = 1, limit = 20 }: PaginationDto,
     year?: number,
     month?: number,
-  ): Promise<Budget[]> {
+  ): Promise<BudgetListItem[]> {
     const qb = this.budgetsRepository
       .createQueryBuilder('budget')
-      .leftJoinAndSelect('budget.items', 'items')
-      .leftJoinAndSelect('items.debt', 'itemsDebt')
+      .leftJoinAndSelect('budget.expenses', 'expenses')
+      .leftJoinAndSelect('expenses.debt', 'expensesDebt')
       .orderBy('budget.year', 'DESC')
       .addOrderBy('budget.month', 'DESC')
       .skip((page - 1) * limit)
@@ -101,151 +113,219 @@ export class BudgetsService {
     if (year) qb.andWhere('budget.year = :year', { year });
     if (month) qb.andWhere('budget.month = :month', { month });
 
-    return qb.getMany();
+    const budgets = await qb.getMany();
+    return budgets.map((budget) => ({
+      ...budget,
+      expenses: (budget.expenses ?? []).map((e) => withExecutionStatus(e)),
+      plannedTotal: (budget.expenses ?? []).reduce(
+        (sum, e) =>
+          sum + (e.plannedAmount != null ? Number(e.plannedAmount) : 0),
+        0,
+      ),
+    }));
   }
 
   async findOne(id: string): Promise<BudgetDetail> {
     const budget = await this.budgetsRepository
       .createQueryBuilder('budget')
-      .leftJoinAndSelect('budget.items', 'items')
-      .leftJoinAndSelect('items.debt', 'itemsDebt')
+      .leftJoinAndSelect('budget.expenses', 'expenses')
+      .leftJoinAndSelect('expenses.debt', 'expensesDebt')
+      .leftJoinAndSelect('expenses.creditCard', 'expensesCreditCard')
       .where('budget.id = :id', { id })
       .getOne();
 
     if (!budget) throw new NotFoundException(`Budget ${id} not found`);
 
-    const [totalIncome, expenses] = await Promise.all([
-      this.incomesRepository
-        .createQueryBuilder('income')
-        .select('COALESCE(SUM(income.amount), 0)', 'total')
-        .where('EXTRACT(month FROM income.date) = :month', { month: budget.month })
-        .andWhere('EXTRACT(year FROM income.date) = :year', { year: budget.year })
-        .getRawOne()
-        .then((r) => Number(r.total)),
-      this.expensesRepository
-        .createQueryBuilder('expense')
-        .where('EXTRACT(month FROM expense.date) = :month', { month: budget.month })
-        .andWhere('EXTRACT(year FROM expense.date) = :year', { year: budget.year })
-        .getMany(),
-    ]);
+    const totalIncome = await this.incomesRepository
+      .createQueryBuilder('income')
+      .select('COALESCE(SUM(income.amount), 0)', 'total')
+      .where('EXTRACT(month FROM income.date) = :month', {
+        month: budget.month,
+      })
+      .andWhere('EXTRACT(year FROM income.date) = :year', { year: budget.year })
+      .getRawOne()
+      .then((r) => Number(r.total));
 
-    const typeSummary = this.computeTypeSummary(budget.items ?? [], expenses, totalIncome);
+    const expenses = (budget.expenses ?? []).map((e) => withExecutionStatus(e));
+    const plannedTotal = this.sumPlanned(expenses);
+    const executedTotal = this.sumExecuted(expenses);
+    const byType = this.computeTypeBreakdown(expenses, totalIncome);
 
-    return { ...budget, totalIncome, typeSummary };
+    return {
+      ...budget,
+      totalIncome,
+      plannedTotal,
+      executedTotal,
+      variance: plannedTotal - executedTotal,
+      byType,
+    };
   }
 
-  private computeTypeSummary(
-    items: BudgetItem[],
+  private sumPlanned(expenses: Expense[]): number {
+    return expenses.reduce(
+      (sum, e) => sum + (e.plannedAmount != null ? Number(e.plannedAmount) : 0),
+      0,
+    );
+  }
+
+  private sumExecuted(expenses: Expense[]): number {
+    return expenses.reduce(
+      (sum, e) => sum + (e.amount != null ? Number(e.amount) : 0),
+      0,
+    );
+  }
+
+  private computeTypeBreakdown(
     expenses: Expense[],
     totalIncome: number,
-  ): BudgetTypeSummary[] {
-    const totals = new Map<ExpenseType, number>();
-
-    for (const item of items) {
-      totals.set(item.type, (totals.get(item.type) ?? 0) + Number(item.plannedAmount));
-    }
+  ): TypeBreakdown[] {
+    const totals = new Map<
+      ExpenseType,
+      { planned: number; executed: number }
+    >();
 
     for (const expense of expenses) {
-      totals.set(expense.type, (totals.get(expense.type) ?? 0) + Number(expense.amount));
+      const current = totals.get(expense.type) ?? { planned: 0, executed: 0 };
+      if (expense.plannedAmount != null)
+        current.planned += Number(expense.plannedAmount);
+      if (expense.amount != null) current.executed += Number(expense.amount);
+      totals.set(expense.type, current);
     }
 
-    return Array.from(totals.entries()).map(([type, total]) => ({
-      type,
-      total,
-      percentage: totalIncome > 0 ? Math.round((total / totalIncome) * 10000) / 100 : 0,
-    }));
+    return Array.from(totals.entries()).map(
+      ([type, { planned, executed }]) => ({
+        type,
+        planned,
+        executed,
+        variance: planned - executed,
+        plannedPct:
+          totalIncome > 0
+            ? Math.round((planned / totalIncome) * 10000) / 100
+            : 0,
+        executedPct:
+          totalIncome > 0
+            ? Math.round((executed / totalIncome) * 10000) / 100
+            : 0,
+      }),
+    );
+  }
+
+  private computeCardTotals(expenses: Expense[]): CardTotal[] {
+    const totals = new Map<
+      string,
+      { name: string; planned: number; executed: number }
+    >();
+
+    for (const expense of expenses) {
+      if (!expense.creditCard) continue;
+      const current = totals.get(expense.creditCard.id) ?? {
+        name: expense.creditCard.name,
+        planned: 0,
+        executed: 0,
+      };
+      if (expense.plannedAmount != null)
+        current.planned += Number(expense.plannedAmount);
+      if (expense.amount != null) current.executed += Number(expense.amount);
+      totals.set(expense.creditCard.id, current);
+    }
+
+    return Array.from(totals.entries())
+      .map(([creditCardId, { name, planned, executed }]) => ({
+        creditCardId,
+        name,
+        planned,
+        executed,
+      }))
+      .sort((a, b) => b.executed - a.executed);
   }
 
   async update(id: string, dto: UpdateBudgetDto): Promise<Budget> {
-    const budget = await this.findOne(id);
+    const budget = await this.getBudgetOrThrow(id);
     Object.assign(budget, dto);
     return this.budgetsRepository.save(budget);
   }
 
-  async remove(id: string): Promise<void> {
-    const budget = await this.findOne(id);
+  /**
+   * spec-034, decisión 12: borrar un presupuesto borra sus gastos en
+   * cascada (ON DELETE CASCADE en `expenses.budgetId`, ver migración
+   * 1787100000000). Incluye gastos ya ejecutados — el conteo y monto se
+   * devuelven para que la UI advierta antes de confirmar (Fase 8).
+   */
+  async remove(id: string): Promise<RemoveBudgetResult> {
+    const budget = await this.getBudgetOrThrow(id);
+
+    const stats = await this.expensesRepository
+      .createQueryBuilder('expense')
+      .select('COUNT(*)', 'count')
+      .addSelect('COALESCE(SUM(expense.amount), 0)', 'total')
+      .where('expense.budgetId = :id', { id })
+      .andWhere('expense.amount IS NOT NULL')
+      .getRawOne();
+
     await this.budgetsRepository.remove(budget);
+
+    return {
+      executedExpensesRemoved: Number(stats.count),
+      executedTotalRemoved: Number(stats.total),
+    };
   }
 
-  async addItem(budgetId: string, dto: CreateBudgetItemDto): Promise<BudgetItem> {
-    const budget = await this.findOne(budgetId);
-    const item = this.budgetItemsRepository.create({ ...dto, budget });
-    return this.budgetItemsRepository.save(item);
+  private async getBudgetOrThrow(id: string): Promise<Budget> {
+    const budget = await this.budgetsRepository.findOneBy({ id });
+    if (!budget) throw new NotFoundException(`Budget ${id} not found`);
+    return budget;
   }
 
-  async updateItem(budgetId: string, itemId: string, dto: UpdateBudgetItemDto): Promise<BudgetItem> {
-    const item = await this.budgetItemsRepository.findOne({
-      where: { id: itemId, budget: { id: budgetId } },
-    });
-    if (!item) throw new NotFoundException(`BudgetItem ${itemId} not found in budget ${budgetId}`);
-    Object.assign(item, dto);
-    return this.budgetItemsRepository.save(item);
-  }
+  async getMonthlySummary(
+    year: number,
+    month: number,
+  ): Promise<MonthlySummary> {
+    const budget = await this.budgetsRepository.findOneBy({ year, month });
 
-  async getMonthlySummary(year: number, month: number): Promise<MonthlySummary> {
-    const budget = await this.budgetsRepository
-      .createQueryBuilder('budget')
-      .leftJoinAndSelect('budget.items', 'items')
-      .where('budget.year = :year', { year })
-      .andWhere('budget.month = :month', { month })
-      .getOne();
+    const totalIncome = await this.incomesRepository
+      .createQueryBuilder('income')
+      .select('COALESCE(SUM(income.amount), 0)', 'total')
+      .where('EXTRACT(month FROM income.date) = :month', { month })
+      .andWhere('EXTRACT(year FROM income.date) = :year', { year })
+      .getRawOne()
+      .then((r) => Number(r.total));
 
-    const budgetTotal = budget
-      ? (budget.items ?? []).reduce((sum, item) => sum + Number(item.plannedAmount), 0)
-      : 0;
+    const qb = this.expensesRepository
+      .createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.creditCard', 'creditCard');
+    await this.expensesService.applyMonthScope(qb, year, month);
+    const expenses = await qb.getMany();
 
-    const [expensesTotal, cardTotalsRaw] = await Promise.all([
-      this.expensesRepository
-        .createQueryBuilder('expense')
-        .select('COALESCE(SUM(expense.amount), 0)', 'total')
-        .where('EXTRACT(month FROM expense.date) = :month', { month })
-        .andWhere('EXTRACT(year FROM expense.date) = :year', { year })
-        .getRawOne()
-        .then((r) => Number(r.total)),
-      this.expensesRepository
-        .createQueryBuilder('expense')
-        .leftJoinAndSelect('expense.creditCard', 'creditCard')
-        .select('expense.creditCardId', 'creditCardId')
-        .addSelect('creditCard.name', 'name')
-        .addSelect('SUM(expense.amount)', 'total')
-        .where('EXTRACT(month FROM expense.date) = :month', { month })
-        .andWhere('EXTRACT(year FROM expense.date) = :year', { year })
-        .andWhere('expense.creditCardId IS NOT NULL')
-        .groupBy('expense.creditCardId')
-        .addGroupBy('creditCard.name')
-        .orderBy('total', 'DESC')
-        .getRawMany(),
-    ]);
-
-    const cardTotals: CardTotal[] = cardTotalsRaw.map((row) => ({
-      creditCardId: row.creditCardId,
-      name: row.name,
-      total: Number(row.total),
-    }));
+    const plannedTotal = this.sumPlanned(expenses);
+    const executedTotal = this.sumExecuted(expenses);
+    const pendingPlannedTotal = expenses
+      .filter((e) => e.plannedAmount != null && e.amount == null)
+      .reduce((sum, e) => sum + Number(e.plannedAmount), 0);
+    const unplannedTotal = expenses
+      .filter((e) => e.plannedAmount == null && e.amount != null)
+      .reduce((sum, e) => sum + Number(e.amount), 0);
 
     return {
       year,
       month,
-      budgetTotal,
-      expensesTotal,
-      combinedTotal: budgetTotal + expensesTotal,
       budgetId: budget?.id ?? null,
-      cardTotals,
+      totalIncome,
+      plannedTotal,
+      executedTotal,
+      variance: plannedTotal - executedTotal,
+      pendingPlannedTotal,
+      unplannedTotal,
+      byType: this.computeTypeBreakdown(expenses, totalIncome),
+      cardTotals: this.computeCardTotals(expenses),
     };
   }
 
-  async removeItem(budgetId: string, itemId: string): Promise<void> {
-    const item = await this.budgetItemsRepository.findOne({
-      where: { id: itemId, budget: { id: budgetId } },
-    });
-    if (!item) throw new NotFoundException(`BudgetItem ${itemId} not found in budget ${budgetId}`);
-    await this.budgetItemsRepository.remove(item);
-  }
-
-  async duplicate(sourceId: string, dto: DuplicateBudgetDto): Promise<DuplicateBudgetResult> {
+  async duplicate(
+    sourceId: string,
+    dto: DuplicateBudgetDto,
+  ): Promise<DuplicateBudgetResult> {
     const sourceBudget = await this.findOne(sourceId);
 
-    // Guard against conflict in destination
     const existingBudget = await this.budgetsRepository.findOne({
       where: { month: dto.month, year: dto.year },
     });
@@ -255,28 +335,24 @@ export class BudgetsService {
       );
     }
 
-    // Fetch all incomes and expenses for source month
-    const [incomes, expenses] = await Promise.all([
-      this.incomesRepository
-        .createQueryBuilder('income')
-        .where('EXTRACT(month FROM income.date) = :month', { month: sourceBudget.month })
-        .andWhere('EXTRACT(year FROM income.date) = :year', { year: sourceBudget.year })
-        .getMany(),
-      this.expensesRepository
-        .createQueryBuilder('expense')
-        .leftJoinAndSelect('expense.creditCard', 'creditCard')
-        .where('EXTRACT(month FROM expense.date) = :month', { month: sourceBudget.month })
-        .andWhere('EXTRACT(year FROM expense.date) = :year', { year: sourceBudget.year })
-        .getMany(),
-    ]);
+    const incomes = await this.incomesRepository
+      .createQueryBuilder('income')
+      .where('EXTRACT(month FROM income.date) = :month', {
+        month: sourceBudget.month,
+      })
+      .andWhere('EXTRACT(year FROM income.date) = :year', {
+        year: sourceBudget.year,
+      })
+      .getMany();
+
+    // spec-034, decisión 5: duplicar copia solo el plan. Se excluyen los
+    // ítems de cuota de deuda (spec-026, decisión 9): ya están, o estarán,
+    // materializados por la propia deuda en el mes destino.
+    const plannedExpenses = (sourceBudget.expenses ?? []).filter(
+      (expense) => expense.plannedAmount != null && expense.debt == null,
+    );
 
     return this.dataSource.transaction(async (manager) => {
-      let itemsCopied = 0;
-      let incomesCopied = 0;
-      let expensesCopied = 0;
-      let copiedItems: BudgetItem[] = [];
-
-      // Create destination budget
       const destBudget = manager.create(Budget, {
         name: dto.name ?? sourceBudget.name,
         month: dto.month,
@@ -284,87 +360,80 @@ export class BudgetsService {
       });
       const savedBudget = await manager.save(destBudget);
 
-      // Clone budget items — excluyendo ítems de cuota de deuda (spec-026,
-      // decisión 9): esas cuotas ya están (o estarán) materializadas por la
-      // propia deuda en el mes destino; copiarlas las duplicaría.
-      const nonDebtItems = (sourceBudget.items ?? []).filter(
-        (item) => item.debt == null,
-      );
-      if (nonDebtItems.length > 0) {
-        const items = nonDebtItems.map((item) =>
-          manager.create(BudgetItem, {
-            description: item.description,
-            plannedAmount: item.plannedAmount,
-            type: item.type,
+      let copiedExpenses: Expense[] = [];
+      if (plannedExpenses.length > 0) {
+        const newExpenses = plannedExpenses.map((expense) =>
+          manager.create(Expense, {
+            description: expense.description,
+            plannedAmount: expense.plannedAmount,
+            type: expense.type,
+            creditCard: expense.creditCard
+              ? { id: expense.creditCard.id }
+              : null,
+            amount: null,
+            date: null,
             budget: savedBudget,
           }),
         );
-        copiedItems = await manager.save(items);
-        itemsCopied = items.length;
+        copiedExpenses = (await manager.save(newExpenses)).map((e) =>
+          withExecutionStatus(e),
+        );
       }
 
-      // Recreate incomes with shifted dates
+      let incomesCopied = 0;
       if (incomes.length > 0) {
         const newIncomes = incomes.map((income) =>
           manager.create(Income, {
             description: income.description,
             amount: income.amount,
             type: income.type,
-            date: this.shiftDate(income.date, sourceBudget.month, sourceBudget.year, dto.month, dto.year),
+            date: this.shiftDate(
+              income.date,
+              sourceBudget.month,
+              sourceBudget.year,
+              dto.month,
+              dto.year,
+            ),
           }),
         );
         await manager.save(newIncomes);
         incomesCopied = newIncomes.length;
       }
 
-      // Recreate expenses with shifted dates and preserve creditCardId
-      if (expenses.length > 0) {
-        const newExpenses = expenses.map((expense) =>
-          manager.create(Expense, {
-            description: expense.description,
-            amount: expense.amount,
-            type: expense.type,
-            creditCard: expense.creditCard ? { id: expense.creditCard.id } : null,
-            date: this.shiftDate(expense.date, sourceBudget.month, sourceBudget.year, dto.month, dto.year),
-          }),
-        );
-        await manager.save(newExpenses);
-        expensesCopied = newExpenses.length;
-      }
-
-      // Compute BudgetDetail fields
-      const totalIncome = incomesCopied > 0
-        ? incomes.reduce((sum, i) => sum + Number(i.amount), 0)
-        : 0;
-
-      const typeSummary = this.computeTypeSummary(
-        copiedItems,
-        expenses,
-        totalIncome,
-      );
+      const totalIncome = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
+      const plannedTotal = this.sumPlanned(copiedExpenses);
+      const byType = this.computeTypeBreakdown(copiedExpenses, totalIncome);
 
       const budgetDetail: BudgetDetail = {
         id: savedBudget.id,
         name: savedBudget.name,
         month: savedBudget.month,
         year: savedBudget.year,
-        items: copiedItems,
+        expenses: copiedExpenses,
         createdAt: savedBudget.createdAt,
         updatedAt: savedBudget.updatedAt,
         totalIncome,
-        typeSummary,
+        plannedTotal,
+        executedTotal: 0,
+        variance: plannedTotal,
+        byType,
       };
 
       return {
         budget: budgetDetail,
-        itemsCopied,
+        plannedExpensesCopied: copiedExpenses.length,
         incomesCopied,
-        expensesCopied,
       };
     });
   }
 
-  private shiftDate(date: string, sourceMonth: number, sourceYear: number, destMonth: number, destYear: number): string {
+  private shiftDate(
+    date: string,
+    sourceMonth: number,
+    sourceYear: number,
+    destMonth: number,
+    destYear: number,
+  ): string {
     const [year, month, day] = date.split('-').map(Number);
     const destLastDay = this.getLastDayOfMonth(destYear, destMonth);
     const shiftedDay = Math.min(day, destLastDay);
