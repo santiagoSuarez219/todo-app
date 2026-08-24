@@ -2,8 +2,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ExpenseType } from '../../types';
-import type { CreateBudgetItemDto } from '../../types';
+import type { CreateExpenseDto } from '../../types';
 
+// spec-034: reemplaza a BudgetItemForm — agregar un ítem al presupuesto es
+// ahora crear un Expense con `plannedAmount` + `budgetId`, sin `amount`/
+// `date` (queda "planned" hasta que se registre su ejecución).
 const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
   basico: 'Básico',
   lujo: 'Lujo',
@@ -23,18 +26,19 @@ const inputCls =
   'border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-colors';
 
 interface Props {
-  onSubmit: (dto: CreateBudgetItemDto) => Promise<void>;
+  budgetId: string;
+  onSubmit: (dto: CreateExpenseDto) => Promise<void>;
   loading?: boolean;
 }
 
-export default function BudgetItemForm({ onSubmit, loading }: Props) {
+export default function PlannedExpenseForm({ budgetId, onSubmit, loading }: Props) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { description: '', plannedAmount: undefined, type: 'basico' },
   });
 
   async function handleAdd(values: FormValues) {
-    await onSubmit(values);
+    await onSubmit({ ...values, budgetId, type: values.type });
     reset();
   }
 
@@ -44,7 +48,7 @@ export default function BudgetItemForm({ onSubmit, loading }: Props) {
         <input
           {...register('description')}
           className={`${inputCls} w-full`}
-          placeholder="Descripción del ítem"
+          placeholder="Descripción del gasto planeado"
         />
         {errors.description && (
           <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.description.message}</p>
@@ -57,7 +61,7 @@ export default function BudgetItemForm({ onSubmit, loading }: Props) {
           min="0"
           {...register('plannedAmount')}
           className={`${inputCls} w-full`}
-          placeholder="Monto COP"
+          placeholder="Monto planeado"
         />
         {errors.plannedAmount && (
           <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.plannedAmount.message}</p>

@@ -5,13 +5,10 @@ import {
   createBudget,
   updateBudget,
   deleteBudget,
-  addBudgetItem,
-  updateBudgetItem,
-  deleteBudgetItem,
   getMonthlyExpenseSummary,
   duplicateBudget,
 } from '../../services/finances/budgets.service';
-import type { CreateBudgetDto, UpdateBudgetDto, DuplicateBudgetDto, CreateBudgetItemDto, UpdateBudgetItemDto, PaginationParams } from '../../types';
+import type { CreateBudgetDto, UpdateBudgetDto, DuplicateBudgetDto, PaginationParams } from '../../types';
 
 export function useBudgets(params?: PaginationParams, year?: number, month?: number) {
   return useQuery({
@@ -44,20 +41,18 @@ export function useUpdateBudget() {
   });
 }
 
+// spec-034, decisión 12: el resultado indica cuántos gastos ejecutados se
+// perdieron en cascada — el caller (BudgetDetailView) lo usa para el
+// ConfirmDialog. Sigue invalidando ['expenses']: los gastos del presupuesto
+// desaparecieron de verdad.
 export function useDeleteBudget() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteBudget(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
-  });
-}
-
-export function useAddBudgetItem() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ budgetId, dto }: { budgetId: string; dto: CreateBudgetItemDto }) =>
-      addBudgetItem(budgetId, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['budgets'] });
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+    },
   });
 }
 
@@ -66,24 +61,6 @@ export function useMonthlyExpenseSummary(year: number, month: number) {
     queryKey: ['budgets', 'monthly-summary', year, month],
     queryFn: () => getMonthlyExpenseSummary(year, month),
     enabled: !!year && !!month,
-  });
-}
-
-export function useUpdateBudgetItem() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ budgetId, itemId, dto }: { budgetId: string; itemId: string; dto: UpdateBudgetItemDto }) =>
-      updateBudgetItem(budgetId, itemId, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
-  });
-}
-
-export function useDeleteBudgetItem() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ budgetId, itemId }: { budgetId: string; itemId: string }) =>
-      deleteBudgetItem(budgetId, itemId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets'] }),
   });
 }
 

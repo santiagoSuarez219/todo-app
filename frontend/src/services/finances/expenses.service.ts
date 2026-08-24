@@ -1,11 +1,24 @@
 import apiClient from '../../lib/api-client';
 import type { Expense, CreateExpenseDto, UpdateExpenseDto, DuplicateExpenseDto, PaginationParams } from '../../types';
 
+export interface GetExpensesFilters {
+  year?: number;
+  month?: number;
+  search?: string;
+  /** spec-034: gastos de un presupuesto puntual. */
+  budgetId?: string;
+  /** spec-034: solo planeados sin ejecutar (amount IS NULL). */
+  planned?: boolean;
+  /** spec-034: solo ejecutados (amount IS NOT NULL). */
+  executed?: boolean;
+}
+
 export async function getExpenses(
   params?: PaginationParams,
   year?: number,
   month?: number,
   search?: string,
+  filters?: Pick<GetExpensesFilters, 'budgetId' | 'planned' | 'executed'>,
 ): Promise<Expense[]> {
   const { data } = await apiClient.get<{ data: Expense[] }>('/finances/expenses', {
     params: {
@@ -13,6 +26,9 @@ export async function getExpenses(
       ...(year ? { year } : {}),
       ...(month ? { month } : {}),
       ...(search ? { search } : {}),
+      ...(filters?.budgetId ? { budgetId: filters.budgetId } : {}),
+      ...(filters?.planned ? { planned: true } : {}),
+      ...(filters?.executed ? { executed: true } : {}),
     },
   });
   return data.data;

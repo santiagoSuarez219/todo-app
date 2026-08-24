@@ -28,17 +28,15 @@ interface Props {
 }
 
 export default function DuplicateExpenseForm({ origin, onSubmit, onCancel, loading }: Props) {
-  const getNextMonth = () => {
-    const [, month] = origin.date.split('-').map(Number);
-    if (month === 12) return 1;
-    return month + 1;
-  };
+  // spec-034: un gasto solo planeado no tiene `date` — se propone el mes
+  // siguiente al actual como destino por defecto.
+  const now = new Date();
+  const [refYear, refMonth] = origin.date
+    ? origin.date.split('-').map(Number)
+    : [now.getFullYear(), now.getMonth() + 1];
 
-  const getNextYear = () => {
-    const [year, month] = origin.date.split('-').map(Number);
-    if (month === 12) return year + 1;
-    return year;
-  };
+  const getNextMonth = () => (refMonth === 12 ? 1 : refMonth + 1);
+  const getNextYear = () => (refMonth === 12 ? refYear + 1 : refYear);
 
   const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormValues>({
     resolver: zodResolver(schema),
@@ -75,7 +73,10 @@ export default function DuplicateExpenseForm({ origin, onSubmit, onCancel, loadi
       </div>
 
       <div className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-2">
-        Se copiará: <strong>{origin.description}</strong> por {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(origin.amount)}
+        Se copiará: <strong>{origin.description}</strong> tal cual (planeado y ejecución si los tenía) por{' '}
+        {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(
+          origin.amount ?? origin.plannedAmount ?? 0,
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">

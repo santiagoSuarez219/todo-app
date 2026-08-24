@@ -17,7 +17,8 @@ const TYPE_COLORS: Record<ExpenseType, string> = {
 
 const COP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
-function fmt(dateStr: string) {
+function fmt(dateStr: string | null) {
+  if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day).toLocaleDateString('es-CO', {
     day: '2-digit',
@@ -50,8 +51,29 @@ function DuplicateIcon() {
   );
 }
 
+// spec-034: un gasto vive en tres estados posibles según qué campos tiene
+// seteados — ver "Semántica derivada" del spec.
+function statusBadge(expense: Expense) {
+  if (expense.executionStatus === 'planned') {
+    return (
+      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+        Planeado
+      </span>
+    );
+  }
+  if (expense.executionStatus === 'executed' && !expense.plannedAmount) {
+    return (
+      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+        Sin presupuesto
+      </span>
+    );
+  }
+  return null;
+}
+
 interface EditState {
   description: string;
+  plannedAmount: string;
   amount: string;
   date: string;
   type: ExpenseType;
@@ -91,6 +113,16 @@ export default function ExpenseCard({
   isSaving,
 }: Props) {
   if (isEditing) {
+    // Ejecutado si amount+date tienen valor; planeado en caso contrario.
+    // Registrar la ejecución de un planeado es simplemente llenar esos dos
+    // campos y guardar.
+    const canSave =
+      editState.description.trim() &&
+      (Number(editState.plannedAmount) > 0 ||
+        (Number(editState.amount) > 0 && !!editState.date)) &&
+      (!editState.amount || (Number(editState.amount) > 0 && !!editState.date)) &&
+      (!editState.date || Number(editState.amount) > 0);
+
     return (
       <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
         <div>
@@ -105,8 +137,22 @@ export default function ExpenseCard({
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <div>
+            <label className="block text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">Planeado</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={editState.plannedAmount}
+              onChange={(e) => onEditStateChange({ plannedAmount: e.target.value })}
+              className={inputCls}
+              placeholder="—"
+              disabled={isSaving}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">Real</label>
             <input
               type="number"
               step="0.01"
@@ -114,11 +160,12 @@ export default function ExpenseCard({
               value={editState.amount}
               onChange={(e) => onEditStateChange({ amount: e.target.value })}
               className={inputCls}
-              placeholder="Monto"
+              placeholder="—"
               disabled={isSaving}
             />
           </div>
           <div>
+            <label className="block text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">Fecha</label>
             <input
               type="date"
               value={editState.date}
@@ -128,6 +175,7 @@ export default function ExpenseCard({
             />
           </div>
           <div>
+            <label className="block text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">Tipo</label>
             <select
               value={editState.type}
               onChange={(e) => onEditStateChange({ type: e.target.value as ExpenseType })}
@@ -142,6 +190,7 @@ export default function ExpenseCard({
             </select>
           </div>
           <div>
+            <label className="block text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">Tarjeta</label>
             <select
               value={editState.creditCardId}
               onChange={(e) => onEditStateChange({ creditCardId: e.target.value })}
@@ -161,7 +210,7 @@ export default function ExpenseCard({
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={() => onSaveEdit(expense)}
-            disabled={isSaving || !editState.description.trim() || Number(editState.amount) <= 0 || !editState.date}
+            disabled={isSaving || !canSave}
             className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-40 transition-colors"
             title="Guardar"
           >
@@ -184,12 +233,16 @@ export default function ExpenseCard({
     );
   }
 
+  const formattedDate = fmt(expense.date);
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between gap-4 hover:shadow-md transition-shadow">
       <div className="flex items-center gap-3 min-w-0">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{expense.description}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{fmt(expense.date)}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {formattedDate ?? 'Sin ejecutar'}
+          </p>
         </div>
       </div>
 
@@ -197,13 +250,14 @@ export default function ExpenseCard({
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TYPE_COLORS[expense.type]}`}>
           {TYPE_LABELS[expense.type]}
         </span>
+        {statusBadge(expense)}
         {expense.creditCard && (
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
             {expense.creditCard.name}
           </span>
         )}
         <span className="text-sm font-semibold text-red-600 dark:text-red-400 tabular-nums">
-          {COP.format(expense.amount)}
+          {expense.amount != null ? COP.format(expense.amount) : `Plan: ${COP.format(expense.plannedAmount ?? 0)}`}
         </span>
         <div className="flex items-center gap-1">
           <button
