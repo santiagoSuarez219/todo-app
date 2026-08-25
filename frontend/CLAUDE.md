@@ -123,14 +123,14 @@ de rutas y lógica de negocio: ver `backend/CLAUDE.md`.
 
 | Método | Ruta | Descripción | Params |
 |--------|------|-------------|--------|
-| `GET` | `/activities` | Listar (paginado) | `?page=&limit=` |
+| `GET` | `/activities` | Listar (paginado). **Excluye plantillas y subtareas por defecto** — `?includeTemplates=`/`?includeSubtasks=` para incluirlas. Acepta `?status=` (uno o varios, separados por coma) y `?dueFilter=overdue\|no_date` (spec-034) | `?page=&limit=&status=&dueFilter=&includeTemplates=&includeSubtasks=` |
+| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas (spec-034) | `?projectId=&includeTemplates=&includeSubtasks=` |
 | `GET` | `/activities/today` | Actividades de hoy (`dueDate` o `scheduledForToday`) | paginación |
 | `GET` | `/activities/tomorrow` | Actividades de mañana | paginación |
 | `GET` | `/activities/this-week` | Actividades semana actual (Lun–Dom) | paginación |
 | `GET` | `/activities/overdue` | Vencidas (`dueDate < hoy`, status ≠ completed) | paginación |
-| `GET` | `/activities/without-project` | Sin proyecto asociado | paginación |
-| `GET` | `/activities/project/:projectId` | Por proyecto (UUID) | paginación |
-| `GET` | `/activities/type/:type` | Por tipo (`task` \| `reminder`) | paginación |
+| `GET` | `/activities/without-project` | Sin proyecto asociado. Excluye plantillas y subtareas (spec-034) | paginación |
+| `GET` | `/activities/project/:projectId` | Por proyecto (UUID). Mismos filtros y mismo comportamiento por defecto que `GET /activities` (spec-034) | paginación + filtros |
 | `GET` | `/activities/priority/:priority` | Por prioridad (`high` \| `medium` \| `low`) | paginación |
 | `GET` | `/activities/status/:status` | Por status | paginación |
 | `GET` | `/activities/search/:query` | Búsqueda por nombre/descripción/proyecto | paginación |
@@ -142,9 +142,10 @@ de rutas y lógica de negocio: ver `backend/CLAUDE.md`.
 | `DELETE` | `/activities/:id` | Eliminar actividad (204) | UUID |
 | `DELETE` | `/activities/:id/future-instances` | Cancelar instancias futuras pendientes (204) | UUID |
 
-> No existe `type: 'event'` — solo `task` y `reminder` (corregido; versiones
-> anteriores de este archivo lo mencionaban por error). Tampoco existen
-> `actionDate`, `device`, `duration`, `durationUnit`, `location` ni
+> No existe el campo `type` (`task` \| `reminder`) ni la ruta
+> `GET /activities/type/:type` — eliminados en spec-027 (versiones anteriores
+> de este archivo los mencionaban por error; corregido en spec-034). Tampoco
+> existen `actionDate`, `device`, `duration`, `durationUnit`, `location` ni
 > `automatizacion` — fueron eliminados del modelo (ver `backend/CLAUDE.md`).
 
 **Paginación** — query params: `page` (default 1) · `limit` (default 20, max 100)
@@ -225,8 +226,7 @@ móvil (`FinancesLayout` en `App.tsx`) — finanzas solo es usable en desktop.
 
 ```ts
 ProjectStatus:        'active' | 'inactive' | 'paused' | 'completed'
-ActivityStatus:       'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold'
-ActivityType:         'reminder' | 'task'
+ActivityStatus:       'pending' | 'in_progress' | 'testing' | 'completed' | 'cancelled' | 'on_hold' | 'waiting'
 Priority:             'high' | 'medium' | 'low'
 Energy:               'high' | 'medium' | 'low'
 RecurrenceFrequency:  'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
@@ -252,9 +252,13 @@ interface Activity {
   id: string; name: string; description: string | null;
   project: Project | null; parent: Activity | null; subtasks: Activity[];
   dueDate: string | null;
-  priority: Priority; status: ActivityStatus; energy: Energy; type: ActivityType;
-  scheduledForToday: boolean; notionUrl: string | null;
-  isTemplate: boolean; isRecurring: boolean; templateId: string | null;
+  priority: Priority; status: ActivityStatus; energy: Energy;
+  // ⚠️ Deuda de documentación registrada en spec/backlog.md (spec-034): este
+  // bloque también arrastra `scheduledForToday`/`notionUrl`/`isRecurring` y
+  // le faltan varios campos vigentes (`scheduledFor`, `deferUntil`,
+  // `waitingFor`/`waitingSince`, `completedAt`, `postponementCount`) — ver
+  // `types/index.ts` como fuente de verdad real, no este snippet.
+  isTemplate: boolean; templateId: string | null;
   recurrenceFrequency: RecurrenceFrequency | null;
   recurrenceDays: WeekDay[] | null; recurrenceDayOfMonth: number | null;
   recurrenceEndDate: string | null; instanceDate: string | null;

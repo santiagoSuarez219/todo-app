@@ -1,31 +1,34 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useProject } from '../hooks/useProjects';
-import { useActivitiesByProject, useCreateActivity, useDeleteActivity, useSearchActivities } from '../hooks/useActivities';
+import {
+  useActivitiesByProject,
+  useActivitiesSummary,
+  useCreateActivity,
+  useDeleteActivity,
+  useSearchActivities,
+} from '../hooks/useActivities';
 import { useProjects } from '../hooks/useProjects';
 import { useDebounce } from '../hooks/useDebounce';
 import StatusBadge from '../components/StatusBadge';
 import HorizonBadge from '../components/HorizonBadge';
 import ActivityCard from '../components/ActivityCard';
 import ActivityForm from '../components/ActivityForm';
+import ActivityStatusFilter from '../components/ActivityStatusFilter';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { SearchBar } from '../components/SearchBar';
-import type { Activity, CreateActivityDto } from '../types';
+import {
+  DEFAULT_ACTIVITY_FILTER,
+  activityFilterToParams,
+  getActivityFilter,
+  type ActivityFilterKey,
+} from '../lib/activityFilters';
+import type { CreateActivityDto } from '../types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type FilterTab = 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'no_date';
-
-const TABS: { key: FilterTab; label: string }[] = [
-  { key: 'all',         label: 'Todas' },
-  { key: 'pending',     label: 'Pendientes' },
-  { key: 'in_progress', label: 'En progreso' },
-  { key: 'completed',   label: 'Completadas' },
-  { key: 'overdue',     label: 'Atrasadas' },
-  { key: 'no_date',     label: 'Sin fecha' },
-];
+const LIMIT = 20;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -50,11 +53,6 @@ function isThisWeek(dateStr: string): boolean {
   sunday.setDate(monday.getDate() + 6);
   sunday.setHours(23, 59, 59, 999);
   return d >= monday && d <= sunday;
-}
-
-function isOverdue(a: Activity, now: Date): boolean {
-  if (a.status === 'completed') return false;
-  return !!a.dueDate && new Date(a.dueDate) < now;
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
@@ -110,55 +108,59 @@ export default function ProjectDetail() {
   const [createOpen, setCreateOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [activeFilter, setActiveFilter] = useState<ActivityFilterKey>(DEFAULT_ACTIVITY_FILTER);
+  const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
 
   const { data: project, isLoading: projectLoading } = useProject(id!);
   const { data: allProjects } = useProjects();
-  const { data: activities = [], isLoading: activitiesLoading } = useActivitiesByProject(id!, { limit: 100 });
+  const summaryQ = useActivitiesSummary({ projectId: id! });
+  const listQ = useActivitiesByProject(id!, {
+    page,
+    limit: LIMIT,
+    ...activityFilterToParams(activeFilter),
+  });
+  // spec-034: consulta aparte, sin paginar, solo para los conteos de "hoy" y
+  // "esta semana" — el summary no los deriva (agrupa por status/overdue/
+  // sin-fecha, no por rango de fecha) y por alcance del spec no se amplía
+  // para cubrirlos. `overdueCount`, en cambio, sí sale del summary — es el
+  // conteo real, no el de una página parcial.
+  const statsQ = useActivitiesByProject(id!, { limit: 100 });
   const searchQ = useSearchActivities(debouncedSearch, { limit: 100, projectId: id });
 
   const createActivity = useCreateActivity();
   const deleteActivity = useDeleteActivity();
 
-  const now = new Date();
-
   const isSearching = debouncedSearch.trim().length >= 2;
-  const sourceActivities = isSearching ? (searchQ.data ?? []) : activities;
+  const sourceActivities = isSearching ? (searchQ.data ?? []) : (listQ.data ?? []);
   const rootActivities = sourceActivities.filter((a) => !a.parent);
+  const statsActivities = (statsQ.data ?? []).filter((a) => !a.parent);
+  // spec-034 (corrección post-revisión): derivado SIEMPRE de `listQ.data`
+  // (nunca de `searchQ.data`) y filtrado explícitamente por
+  // `status === 'completed'` — independiente de `activeFilter`/`isSearching`,
+  // para que "Limpiar completadas" no pueda operar sobre resultados de
+  // búsqueda ni sobre otro estado aunque ese estado de UI quede desalineado.
+  const completedOnPage = (listQ.data ?? []).filter(
+    (a) => !a.parent && a.status === 'completed',
+  );
 
   // Loading inicial vs. refresco (datos previos visibles → transición suave).
-  const isInitialLoading = isSearching ? searchQ.isLoading : activitiesLoading;
-  const isRefreshing = isSearching && searchQ.isFetching && !searchQ.isLoading;
+  const isInitialLoading = isSearching ? searchQ.isLoading : listQ.isLoading;
+  const isRefreshing = isSearching
+    ? searchQ.isFetching && !searchQ.isLoading
+    : listQ.isFetching && !listQ.isLoading;
 
-  const todayCount  = rootActivities.filter((a) => a.dueDate && isToday(a.dueDate)).length;
-  const weekCount   = rootActivities.filter((a) => a.dueDate && isThisWeek(a.dueDate)).length;
-  const overdueCount = rootActivities.filter((a) => isOverdue(a, now)).length;
+  const todayCount = statsActivities.filter((a) => a.dueDate && isToday(a.dueDate)).length;
+  const weekCount = statsActivities.filter((a) => a.dueDate && isThisWeek(a.dueDate)).length;
+  const overdueCount = summaryQ.data?.overdue ?? 0;
 
-  const filteredActivities = (() => {
-    switch (activeTab) {
-      case 'pending':     return rootActivities.filter((a) => a.status === 'pending');
-      case 'in_progress': return rootActivities.filter((a) => a.status === 'in_progress');
-      case 'completed':   return rootActivities.filter((a) => a.status === 'completed');
-      case 'overdue':     return rootActivities.filter((a) => isOverdue(a, now));
-      case 'no_date':     return rootActivities.filter((a) => !a.dueDate);
-      default:            return rootActivities.filter((a) => a.status !== 'completed');
-    }
-  })();
+  const completedCount = summaryQ.data?.byStatus.completed ?? 0;
 
-  function tabCount(key: FilterTab): number {
-    switch (key) {
-      case 'pending':     return rootActivities.filter((a) => a.status === 'pending').length;
-      case 'in_progress': return rootActivities.filter((a) => a.status === 'in_progress').length;
-      case 'completed':   return rootActivities.filter((a) => a.status === 'completed').length;
-      case 'overdue':     return overdueCount;
-      case 'no_date':     return rootActivities.filter((a) => !a.dueDate).length;
-      default:            return 0;
-    }
+  function handleFilterChange(key: ActivityFilterKey) {
+    setActiveFilter(key);
+    setPage(1);
   }
-
-  const completedActivities = rootActivities.filter((a) => a.status === 'completed');
 
   async function handleCreate(dto: CreateActivityDto) {
     await createActivity.mutateAsync(dto);
@@ -168,7 +170,9 @@ export default function ProjectDetail() {
   async function handleClearCompleted() {
     setClearing(true);
     try {
-      await Promise.all(completedActivities.map((a) => deleteActivity.mutateAsync(a.id)));
+      // spec-034: `completedOnPage` ya está filtrado por status === 'completed'
+      // y nunca proviene de resultados de búsqueda — ver su definición.
+      await Promise.all(completedOnPage.map((a) => deleteActivity.mutateAsync(a.id)));
     } finally {
       setClearing(false);
       setClearOpen(false);
@@ -202,12 +206,17 @@ export default function ProjectDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {completedActivities.length > 0 && (
+          {/* spec-034: solo visible en el tab "Completadas" y fuera del modo
+              búsqueda — `completedOnPage` ya es intrínsecamente seguro (ver su
+              definición), pero también se oculta el botón mientras se busca
+              para no confundir al usuario con un conteo que no coincide con
+              lo que ve en pantalla. */}
+          {activeFilter === 'completed' && !isSearching && completedOnPage.length > 0 && (
             <button
               onClick={() => setClearOpen(true)}
               className="px-4 py-2 text-sm font-medium rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
-              Limpiar completadas ({completedActivities.length})
+              Limpiar completadas de esta página ({completedOnPage.length})
             </button>
           )}
           <button
@@ -225,19 +234,19 @@ export default function ProjectDetail() {
           label="Actividades hoy"
           value={todayCount}
           variant="blue"
-          isLoading={activitiesLoading}
+          isLoading={statsQ.isLoading}
         />
         <StatCard
           label="Esta semana"
           value={weekCount}
           variant="green"
-          isLoading={activitiesLoading}
+          isLoading={statsQ.isLoading}
         />
         <StatCard
           label="Vencidas"
           value={overdueCount}
           variant="red"
-          isLoading={activitiesLoading}
+          isLoading={summaryQ.isLoading}
         />
       </div>
 
@@ -253,40 +262,24 @@ export default function ProjectDetail() {
             value={searchInput}
             onChange={setSearchInput}
             placeholder="Buscar en este proyecto..."
-            onClear={() => {
-              setSearchInput('');
-              setActiveTab('all');
-            }}
+            onClear={() => setSearchInput('')}
           />
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-0 mb-5 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                activeTab === tab.key
-                  ? 'border-blue-700 dark:border-blue-400 text-blue-700 dark:text-blue-400 font-medium'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              {tab.label}
-              {tab.key !== 'all' && !activitiesLoading && (
-                <span
-                  className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                    activeTab === tab.key
-                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  {tabCount(tab.key)}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Filter tabs — mismo criterio que Dashboard: se desactivan mientras
+            se busca. */}
+        <div className={isSearching ? 'opacity-50 pointer-events-none' : undefined}>
+          <ActivityStatusFilter
+            value={activeFilter}
+            onChange={handleFilterChange}
+            summary={summaryQ.data}
+          />
         </div>
+        {isSearching && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3 mb-4">
+            Los filtros de estado se desactivan mientras buscas.
+          </p>
+        )}
 
         {/* Activity list */}
         {isInitialLoading && (
@@ -297,7 +290,7 @@ export default function ProjectDetail() {
           </div>
         )}
 
-        {!isInitialLoading && filteredActivities.length === 0 && (
+        {!isInitialLoading && rootActivities.length === 0 && (
           <EmptyState
             message={
               isSearching
@@ -307,16 +300,25 @@ export default function ProjectDetail() {
           />
         )}
 
-        {!isInitialLoading && filteredActivities.length > 0 && (
+        {!isInitialLoading && rootActivities.length > 0 && (
           <div
             className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 transition-opacity duration-200 ${
               isRefreshing ? 'opacity-50' : 'opacity-100'
             }`}
           >
-            {filteredActivities.map((activity) => (
+            {rootActivities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}
           </div>
+        )}
+
+        {!isSearching && !isInitialLoading && rootActivities.length > 0 && summaryQ.data && (
+          <Pagination
+            page={page}
+            total={getActivityFilter(activeFilter).count(summaryQ.data)}
+            limit={LIMIT}
+            onPageChange={setPage}
+          />
         )}
       </div>
 
@@ -337,7 +339,11 @@ export default function ProjectDetail() {
       <ConfirmDialog
         open={clearOpen}
         title="Limpiar actividades completadas"
-        message={`¿Eliminar las ${completedActivities.length} actividades completadas de este proyecto? Esta acción no se puede deshacer.`}
+        message={
+          completedOnPage.length < completedCount
+            ? `¿Eliminar las ${completedOnPage.length} actividades completadas de esta página? Esta acción no se puede deshacer. El proyecto tiene ${completedCount} completadas en total — repite en cada página del tab "Completadas" para eliminar el resto.`
+            : `¿Eliminar las ${completedOnPage.length} actividades completadas de este proyecto? Esta acción no se puede deshacer.`
+        }
         confirmLabel="Limpiar"
         onConfirm={handleClearCompleted}
         onCancel={() => setClearOpen(false)}

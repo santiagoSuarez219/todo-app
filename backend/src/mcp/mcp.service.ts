@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { ListActivitiesQueryDto } from '../activities/dto/list-activities-query.dto';
+import { ActivitiesSummaryQueryDto } from '../activities/dto/activities-summary-query.dto';
 import { Priority } from '../common/enums/priority.enum';
 import { ProjectsService } from '../projects/projects.service';
 import { ProjectStatus } from '../common/enums/project-status.enum';
@@ -34,6 +36,50 @@ const paginationSchema = {
     .max(100)
     .optional()
     .describe('Items per page, max 100 (default: 20)'),
+};
+
+// spec-034: filtros compartidos por `list_activities` y
+// `get_activities_by_project` — deben coincidir exactamente con
+// `ListActivitiesQueryDto` (backend), nunca inventar parámetros.
+const activityListFiltersSchema = {
+  status: z
+    .array(
+      z.enum([
+        'pending',
+        'in_progress',
+        'testing',
+        'completed',
+        'cancelled',
+        'on_hold',
+        'waiting',
+      ]),
+    )
+    .optional()
+    .describe(
+      'Filter by one or more statuses (union). Omit to include all statuses.',
+    ),
+  dueFilter: z
+    .enum(['overdue', 'no_date'])
+    .optional()
+    .describe(
+      "'overdue': dueDate in the past and status != completed (same rule " +
+        "as get_overdue_activities). 'no_date': dueDate is null.",
+    ),
+  includeTemplates: z
+    .boolean()
+    .optional()
+    .describe(
+      'Include recurring templates (isTemplate = true) in the results. ' +
+        'Default: false — templates are excluded.',
+    ),
+  includeSubtasks: z
+    .boolean()
+    .optional()
+    .describe(
+      'Include subtasks (activities with a parent) as top-level rows in ' +
+        'the results. Default: false — subtasks are excluded (fetch them ' +
+        'via get_activity_subtasks or get_activity instead).',
+    ),
 };
 
 // ─── Response helpers ────────────────────────────────────────────────────────
@@ -215,12 +261,55 @@ export class McpService {
 
     server.tool(
       'list_activities',
-      'List all activities with optional pagination',
-      paginationSchema,
-      async (pagination) => {
+      'List activities with pagination and optional filters. By default ' +
+        'excludes recurring templates and subtasks — only top-level, ' +
+        'non-template activities are returned unless includeTemplates or ' +
+        'includeSubtasks is set. Use status to filter by one or more ' +
+        'statuses and dueFilter for overdue/no-date activities.',
+      { ...paginationSchema, ...activityListFiltersSchema },
+      async (query) => {
         try {
           return ok(
-            await this.activitiesService.findAll(pagination as PaginationDto),
+            await this.activitiesService.findAll(
+              query as unknown as ListActivitiesQueryDto,
+            ),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
+      'get_activities_summary',
+      'Get activity counts grouped by status, plus overdue and no-date ' +
+        'counts, without fetching the rows. Excludes templates and ' +
+        'subtasks by default (same defaults as list_activities). Use this ' +
+        'instead of calling get_activities_by_status repeatedly to count ' +
+        '— it returns the real total, not just what fits in one page.',
+      {
+        projectId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('Restrict the summary to a single project (UUID)'),
+        includeTemplates: z
+          .boolean()
+          .optional()
+          .describe(
+            'Include recurring templates in the counts (default: false)',
+          ),
+        includeSubtasks: z
+          .boolean()
+          .optional()
+          .describe('Include subtasks in the counts (default: false)'),
+      },
+      async (query) => {
+        try {
+          return ok(
+            await this.activitiesService.getSummary(
+              query as unknown as ActivitiesSummaryQueryDto,
+            ),
           );
         } catch (e) {
           return err(e);
@@ -555,17 +644,21 @@ export class McpService {
 
     server.tool(
       'get_activities_by_project',
-      'Get all activities belonging to a specific project',
+      'Get all activities belonging to a specific project, paginated. By ' +
+        'default excludes recurring templates and subtasks (same defaults ' +
+        'as list_activities) — set includeTemplates/includeSubtasks to ' +
+        'change that.',
       {
         projectId: z.string().uuid().describe('Project UUID'),
         ...paginationSchema,
+        ...activityListFiltersSchema,
       },
-      async ({ projectId, ...pagination }) => {
+      async ({ projectId, ...query }) => {
         try {
           return ok(
             await this.activitiesService.findByProject(
               projectId,
-              pagination as PaginationDto,
+              query as unknown as ListActivitiesQueryDto,
             ),
           );
         } catch (e) {
