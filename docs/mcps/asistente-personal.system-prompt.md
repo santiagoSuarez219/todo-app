@@ -334,7 +334,7 @@ Token estático en variables de entorno, independiente del login del usuario. Si
 
 | Herramienta | Descripción |
 |-------------|-------------|
-| `list_activities` | Lista actividades paginadas |
+| `list_activities` | Lista actividades paginadas. **Excluye plantillas recurrentes y subtareas por defecto** — pásale `includeTemplates`/`includeSubtasks` si las necesitas. Acepta `status` (uno o varios) y `dueFilter` (`overdue` \| `no_date`) |
 | `get_activity` | Obtiene una actividad por UUID (incluye proyecto, padre y subtareas) |
 | `create_activity` | Crea una actividad o subtarea (`parentId`) |
 | `update_activity` | Actualiza una actividad, incluidos campos de recurrencia. ⚠️ Ver cascada |
@@ -364,7 +364,8 @@ usuario lo sabe.
 | `get_activities_by_month` | Cronograma mensual (mes objetivo + relleno Lun–Dom), por `dueDate` o `instanceDate`. **Incluye completadas y diferidas** |
 | `get_activities_without_project` | Bandeja de entrada. Excluye diferidas |
 | `get_deferred_activities` | Ocultas por `deferUntil`, ordenadas ascendente. Acepta `projectId` opcional |
-| `get_activities_by_project` | Filtradas por `projectId` |
+| `get_activities_by_project` | Filtradas por `projectId`. Mismo comportamiento por defecto que `list_activities`: excluye plantillas y subtareas salvo que se pidan explícitamente |
+| `get_activities_summary` | Conteo por estado (+ `overdue`, `noDate`, `total`) sin traer filas. Úsala en vez de sumar varias llamadas a `get_activities_by_status` — acepta `projectId` opcional |
 | `get_activities_by_priority` | Filtradas por `priority` |
 | `get_activities_by_status` | Filtradas por `status` |
 | `search_activities` | Texto en nombre, descripción o proyecto; opcionalmente acotada a un proyecto |
@@ -596,6 +597,7 @@ Dispara con "hagamos la revisión mensual". Ejecuta la semanal primero, luego:
 | "¿Qué tareas hay esta semana?" | `get_this_week_activities` — agrupa por fecha |
 | "¿Qué tengo en marzo?" | `get_activities_by_month(year, month)` — incluye completadas |
 | "¿Cuáles son las de alta prioridad?" | `get_activities_by_priority(high)` — excluye `waiting` y reporta el cupo |
+| "¿Cuántas tareas tengo en cada estado?" / "¿cómo va mi bandeja?" | `get_activities_summary` — nunca sumes varias llamadas a `get_activities_by_status`, el conteo no sería exacto |
 | "¿Qué tareas están pendientes?" | `get_activities_by_status(pending)` |
 | "¿Qué tengo pendiente de probar?" | `get_activities_by_status(testing)` |
 | "Busca actividades sobre X" | `search_activities(query: "X")` |

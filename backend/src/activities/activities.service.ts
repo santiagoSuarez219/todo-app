@@ -14,6 +14,18 @@ import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { Priority } from '../common/enums/priority.enum';
 import { RecurrenceFrequency } from '../common/enums/recurrence-frequency.enum';
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
+import {
+  DueFilter,
+  ListActivitiesQueryDto,
+} from './dto/list-activities-query.dto';
+import { ActivitiesSummaryQueryDto } from './dto/activities-summary-query.dto';
+
+export interface ActivitiesSummary {
+  total: number;
+  byStatus: Record<ActivityStatus, number>;
+  overdue: number;
+  noDate: number;
+}
 
 @Injectable()
 export class ActivitiesService {
@@ -62,6 +74,53 @@ export class ActivitiesService {
    */
   private notDeferredCondition(): string {
     return '(activity.deferUntil IS NULL OR activity.deferUntil <= :today)';
+  }
+
+  /**
+   * spec-034: filtros server-side compartidos por `findAll`, `findByProject`,
+   * `findWithoutProject` y `getSummary`. Aplica, en este orden: exclusión de
+   * plantillas salvo `includeTemplates`, exclusión de subtareas
+   * (`parent IS NULL`) salvo `includeSubtasks`, `status IN (...)` si viene, y
+   * la condición de `dueFilter` — `overdue` reusa el mismo `dueDate < hoy AND
+   * status != completed` de `findOverdue`, pero **sin** su
+   * `notDeferredCondition()` (spec-030): `findAll`/`getSummary` son vistas de
+   * inventario, no vistas activas (ver nota en `findAll`), así que una tarea
+   * vencida y diferida SÍ cuenta aquí aunque no aparezca en
+   * `/activities/overdue` ni en `OverdueView`. `no_date` es simplemente
+   * `dueDate IS NULL`.
+   */
+  private applyListFilters(
+    qb: SelectQueryBuilder<Activity>,
+    opts: {
+      includeTemplates?: boolean;
+      includeSubtasks?: boolean;
+      status?: ActivityStatus[];
+      dueFilter?: DueFilter;
+    },
+  ): SelectQueryBuilder<Activity> {
+    if (!opts.includeTemplates) {
+      qb = qb.andWhere('activity.isTemplate = false');
+    }
+    if (!opts.includeSubtasks) {
+      qb = qb.andWhere('activity.parent IS NULL');
+    }
+    if (opts.status && opts.status.length > 0) {
+      qb = qb.andWhere('activity.status IN (:...listFilterStatuses)', {
+        listFilterStatuses: opts.status,
+      });
+    }
+    if (opts.dueFilter === DueFilter.OVERDUE) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      qb = qb
+        .andWhere('activity.dueDate < :dueFilterNow', { dueFilterNow: now })
+        .andWhere('activity.status != :dueFilterCompletedStatus', {
+          dueFilterCompletedStatus: ActivityStatus.COMPLETED,
+        });
+    } else if (opts.dueFilter === DueFilter.NO_DATE) {
+      qb = qb.andWhere('activity.dueDate IS NULL');
+    }
+    return qb;
   }
 
   // ─── Recurrence helpers ──────────────────────────────────────────────────────
@@ -235,8 +294,18 @@ export class ActivitiesService {
     return this.activitiesRepository.save(activity);
   }
 
-  findAll(pagination: PaginationDto): Promise<Activity[]> {
-    return this.paginate(this.baseQuery(), pagination).getMany();
+  /**
+   * spec-034: a diferencia de findToday/findThisWeek/findOverdue, el
+   * Dashboard es una vista de INVENTARIO, no una vista activa — una tarea
+   * diferida (`deferUntil` en el futuro) debe seguir siendo alcanzable
+   * desde aquí, así que `findAll` NO aplica `notDeferredCondition()`.
+   * Decisión explícita del spec-034, no un olvido.
+   */
+  findAll(query: ListActivitiesQueryDto): Promise<Activity[]> {
+    return this.paginate(
+      this.applyListFilters(this.baseQuery(), query),
+      query,
+    ).getMany();
   }
 
   async findOne(id: string): Promise<Activity> {
@@ -507,23 +576,92 @@ export class ActivitiesService {
 
   findByProject(
     projectId: string,
-    pagination: PaginationDto,
+    query: ListActivitiesQueryDto,
   ): Promise<Activity[]> {
     return this.paginate(
-      this.baseQuery().where('project.id = :projectId', { projectId }),
-      pagination,
+      this.applyListFilters(
+        this.baseQuery().where('project.id = :projectId', { projectId }),
+        query,
+      ),
+      query,
     ).getMany();
   }
 
   findWithoutProject(pagination: PaginationDto): Promise<Activity[]> {
     return this.paginate(
-      this.baseQuery()
-        .where('activity.project IS NULL')
-        .andWhere(this.notDeferredCondition(), {
-          today: this.toDateOnlyString(new Date()),
-        }),
+      this.applyListFilters(
+        this.baseQuery()
+          .where('activity.project IS NULL')
+          .andWhere(this.notDeferredCondition(), {
+            today: this.toDateOnlyString(new Date()),
+          }),
+        {},
+      ),
       pagination,
     ).getMany();
+  }
+
+  /**
+   * spec-034: conteos por estado (+ `overdue` + `noDate` + `total`) sin
+   * traer las filas de actividades. Los 7 valores de `ActivityStatus`
+   * siempre están presentes en `byStatus`, rellenados con 0 los que Postgres
+   * no devuelva — para que el consumidor nunca tenga que defenderse de
+   * `undefined`. Sin joins de `baseQuery()`: no hacen falta para contar y
+   * encarecen la query.
+   */
+  async getSummary(
+    query: ActivitiesSummaryQueryDto,
+  ): Promise<ActivitiesSummary> {
+    const scopedQuery = (): SelectQueryBuilder<Activity> => {
+      let qb = this.applyListFilters(
+        this.activitiesRepository.createQueryBuilder('activity'),
+        {
+          includeTemplates: query.includeTemplates,
+          includeSubtasks: query.includeSubtasks,
+        },
+      );
+      if (query.projectId) {
+        qb = qb.andWhere('activity.projectId = :summaryProjectId', {
+          summaryProjectId: query.projectId,
+        });
+      }
+      return qb;
+    };
+
+    const statusRows = await scopedQuery()
+      .select('activity.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('activity.status')
+      .getRawMany<{ status: ActivityStatus; count: string }>();
+
+    const byStatus = Object.values(ActivityStatus).reduce(
+      (acc, status) => {
+        acc[status] = 0;
+        return acc;
+      },
+      {} as Record<ActivityStatus, number>,
+    );
+    let total = 0;
+    for (const row of statusRows) {
+      const count = Number(row.count);
+      byStatus[row.status] = count;
+      total += count;
+    }
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const overdue = await scopedQuery()
+      .andWhere('activity.dueDate < :summaryNow', { summaryNow: now })
+      .andWhere('activity.status != :summaryCompletedStatus', {
+        summaryCompletedStatus: ActivityStatus.COMPLETED,
+      })
+      .getCount();
+
+    const noDate = await scopedQuery()
+      .andWhere('activity.dueDate IS NULL')
+      .getCount();
+
+    return { total, byStatus, overdue, noDate };
   }
 
   findToday(pagination: PaginationDto): Promise<Activity[]> {
