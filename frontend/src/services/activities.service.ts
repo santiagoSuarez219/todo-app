@@ -8,6 +8,9 @@ import type {
   ScheduleParams,
   ActivityStatus,
   Priority,
+  ActivityListParams,
+  ActivitiesSummaryParams,
+  ActivitiesSummary,
 } from '../types';
 
 async function getList<P extends object = PaginationParams>(url: string, params?: P): Promise<Activity[]> {
@@ -15,8 +18,25 @@ async function getList<P extends object = PaginationParams>(url: string, params?
   return data.data;
 }
 
-export async function getActivities(params?: PaginationParams): Promise<Activity[]> {
-  return getList('/activities', params);
+// spec-034: `status` viaja como un solo string separado por comas
+// ("waiting,on_hold"), no como array repetido — es lo que espera
+// `ListActivitiesQueryDto` en el backend.
+function serializeListParams(params?: ActivityListParams): Record<string, unknown> | undefined {
+  if (!params) return undefined;
+  const { status, ...rest } = params;
+  return {
+    ...rest,
+    ...(status && status.length > 0 ? { status: status.join(',') } : {}),
+  };
+}
+
+export async function getActivities(params?: ActivityListParams): Promise<Activity[]> {
+  return getList('/activities', serializeListParams(params));
+}
+
+export async function getActivitiesSummary(params?: ActivitiesSummaryParams): Promise<ActivitiesSummary> {
+  const { data } = await apiClient.get<{ data: ActivitiesSummary }>('/activities/summary', { params });
+  return data.data;
 }
 
 export async function getActivity(id: string): Promise<Activity> {
@@ -60,9 +80,9 @@ export async function getScheduleActivities(year: number, month: number): Promis
 
 export async function getActivitiesByProject(
   projectId: string,
-  params?: PaginationParams,
+  params?: ActivityListParams,
 ): Promise<Activity[]> {
-  return getList(`/activities/project/${projectId}`, params);
+  return getList(`/activities/project/${projectId}`, serializeListParams(params));
 }
 
 export async function getActivitiesByPriority(
