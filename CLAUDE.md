@@ -803,12 +803,30 @@ inesperado, lentitud, detalle visual… o "sin observaciones"}}
 
 | Campo              | Valor                                      |
 |--------------------|--------------------------------------------|
-| Proveedor          | `{{proveedor de BD en producción — no confirmado; en local es PostgreSQL 16 vía docker-compose.yml}}` |
-| Proyecto / Cluster | `{{nombre del proyecto en el proveedor}}`  |
+| Proveedor          | **Neon** (Postgres serverless). En local, en cambio, es PostgreSQL 16 vía `docker-compose.yml` (puerto 5433, sin SSL) |
+| Proyecto / Cluster | `{{nombre del proyecto en Neon}}`          |
 | Base de datos      | `todo_db`                                  |
 | Región             | `{{región de producción}}`                 |
-| Variable de conexión | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` en `.env` |
-| Panel de control   | `{{url del dashboard del proveedor}}`      |
+| Variable de conexión | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` en `.env` (no `DATABASE_URL`: `data-source.ts` arma la conexión con campos sueltos) |
+| Panel de control   | `https://console.neon.tech`                |
+
+> **SSL:** Neon lo exige. `data-source.ts` y `app.module.ts` activan
+> `ssl: { rejectUnauthorized: false }` **solo** cuando `NODE_ENV === 'production'`.
+> Por eso el contenedor local `todo_backend` (que corre con
+> `NODE_ENV=production`) entra en crash-loop contra el Postgres de Docker:
+> exige SSL a un servidor que no lo ofrece. Para desarrollo local se usa
+> `npm run start:dev` con `NODE_ENV=development`, no ese contenedor.
+
+> **Branching de Neon para ensayar migraciones.** Antes de un despliegue con
+> cambios de esquema, crear una rama de la base de producción en Neon
+> (instantánea, copy-on-write) y correr la migración **contra esa rama**
+> primero: es el único ensayo fiel contra datos reales sin arriesgarlos. Ver
+> "Proceso de despliegue — Backend", paso 2.
+
+> **Point-in-time restore.** Neon conserva historial según el plan
+> (`{{ventana de retención — confirmar en la consola}}`), lo que da un
+> camino de recuperación si una migración sale mal en producción. Confirmar
+> la ventana **antes** de desplegar un cambio de esquema destructivo.
 
 #### Backend
 
@@ -872,13 +890,34 @@ development ──merge──▶ deploy/vX.Y.Z ──merge──▶ main ──p
    git checkout -b deploy/{{versión}}
    ```
 
-2. **Ejecutar migraciones** *(solo si hay cambios de esquema)*
+2. **Ensayar la migración en una rama de Neon** *(solo si hay cambios de esquema)*
    > ⚠️ Requiere confirmación explícita del usuario antes de ejecutar.
+
+   **La migración NO se ejecuta a mano en producción:** `backend/entrypoint.sh`
+   corre `npm run migration:run:prod` automáticamente al arrancar el
+   contenedor, así que el `git push origin main` del paso 4 la dispara solo.
+   Con `set -e`, si falla, el contenedor no arranca y Railway lo reintenta
+   (`restartPolicyType = "on_failure"`) — un fallo de migración es un deploy
+   caído, no una app degradada.
+
+   Por eso el ensayo previo contra una rama de Neon es el paso que de verdad
+   protege: es la única forma de correr la migración contra los datos reales
+   sin tocarlos.
    ```bash
+   # 1. Crear la rama de producción en la consola de Neon.
+   # 2. Volcar sus credenciales en backend/.env.neon.local
+   #    (gitignored por el patrón `.env.*.local`; NUNCA usar un nombre
+   #    fuera de ese patrón: `.env.neon-branch`, por ejemplo, SÍ se commitea).
+   #    Incluir NODE_ENV=production para que se active el SSL que Neon exige.
+   # 3. Correr la migración contra la rama, sin tocar el .env local:
+   cd backend
+   set -a; . ./.env.neon.local; set +a
    npx typeorm migration:run -d src/data-source.ts
    ```
-   Verificar en el panel de la base de datos que la migración aplicó correctamente
-   antes de continuar.
+   Verificar el resultado contra los criterios de aceptación del spec (ej.
+   conteos de filas antes/después) y **eliminar la rama de Neon** al terminar.
+   Si el ensayo falla, corregir la migración antes de seguir: el mismo fallo
+   tumbaría el deploy real.
 
 3. **Merge a `main`**
    > ⚠️ Requiere confirmación explícita del usuario.
