@@ -1,4 +1,4 @@
-# spec-035 — [TESTING] Unificación de presupuesto y gastos
+# spec-035 — [DONE] Unificación de presupuesto y gastos
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -612,8 +612,15 @@ local, no un camino soportado en producción.
       ajenos al spec, confirmado corriendo la misma suite sin los cambios de
       este spec (falla igual). Verificación JSON-RPC de las tools MCP: ver
       Fase 6, ítem actualizado arriba.
-- [ ] El usuario ejecuta `docs/testing/test-035-...md`; Claude prepara los datos
+- [x] El usuario ejecuta `docs/testing/test-035-...md`; Claude prepara los datos
       vía API, registra hallazgos caso por caso y limpia al cerrar la ronda.
+      **33/33 casos aprobados** (20 UI + 13 MCP), 0 fallidos. Ejecutados por
+      Claude en el navegador y por API/MCP directa con autorización
+      explícita del usuario para toda la ronda. 3 hallazgos de UX/copy/MCP
+      no bloqueantes escalados a `spec/backlog.md`. Datos de prueba
+      limpiados y verificados sin restos (deudas, presupuestos, gastos,
+      tarjeta). Ver "Resumen de la ronda" en
+      `docs/testing/test-035-unificacion-presupuesto-gastos.md`.
 - [x] `@reviewer` revisó antes de las pruebas manuales: veredicto inicial
       **CAMBIOS REQUERIDOS**. Hallazgos corregidos:
       - 🔴 **Colisión de numeración**: `development` ya tenía un
@@ -647,7 +654,13 @@ local, no un camino soportado en producción.
       **216/218** (los 2 restantes preexistentes y ajenos, confirmado sin
       los cambios de este spec). Build backend y `tsc --noEmit` frontend
       limpios.
-- [ ] `@tester` cierra la ronda automática; `@reviewer` revisa antes de `[DONE]`.
+- [x] `@tester` cierra la ronda automática: unitarios 110/110, `e2e-035`
+      100% verde, `e2e-023`/`e2e-026` readaptados sin fallos (58/58 en
+      conjunto). Los únicos 2 fallos del suite e2e completo
+      (`app.e2e-spec.ts`, `auth.e2e-spec.ts` TC-014) son preexistentes y
+      ajenos al spec, reconfirmado sin cambios locales en esos archivos.
+      `@reviewer` ya había aprobado el código en la ronda de correcciones
+      previa (ver arriba). Spec cerrado en `[DONE]`.
 
 ## Dependencias entre fases
 
