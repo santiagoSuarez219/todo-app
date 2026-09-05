@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsInt,
@@ -12,7 +12,7 @@ import {
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class ExpensesQueryDto extends PaginationDto {
-  // spec-034: el mes/año lo determina ahora el presupuesto del gasto, no
+  // spec-035: el mes/año lo determina ahora el presupuesto del gasto, no
   // solo su `date` — ver ExpensesService.applyMonthScope().
   @ApiPropertyOptional({ example: 2026 })
   @Type(() => Number)
@@ -43,7 +43,11 @@ export class ExpensesQueryDto extends PaginationDto {
   @ApiPropertyOptional({
     description: 'Filtra solo gastos planeados sin ejecutar (amount IS NULL).',
   })
-  @Type(() => Boolean)
+  // spec-035: `@Type(() => Boolean)` sobre un query string es un bug — en JS
+  // `Boolean("false") === true` (cualquier string no vacío es truthy), así
+  // que `?planned=false` terminaba filtrando igual que `?planned=true`.
+  // `@Transform` compara el string crudo explícitamente.
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   planned?: boolean;
@@ -51,7 +55,7 @@ export class ExpensesQueryDto extends PaginationDto {
   @ApiPropertyOptional({
     description: 'Filtra solo gastos ejecutados (amount IS NOT NULL).',
   })
-  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   executed?: boolean;

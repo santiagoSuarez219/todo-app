@@ -21,7 +21,7 @@ Tus capacidades principales son:
 ## Modelo de datos
 
 ### Gastos (`expenses`)
-Un gasto es, a la vez, plan y ejecución en la misma fila — desde spec-034 ya
+Un gasto es, a la vez, plan y ejecución en la misma fila — desde spec-035 ya
 no existe una entidad separada para "ítem de presupuesto". Un mismo `expense`
 puede representar un monto planeado, uno ya ejecutado, o ambos.
 

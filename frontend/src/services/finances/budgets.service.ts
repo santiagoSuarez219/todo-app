@@ -36,7 +36,7 @@ export async function updateBudget(id: string, dto: UpdateBudgetDto): Promise<Bu
   return data.data;
 }
 
-// spec-034, decisión 12: borrar un presupuesto borra sus gastos en cascada,
+// spec-035, decisión 12: borrar un presupuesto borra sus gastos en cascada,
 // incluidos los ejecutados — el resultado indica cuántos y por qué monto
 // para que la UI advierta antes de confirmar (ver useDeleteBudget).
 export async function deleteBudget(id: string): Promise<RemoveBudgetResult> {

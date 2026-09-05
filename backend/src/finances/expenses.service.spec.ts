@@ -20,7 +20,7 @@ describe('ExpensesService - Search', () => {
       findOneBy: jest.fn(),
     };
 
-    // spec-034: applyMonthScope() consulta el presupuesto del mes antes de
+    // spec-035: applyMonthScope() consulta el presupuesto del mes antes de
     // filtrar — por defecto, sin presupuesto para ese mes (comportamiento
     // "gasto suelto por fecha").
     mockBudgetsRepository = {
@@ -124,7 +124,7 @@ describe('ExpensesService - Search', () => {
       expect(result).toEqual([mockExpenses[1]]);
     });
 
-    // spec-034: year+month ya no filtra con dos EXTRACT sueltos — pasa por
+    // spec-035: year+month ya no filtra con dos EXTRACT sueltos — pasa por
     // applyMonthScope(), que resuelve el presupuesto del mes primero y arma
     // un único andWhere (con o sin presupuesto existente).
     it('should filter expenses by year and month via applyMonthScope (no budget for that month)', async () => {

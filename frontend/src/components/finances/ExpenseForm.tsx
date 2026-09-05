@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { ExpenseType, type CreateExpenseDto, type Expense } from '../../types';
 import { useCreditCards } from '../../hooks/finances/useCreditCards';
 
-// spec-034: amount/date dejan de ser obligatorios — un gasto puede nacer
+// spec-035: amount/date dejan de ser obligatorios — un gasto puede nacer
 // solo planeado (plannedAmount, sin ejecutar). La consistencia (al menos
 // uno de los dos; amount y date siempre juntos) se valida con .refine(),
 // espejando las invariantes del backend (CHK_expenses_has_amount,

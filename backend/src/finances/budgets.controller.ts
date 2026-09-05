@@ -108,7 +108,7 @@ export class BudgetsController {
   @Delete(':id')
   @ApiOperation({
     summary:
-      'Delete a budget. Cascades to ALL its expenses, including already executed ones (spec-034, decisión 12) — el resultado indica cuántos y por qué monto para que la UI advierta antes de confirmar.',
+      'Delete a budget. Cascades to ALL its expenses, including already executed ones (spec-035, decisión 12) — el resultado indica cuántos y por qué monto para que la UI advierta antes de confirmar.',
   })
   @ApiOkResponse()
   @ApiNotFoundResponse()

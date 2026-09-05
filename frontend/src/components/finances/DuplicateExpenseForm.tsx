@@ -28,7 +28,7 @@ interface Props {
 }
 
 export default function DuplicateExpenseForm({ origin, onSubmit, onCancel, loading }: Props) {
-  // spec-034: un gasto solo planeado no tiene `date` — se propone el mes
+  // spec-035: un gasto solo planeado no tiene `date` — se propone el mes
   // siguiente al actual como destino por defecto.
   const now = new Date();
   const [refYear, refMonth] = origin.date

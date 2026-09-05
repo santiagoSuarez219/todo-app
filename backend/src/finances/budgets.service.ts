@@ -16,7 +16,7 @@ import { ExpenseType } from '../common/enums/expense-type.enum';
 import { ExpensesService } from './expenses.service';
 import { withExecutionStatus } from './expense-execution-status.util';
 
-// spec-034: reemplaza a BudgetTypeSummary (que sumaba plannedAmount de
+// spec-035: reemplaza a BudgetTypeSummary (que sumaba plannedAmount de
 // BudgetItem y amount de Expense en el mismo acumulador — la causa del
 // doble conteo). Ahora planeado y ejecutado se reportan por separado.
 export interface TypeBreakdown {
@@ -246,7 +246,7 @@ export class BudgetsService {
   }
 
   /**
-   * spec-034, decisión 12: borrar un presupuesto borra sus gastos en
+   * spec-035, decisión 12: borrar un presupuesto borra sus gastos en
    * cascada (ON DELETE CASCADE en `expenses.budgetId`, ver migración
    * 1787100000000). Incluye gastos ya ejecutados — el conteo y monto se
    * devuelven para que la UI advierta antes de confirmar (Fase 8).
@@ -345,7 +345,7 @@ export class BudgetsService {
       })
       .getMany();
 
-    // spec-034, decisión 5: duplicar copia solo el plan. Se excluyen los
+    // spec-035, decisión 5: duplicar copia solo el plan. Se excluyen los
     // ítems de cuota de deuda (spec-026, decisión 9): ya están, o estarán,
     // materializados por la propia deuda en el mes destino.
     const plannedExpenses = (sourceBudget.expenses ?? []).filter(

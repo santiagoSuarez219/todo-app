@@ -12,11 +12,11 @@ import {
 } from 'class-validator';
 import { ExpenseType } from '../../common/enums/expense-type.enum';
 
-// spec-034: amount/date dejan de ser obligatorios — un gasto puede nacer
+// spec-035: amount/date dejan de ser obligatorios — un gasto puede nacer
 // solo planeado (plannedAmount, sin amount/date). La validación cruzada
 // (al menos uno de los dos; amount y date siempre juntos) se hace en
 // ExpensesService, no aquí, porque depende del estado combinado del dto
-// (ver "Semántica derivada" en spec-034).
+// (ver "Semántica derivada" en spec-035).
 export class CreateExpenseDto {
   @ApiProperty({ example: 'Mercado semanal', maxLength: 255 })
   @IsString()

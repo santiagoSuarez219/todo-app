@@ -24,7 +24,7 @@ function totalPlanned(budget: Budget): number {
   );
 }
 
-// spec-034, decisión 12: eliminar un presupuesto borra en cascada todos sus
+// spec-035, decisión 12: eliminar un presupuesto borra en cascada todos sus
 // gastos, incluidos los ya ejecutados. Se calcula en cliente (ya viene
 // embebido en `useBudgets`) para advertir antes de confirmar, sin request
 // adicional.

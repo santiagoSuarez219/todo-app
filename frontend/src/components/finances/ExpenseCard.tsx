@@ -51,7 +51,7 @@ function DuplicateIcon() {
   );
 }
 
-// spec-034: un gasto vive en tres estados posibles según qué campos tiene
+// spec-035: un gasto vive en tres estados posibles según qué campos tiene
 // seteados — ver "Semántica derivada" del spec.
 function statusBadge(expense: Expense) {
   if (expense.executionStatus === 'planned') {

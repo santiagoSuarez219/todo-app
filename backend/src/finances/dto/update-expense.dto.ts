@@ -2,7 +2,7 @@ import { ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { IsOptional, IsUUID, ValidateIf } from 'class-validator';
 import { CreateExpenseDto } from './create-expense.dto';
 
-// spec-034: `budgetId` admite `null` explícito para desvincular un gasto de
+// spec-035: `budgetId` admite `null` explícito para desvincular un gasto de
 // su presupuesto (decisión 3 — solo un budgetId explícito lo cambia una vez
 // asignado, la fecha ya no re-ancla). El resto de campos hereda de
 // CreateExpenseDto vía PartialType; `budgetId` se omite ahí para poder

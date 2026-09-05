@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Expense } from './expense.entity';
 
-// spec-034: Budget deja de tener ítems propios (BudgetItem eliminada). Su
+// spec-035: Budget deja de tener ítems propios (BudgetItem eliminada). Su
 // contenido son los Expense que lo referencian por `budgetId`. Sin
 // `cascade: true`: el borrado en cascada de sus gastos es una decisión de
 // negocio explícita en BudgetsService.remove(), no un efecto de TypeORM.

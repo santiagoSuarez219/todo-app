@@ -141,7 +141,7 @@ export function buildInstallmentSchedule(
   return schedule;
 }
 
-// spec-034: las cuotas de deuda se materializan ahora como `Expense`
+// spec-035: las cuotas de deuda se materializan ahora como `Expense`
 // (plannedAmount seteado, amount/date en null hasta que se paguen) en vez
 // de `BudgetItem` — la entidad se eliminó. Toda la lógica de spec-026 se
 // conserva 1:1 sobre el modelo nuevo.
@@ -420,7 +420,7 @@ export class DebtsService {
 
         const today = this.todayDateOnly();
         const [todayYear, todayMonth] = today.split('-').map(Number);
-        // Auto-vínculo (spec-034, decisión 4): mismo criterio que
+        // Auto-vínculo (spec-035, decisión 4): mismo criterio que
         // ExpensesService.create() — si el mes en curso ya tiene
         // presupuesto, el pago se le asigna; si no, queda suelto.
         const budgetForToday = await manager.findOne(Budget, {
@@ -456,7 +456,7 @@ export class DebtsService {
    * Idempotente: recrea únicamente las cuotas futuras que falten (creando
    * presupuestos si hace falta). No toca cuotas vencidas ni deudas `pagada`.
    * Ver spec-026, decisión 8 y Fase 3 — usado para deudas heredadas. La ruta
-   * `POST /debts/:id/sync-budget-items` conserva su nombre (spec-034,
+   * `POST /debts/:id/sync-budget-items` conserva su nombre (spec-035,
    * decisión 13) aunque internamente ya no hable de "budget items".
    */
   async syncBudgetItems(id: string): Promise<SyncBudgetItemsResult> {

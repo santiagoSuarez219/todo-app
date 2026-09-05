@@ -186,7 +186,7 @@ export default function BudgetDetailView() {
         </div>
       </div>
 
-      {/* Resumen por tipo — planeado vs real, sin doble conteo (spec-034) */}
+      {/* Resumen por tipo — planeado vs real, sin doble conteo (spec-035) */}
       {byType.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">

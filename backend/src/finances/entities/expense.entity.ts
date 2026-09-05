@@ -14,9 +14,9 @@ import { CreditCard } from './credit-card.entity';
 import { Budget } from './budget.entity';
 import { Debt } from './debt.entity';
 
-// spec-034: Expense absorbe a BudgetItem — una sola entidad para gastos
+// spec-035: Expense absorbe a BudgetItem — una sola entidad para gastos
 // planeados (`plannedAmount`) y ejecutados (`amount` + `date`), que pueden
-// coexistir en la misma fila. Ver "Semántica derivada" en spec-034 para el
+// coexistir en la misma fila. Ver "Semántica derivada" en spec-035 para el
 // estado calculado (planned | executed | settled).
 @Entity('expenses')
 @Index('UQ_expenses_debt_installment', ['debt', 'installmentNumber'], {
@@ -57,7 +57,7 @@ export class Expense {
   type: ExpenseType;
 
   // Presupuesto al que pertenece. Nullable: un gasto suelto (sin
-  // presupuesto para su mes) se ubica por `date` — ver spec-034, decisión 3.
+  // presupuesto para su mes) se ubica por `date` — ver spec-035, decisión 3.
   @ManyToOne(() => Budget, (budget) => budget.expenses, {
     nullable: true,
     onDelete: 'CASCADE',
@@ -84,7 +84,7 @@ export class Expense {
   updatedAt: Date;
 
   // No persistido — calculado por ExpensesService al serializar la
-  // respuesta (ver "Semántica derivada" en spec-034). Sin @Column: TypeORM
+  // respuesta (ver "Semántica derivada" en spec-035). Sin @Column: TypeORM
   // lo ignora para persistencia, solo vive en memoria.
   executionStatus?: 'planned' | 'executed' | 'settled';
 }

@@ -1,12 +1,12 @@
-# test-034 — Unificación de presupuesto y gastos
+# test-035 — Unificación de presupuesto y gastos
 
 > Redactado en modo test-first (`@tester`), junto con
-> `spec/spec-034-unificacion-presupuesto-gastos.md`, **antes** de que exista
+> `spec/spec-035-unificacion-presupuesto-gastos.md`, **antes** de que exista
 > una sola línea de implementación. Todos los casos quedan en `⬜ Pendiente`
 > hasta que las Fases 1–9 del spec estén completas y el usuario los ejecute.
 >
 > Este archivo asume el diseño **definitivo** del spec (a diferencia de
-> `test-026`, aquí sí se leyó `spec-034` completo antes de redactar): nombres
+> `test-026`, aquí sí se leyó `spec-035` completo antes de redactar): nombres
 > de campos, endpoints, shapes de respuesta y textos de UI citados abajo
 > deben coincidir exactamente con las Fases 1–9 y el "Nuevo contrato de
 > `get_monthly_expense_summary`". Si algo cambia durante la implementación
@@ -19,7 +19,7 @@
 > spec aún no está implementado). Se completan con identificadores reales,
 > endpoint exacto usado y estado de eliminación **al ejecutar**, siguiendo
 > "Pruebas manuales asistidas por Claude" del `CLAUDE.md` raíz. Todos los
-> recursos llevan el prefijo `[TEST spec-034]` en su descripción/nombre para
+> recursos llevan el prefijo `[TEST spec-035]` en su descripción/nombre para
 > distinguirlos de datos reales durante la limpieza. Los meses propuestos
 > abajo son relativos a la fecha de **ejecución** de la ronda (no a la fecha
 > de redacción de este archivo, 2026-08-22) — recalcular "mes en curso",
@@ -27,16 +27,16 @@
 
 | Recurso | Endpoint de creación | Identificador | Usado en | Eliminado |
 |---|---|---|---|---|
-| Presupuesto "[TEST spec-034] Mes A" (mes en curso) | `POST /finances/budgets` | `{{id-budget-a}}` | TC-034-001 a 005, 008, 011, 014–020, TC-MCP-034-001, 005–010, 013 | ⬜ |
-| Presupuesto "[TEST spec-034] Mes B" (mes siguiente) | `POST /finances/budgets` | `{{id-budget-b}}` | TC-034-008, 009 (destino de anclaje cruzado) | ⬜ |
-| Gasto planeado en Mes A ("Arriendo", `plannedAmount: 1200000`, sin `amount`/`date`) | `POST /finances/expenses` (`budgetId: {{id-budget-a}}`) | `{{id-expense-planned-a}}` | TC-034-001, 002, 004, 009, 015, 017, TC-MCP-034-006 | ⬜ |
-| Gasto planeado en Mes A, ejecutado ("Streaming", `plannedAmount: 100000`, `amount: 95000`, `date` de Mes A) | `POST /finances/expenses` luego `PATCH` | `{{id-expense-settled-a}}` | TC-034-001, 003 (doble conteo) | ⬜ |
-| Gasto planeado en Mes A, ejecutado con `date` de Mes B (anclaje) | `POST /finances/expenses` (`budgetId: {{id-budget-a}}`) luego `PATCH amount+date-de-mes-B` | `{{id-expense-anchored}}` | TC-034-008 | ⬜ |
-| Gasto suelto ejecutado sin presupuesto (mes lejano sin `Budget`, ej. `+3` años) | `POST /finances/expenses` (`amount`+`date`, sin `budgetId`) | `{{id-expense-loose}}` | TC-034-007, 018 | ⬜ |
-| Tarjeta de crédito "[TEST spec-034] Visa" | `POST /finances/credit-cards` | `{{id-card}}` | TC-034-005, TC-MCP-034-007 | ⬜ |
-| Gasto ejecutado con tarjeta en Mes A (`amount: 300000`, `creditCardId: {{id-card}}`) | `POST /finances/expenses` | `{{id-expense-card}}` | TC-034-005 | ⬜ |
-| Deuda "[TEST spec-034] DEBT — Nevera" (3 cuotas, `startMonth`/`startYear` = Mes A) | `POST /finances/debts` | `{{id-debt}}` | TC-034-012, 013, TC-MCP-034-006 (opcional) | ⬜ |
-| Gasto planeado en Mes C (mes sin presupuesto, muy futuro) creado vía `create_expense` MCP | `tools/call create_expense` en `/mcp` local | `{{id-expense-mcp}}` | TC-MCP-034-001, 002, 003, 004, 005 | ⬜ |
+| Presupuesto "[TEST spec-035] Mes A" (mes en curso) | `POST /finances/budgets` | `{{id-budget-a}}` | TC-035-001 a 005, 008, 011, 014–020, TC-MCP-035-001, 005–010, 013 | ⬜ |
+| Presupuesto "[TEST spec-035] Mes B" (mes siguiente) | `POST /finances/budgets` | `{{id-budget-b}}` | TC-035-008, 009 (destino de anclaje cruzado) | ⬜ |
+| Gasto planeado en Mes A ("Arriendo", `plannedAmount: 1200000`, sin `amount`/`date`) | `POST /finances/expenses` (`budgetId: {{id-budget-a}}`) | `{{id-expense-planned-a}}` | TC-035-001, 002, 004, 009, 015, 017, TC-MCP-035-006 | ⬜ |
+| Gasto planeado en Mes A, ejecutado ("Streaming", `plannedAmount: 100000`, `amount: 95000`, `date` de Mes A) | `POST /finances/expenses` luego `PATCH` | `{{id-expense-settled-a}}` | TC-035-001, 003 (doble conteo) | ⬜ |
+| Gasto planeado en Mes A, ejecutado con `date` de Mes B (anclaje) | `POST /finances/expenses` (`budgetId: {{id-budget-a}}`) luego `PATCH amount+date-de-mes-B` | `{{id-expense-anchored}}` | TC-035-008 | ⬜ |
+| Gasto suelto ejecutado sin presupuesto (mes lejano sin `Budget`, ej. `+3` años) | `POST /finances/expenses` (`amount`+`date`, sin `budgetId`) | `{{id-expense-loose}}` | TC-035-007, 018 | ⬜ |
+| Tarjeta de crédito "[TEST spec-035] Visa" | `POST /finances/credit-cards` | `{{id-card}}` | TC-035-005, TC-MCP-035-007 | ⬜ |
+| Gasto ejecutado con tarjeta en Mes A (`amount: 300000`, `creditCardId: {{id-card}}`) | `POST /finances/expenses` | `{{id-expense-card}}` | TC-035-005 | ⬜ |
+| Deuda "[TEST spec-035] DEBT — Nevera" (3 cuotas, `startMonth`/`startYear` = Mes A) | `POST /finances/debts` | `{{id-debt}}` | TC-035-012, 013, TC-MCP-035-006 (opcional) | ⬜ |
+| Gasto planeado en Mes C (mes sin presupuesto, muy futuro) creado vía `create_expense` MCP | `tools/call create_expense` en `/mcp` local | `{{id-expense-mcp}}` | TC-MCP-035-001, 002, 003, 004, 005 | ⬜ |
 
 **Entorno de pruebas:** desarrollo (`http://localhost:3003/api/v1`). **Nunca**
 crear estos datos en producción sin confirmación explícita.
@@ -58,7 +58,7 @@ crear estos datos en producción sin confirmación explícita.
 
 ## Casos de prueba
 
-### TC-034-001 — `BudgetDetailView`: la tabla muestra plan y real en la misma fila
+### TC-035-001 — `BudgetDetailView`: la tabla muestra plan y real en la misma fila
 **Precondición:** Presupuesto Mes A con `{{id-expense-planned-a}}` (solo plan)
 y `{{id-expense-settled-a}}` (plan + ejecutado).
 **Datos de prueba usados:** `{{id-budget-a}}`, `{{id-expense-planned-a}}`,
@@ -77,7 +77,7 @@ sección.
 
 ---
 
-### TC-034-002 — "Registrar ejecución" completa un gasto planeado sin salir de la vista
+### TC-035-002 — "Registrar ejecución" completa un gasto planeado sin salir de la vista
 **Precondición:** Gasto `{{id-expense-planned-a}}` ("Arriendo") solo tiene
 `plannedAmount`, sin `amount`/`date`.
 **Datos de prueba usados:** `{{id-expense-planned-a}}`.
@@ -96,7 +96,7 @@ ambos no nulos).
 
 ---
 
-### TC-034-003 — Sin doble conteo: un gasto planeado y ejecutado no suma dos veces
+### TC-035-003 — Sin doble conteo: un gasto planeado y ejecutado no suma dos veces
 **Precondición:** `{{id-expense-settled-a}}` tiene `plannedAmount: 100000` y
 `amount: 95000` en Mes A.
 **Datos de prueba usados:** `{{id-budget-a}}`, `{{id-expense-settled-a}}`.
@@ -115,7 +115,7 @@ los `95.000` una sola vez). En ningún bloque de resumen aparece `195.000`
 
 ---
 
-### TC-034-004 — Bloques "Pendiente por ejecutar" y "No presupuestado"
+### TC-035-004 — Bloques "Pendiente por ejecutar" y "No presupuestado"
 **Precondición:** "Arriendo" (`{{id-expense-planned-a}}`) solo planeado;
 existe además al menos un gasto ejecutado sin plan en Mes A (crear uno ad
 hoc: `POST /finances/expenses` con `amount`+`date` de Mes A, sin
@@ -135,7 +135,7 @@ incluye el `amount` del gasto ad hoc recién creado (tiene `amount` pero no
 
 ---
 
-### TC-034-005 — "Total por tarjeta" con dos columnas (planeado / ejecutado)
+### TC-035-005 — "Total por tarjeta" con dos columnas (planeado / ejecutado)
 **Precondición:** `{{id-expense-card}}` (`amount: 300000`,
 `creditCardId: {{id-card}}`) existe en Mes A. Agregar además un gasto
 **planeado** con la misma tarjeta (`plannedAmount: 200000`,
@@ -144,7 +144,7 @@ incluye el `amount` del gasto ad hoc recién creado (tiene `amount` pero no
 `{{id-expense-card}}`, `{{id-expense-card-planned}}`.
 **Pasos:**
 1. Abrir el detalle de "Mes A" y ubicar "Total por tarjeta".
-**Resultado esperado:** La fila de la tarjeta "[TEST spec-034] Visa" muestra
+**Resultado esperado:** La fila de la tarjeta "[TEST spec-035] Visa" muestra
 dos columnas: `Planeado: $200.000` y `Ejecutado: $300.000`, no un solo total
 combinado.
 **Estado:** ⬜ Pendiente
@@ -152,7 +152,7 @@ combinado.
 
 ---
 
-### TC-034-006 — Auto-vínculo al crear un gasto con fecha en un mes con presupuesto
+### TC-035-006 — Auto-vínculo al crear un gasto con fecha en un mes con presupuesto
 **Precondición:** Presupuesto de Mes A existe.
 **Datos de prueba usados:** `{{id-budget-a}}`.
 **Pasos:**
@@ -170,7 +170,7 @@ del presupuesto de Mes A.
 
 ---
 
-### TC-034-007 — Gasto suelto en un mes sin presupuesto: no se crea ningún presupuesto
+### TC-035-007 — Gasto suelto en un mes sin presupuesto: no se crea ningún presupuesto
 **Precondición:** El mes elegido (muy futuro, ej. `+3` años) no tiene
 presupuesto.
 **Datos de prueba usados:** `{{id-expense-loose}}`.
@@ -188,7 +188,7 @@ igual en `ExpensesView` filtrando por ese mes/año (por su `date`), y en
 
 ---
 
-### TC-034-008 — Anclaje por presupuesto: planeado en Mes A, ejecutado con fecha de Mes B, cuenta en Mes A
+### TC-035-008 — Anclaje por presupuesto: planeado en Mes A, ejecutado con fecha de Mes B, cuenta en Mes A
 **Precondición:** `{{id-expense-anchored}}` fue creado con `budgetId` de
 Mes A (por auto-vínculo, al tener originalmente `date` en Mes A) y luego
 actualizado (`PATCH`) para agregar `amount` con una `date` que cae en Mes B.
@@ -210,7 +210,7 @@ listado o resumen de Mes B pese a la fecha.
 
 ---
 
-### TC-034-009 — Duplicar un mes copia solo el plan
+### TC-035-009 — Duplicar un mes copia solo el plan
 **Precondición:** Mes A tiene `{{id-expense-planned-a}}` (`plannedAmount`
 solo) y `{{id-expense-settled-a}}` (plan + ejecutado).
 **Datos de prueba usados:** `{{id-budget-a}}`.
@@ -230,7 +230,7 @@ ejecutado) trae su ejecución al destino.
 
 ---
 
-### TC-034-010 — Duplicar un gasto individual copia todo (asimetría con TC-034-009)
+### TC-035-010 — Duplicar un gasto individual copia todo (asimetría con TC-035-009)
 **Precondición:** `{{id-expense-settled-a}}` tiene `plannedAmount: 100000`,
 `amount: 95000` y `date` en Mes A.
 **Datos de prueba usados:** `{{id-expense-settled-a}}`.
@@ -239,14 +239,14 @@ ejecutado) trae su ejecución al destino.
    `{{id-expense-settled-a}}` a otro mes (ej. Mes A + 2).
 2. Revisar el gasto duplicado.
 **Resultado esperado:** El gasto duplicado conserva `amount: 95000` y una
-`date` desplazada al mes destino (no null) — a diferencia de TC-034-009,
+`date` desplazada al mes destino (no null) — a diferencia de TC-035-009,
 duplicar un gasto individual clona el hecho completo, ejecución incluida.
 **Estado:** ⬜ Pendiente
 **Hallazgos:**
 
 ---
 
-### TC-034-011 — Borrar un presupuesto advierte cuántos gastos ejecutados se pierden
+### TC-035-011 — Borrar un presupuesto advierte cuántos gastos ejecutados se pierden
 **Precondición:** Mes A tiene al menos un gasto ejecutado
 (`{{id-expense-settled-a}}`, `amount: 95000`) y uno solo planeado.
 **Datos de prueba usados:** `{{id-budget-a}}`.
@@ -263,8 +263,8 @@ desaparecen (`GET /finances/expenses/{{id-expense-settled-a}}` → 404).
 
 ---
 
-### TC-034-012 — Cuotas de deuda visibles como gastos planeados con badge "Deuda"
-**Precondición:** Ninguna deuda "[TEST spec-034] DEBT — Nevera" existe
+### TC-035-012 — Cuotas de deuda visibles como gastos planeados con badge "Deuda"
+**Precondición:** Ninguna deuda "[TEST spec-035] DEBT — Nevera" existe
 todavía.
 **Datos de prueba usados:** payload de la deuda (3 cuotas, inicio en Mes A).
 **Pasos:**
@@ -272,7 +272,7 @@ todavía.
 2. Abrir el detalle del presupuesto de cada uno de los 3 meses del
    calendario.
 **Resultado esperado:** Cada mes tiene un gasto con descripción
-`"Cuota k/3 — [TEST spec-034] DEBT — Nevera"`, `plannedAmount` igual al
+`"Cuota k/3 — [TEST spec-035] DEBT — Nevera"`, `plannedAmount` igual al
 valor de cuota, `amount`/`date` en null (estado `planned`), y el badge
 "Deuda" visible en la fila.
 **Estado:** ⬜ Pendiente
@@ -280,8 +280,8 @@ valor de cuota, `amount`/`date` en null (estado `planned`), y el badge
 
 ---
 
-### TC-034-013 — Ciclo completo de deuda sobre el modelo nuevo: editar, eliminar, pagar
-**Precondición:** Deuda de TC-034-012 existe con sus 3 cuotas planeadas.
+### TC-035-013 — Ciclo completo de deuda sobre el modelo nuevo: editar, eliminar, pagar
+**Precondición:** Deuda de TC-035-012 existe con sus 3 cuotas planeadas.
 **Datos de prueba usados:** `{{id-debt}}`.
 **Pasos:**
 1. Editar la deuda cambiando `installmentValue`. Confirmar que solo las
@@ -301,9 +301,9 @@ en spec-026, pero operando sobre `Expense` en vez de `BudgetItem`.
 
 ---
 
-### TC-034-014 — `ExpensesView`: filtro plan/ejecutado
+### TC-035-014 — `ExpensesView`: filtro plan/ejecutado
 **Precondición:** Existen gastos en estado `planned`, `executed` y `settled`
-(ver datos de prueba de TC-034-001 a 004).
+(ver datos de prueba de TC-035-001 a 004).
 **Datos de prueba usados:** los ya creados en Mes A.
 **Pasos:**
 1. Ir a `/finances/expenses`.
@@ -319,7 +319,7 @@ filtros rompe la lista si hay gastos con `date: null`.
 
 ---
 
-### TC-034-015 — `ExpensesView`: edición inline con `plannedAmount`
+### TC-035-015 — `ExpensesView`: edición inline con `plannedAmount`
 **Precondición:** `{{id-expense-planned-a}}` visible en `/finances/expenses`.
 **Datos de prueba usados:** `{{id-expense-planned-a}}`.
 **Pasos:**
@@ -333,7 +333,7 @@ refleja el nuevo `plannedAmount`) sin exigir `amount`/`date` para guardar.
 
 ---
 
-### TC-034-016 — Gastos con fecha nula se renderizan sin romper la UI
+### TC-035-016 — Gastos con fecha nula se renderizan sin romper la UI
 **Precondición:** `{{id-expense-planned-a}}` tiene `date: null`.
 **Datos de prueba usados:** `{{id-expense-planned-a}}`.
 **Pasos:**
@@ -347,7 +347,7 @@ claro (ej. "—" o "Sin ejecutar") en lugar de romper el layout.
 
 ---
 
-### TC-034-017 — Crear un gasto solo planeado desde el formulario
+### TC-035-017 — Crear un gasto solo planeado desde el formulario
 **Precondición:** Ninguna.
 **Datos de prueba usados:** `{{id-budget-a}}`.
 **Pasos:**
@@ -362,9 +362,9 @@ claro (ej. "—" o "Sin ejecutar") en lugar de romper el layout.
 
 ---
 
-### TC-034-018 — Crear un gasto solo ejecutado en un mes sin presupuesto
+### TC-035-018 — Crear un gasto solo ejecutado en un mes sin presupuesto
 **Precondición:** Mes muy futuro sin presupuesto.
-**Datos de prueba usados:** `{{id-expense-loose}}` (reutilizado de TC-034-007).
+**Datos de prueba usados:** `{{id-expense-loose}}` (reutilizado de TC-035-007).
 **Pasos:**
 1. Desde `/finances/expenses`, crear un gasto con `amount`+`date` en ese mes.
 2. Ir a `/finances/budgets` y confirmar que ese mes sigue sin presupuesto.
@@ -375,7 +375,7 @@ claro (ej. "—" o "Sin ejecutar") en lugar de romper el layout.
 
 ---
 
-### TC-034-019 — El formulario rechaza guardar un gasto sin ningún monto
+### TC-035-019 — El formulario rechaza guardar un gasto sin ningún monto
 **Precondición:** Ninguna.
 **Datos de prueba usados:** ninguno.
 **Pasos:**
@@ -391,7 +391,7 @@ cliente) con un mensaje claro. Si se fuerza el envío directo a
 
 ---
 
-### TC-034-020 — `BudgetsView`: el total planeado viene del backend, no se recalcula en cliente
+### TC-035-020 — `BudgetsView`: el total planeado viene del backend, no se recalcula en cliente
 **Precondición:** Mes A tiene sus gastos de datos de prueba.
 **Datos de prueba usados:** `{{id-budget-a}}`.
 **Pasos:**
@@ -410,13 +410,13 @@ desapareció); si se muestra un conteo, es de `expenses.length`.
 
 ## Casos de prueba (MCP)
 
-### TC-MCP-034-001 — `create_expense` solo con `plannedAmount` y `budgetId` es aceptado
+### TC-MCP-035-001 — `create_expense` solo con `plannedAmount` y `budgetId` es aceptado
 **Herramienta probada:** `create_expense` en `todo-api`
 **Precondición:** `{{id-budget-a}}` existe.
 **Input de prueba:**
 ```json
 {
-  "description": "[TEST spec-034] MCP - solo planeado",
+  "description": "[TEST spec-035] MCP - solo planeado",
   "plannedAmount": 250000,
   "budgetId": "{{id-budget-a}}",
   "type": "basico"
@@ -430,13 +430,13 @@ cruzando con `GET /finances/expenses/{{id}}` por REST.
 
 ---
 
-### TC-MCP-034-002 — `create_expense` sin ningún monto es rechazado con mensaje claro
+### TC-MCP-035-002 — `create_expense` sin ningún monto es rechazado con mensaje claro
 **Herramienta probada:** `create_expense` en `todo-api`
 **Precondición:** Ninguna.
 **Input de prueba:**
 ```json
 {
-  "description": "[TEST spec-034] MCP - sin monto, debe fallar",
+  "description": "[TEST spec-035] MCP - sin monto, debe fallar",
   "type": "basico"
 }
 ```
@@ -449,13 +449,13 @@ mensaje debe nombrar la regla (al menos uno de `plannedAmount` o
 
 ---
 
-### TC-MCP-034-003 — `create_expense` con `amount` sin `date` es rechazado
+### TC-MCP-035-003 — `create_expense` con `amount` sin `date` es rechazado
 **Herramienta probada:** `create_expense` en `todo-api`
 **Precondición:** Ninguna.
 **Input de prueba:**
 ```json
 {
-  "description": "[TEST spec-034] MCP - amount sin date",
+  "description": "[TEST spec-035] MCP - amount sin date",
   "amount": 50000,
   "type": "basico"
 }
@@ -467,31 +467,31 @@ mensaje debe nombrar la regla (al menos uno de `plannedAmount` o
 
 ---
 
-### TC-MCP-034-004 — `create_expense` con `date` sin `amount` es rechazado
+### TC-MCP-035-004 — `create_expense` con `date` sin `amount` es rechazado
 **Herramienta probada:** `create_expense` en `todo-api`
 **Precondición:** Ninguna.
 **Input de prueba:**
 ```json
 {
-  "description": "[TEST spec-034] MCP - date sin amount",
+  "description": "[TEST spec-035] MCP - date sin amount",
   "date": "2026-09-10",
   "type": "basico"
 }
 ```
-**Output esperado:** Mismo error de validación que TC-MCP-034-003 (la regla
+**Output esperado:** Mismo error de validación que TC-MCP-035-003 (la regla
 es simétrica). No se crea ningún gasto.
 **Estado:** ⬜ Pendiente
 **Hallazgos:**
 
 ---
 
-### TC-MCP-034-005 — Auto-asignación de `budgetId` al crear con `date` en un mes con presupuesto
+### TC-MCP-035-005 — Auto-asignación de `budgetId` al crear con `date` en un mes con presupuesto
 **Herramienta probada:** `create_expense` en `todo-api`
 **Precondición:** `{{id-budget-a}}` existe para Mes A.
 **Input de prueba:**
 ```json
 {
-  "description": "[TEST spec-034] MCP - auto-vínculo",
+  "description": "[TEST spec-035] MCP - auto-vínculo",
   "amount": 80000,
   "date": "{{fecha-dentro-de-mes-a}}",
   "type": "basico"
@@ -505,7 +505,7 @@ es simétrica). No se crea ningún gasto.
 
 ---
 
-### TC-MCP-034-006 — `update_expense` ejecuta un gasto planeado agregando `amount`+`date`
+### TC-MCP-035-006 — `update_expense` ejecuta un gasto planeado agregando `amount`+`date`
 **Herramienta probada:** `update_expense` en `todo-api`
 **Precondición:** `{{id-expense-planned-a}}` solo tiene `plannedAmount`.
 **Input de prueba:**
@@ -523,13 +523,13 @@ ambos no nulos). No se pierde `budgetId` ni `plannedAmount` original.
 
 ---
 
-### TC-MCP-034-007 — `create_expense` con `creditCardId` tiene efecto real
+### TC-MCP-035-007 — `create_expense` con `creditCardId` tiene efecto real
 **Herramienta probada:** `create_expense` en `todo-api`
 **Precondición:** `{{id-card}}` existe.
 **Input de prueba:**
 ```json
 {
-  "description": "[TEST spec-034] MCP - con tarjeta",
+  "description": "[TEST spec-035] MCP - con tarjeta",
   "amount": 150000,
   "date": "{{fecha-dentro-de-mes-a}}",
   "creditCardId": "{{id-card}}",
@@ -545,7 +545,7 @@ podía alimentar ese desglose (`creditCardId` no expuesto).
 
 ---
 
-### TC-MCP-034-008 — `get_monthly_expense_summary` con el contrato nuevo, mes con presupuesto
+### TC-MCP-035-008 — `get_monthly_expense_summary` con el contrato nuevo, mes con presupuesto
 **Herramienta probada:** `get_monthly_expense_summary` en `todo-api`
 **Precondición:** Mes A tiene los gastos de datos de prueba (planeado,
 settled, ejecutado sin plan, con tarjeta).
@@ -557,13 +557,13 @@ settled, ejecutado sin plan, con tarjeta).
 el spec: `plannedTotal`, `executedTotal`, `variance`, `pendingPlannedTotal`,
 `unplannedTotal`, `byType`, `cardTotals`, `budgetId` (no nulo). **No**
 incluye `budgetTotal`, `expensesTotal` ni `combinedTotal`. Los valores
-numéricos coinciden con lo verificado manualmente en TC-034-003 y 004.
+numéricos coinciden con lo verificado manualmente en TC-035-003 y 004.
 **Estado:** ⬜ Pendiente
 **Hallazgos:**
 
 ---
 
-### TC-MCP-034-009 — `get_monthly_expense_summary` en un mes sin presupuesto
+### TC-MCP-035-009 — `get_monthly_expense_summary` en un mes sin presupuesto
 **Herramienta probada:** `get_monthly_expense_summary` en `todo-api`
 **Precondición:** `{{id-expense-loose}}` es el único gasto del mes elegido
 (sin presupuesto).
@@ -579,14 +579,14 @@ suelto, `executedTotal` igual a ese mismo monto.
 
 ---
 
-### TC-MCP-034-010 — `duplicate_budget` deja `amount`/`date` en null en el destino
+### TC-MCP-035-010 — `duplicate_budget` deja `amount`/`date` en null en el destino
 **Herramienta probada:** `duplicate_budget` en `todo-api`
 **Precondición:** `{{id-budget-a}}` tiene gastos planeados y liquidados.
 **Input de prueba:**
 ```json
 { "budgetId": "{{id-budget-a}}", "month": {{mes-destino}}, "year": {{año-destino}} }
 ```
-**Output esperado:** Igual que TC-034-009 pero verificado por MCP: el
+**Output esperado:** Igual que TC-035-009 pero verificado por MCP: el
 contador devuelto es `plannedExpensesCopied` (no `itemsCopied`), y cada
 gasto del presupuesto destino tiene `plannedAmount` copiado con
 `amount`/`date` en null, incluso el que en origen estaba `settled`.
@@ -595,7 +595,7 @@ gasto del presupuesto destino tiene `plannedAmount` copiado con
 
 ---
 
-### TC-MCP-034-011 — `duplicate_expense` copia el gasto tal cual (asimetría con `duplicate_budget`)
+### TC-MCP-035-011 — `duplicate_expense` copia el gasto tal cual (asimetría con `duplicate_budget`)
 **Herramienta probada:** `duplicate_expense` en `todo-api`
 **Precondición:** `{{id-expense-settled-a}}` tiene `amount`+`date`.
 **Input de prueba:**
@@ -604,7 +604,7 @@ gasto del presupuesto destino tiene `plannedAmount` copiado con
 ```
 **Output esperado:** El gasto duplicado conserva `amount` y `date`
 desplazada (no null) — confirma la asimetría deliberada con
-TC-MCP-034-010. Verificar también que un gasto **plan-only** como origen
+TC-MCP-035-010. Verificar también que un gasto **plan-only** como origen
 (`{{id-expense-planned-a}}`) se duplica tolerando `date: null` (no lanza
 error del tipo `split of null`).
 **Estado:** ⬜ Pendiente
@@ -612,7 +612,7 @@ error del tipo `split of null`).
 
 ---
 
-### TC-MCP-034-012 — `add_budget_item`, `update_budget_item`, `delete_budget_item` ya no existen
+### TC-MCP-035-012 — `add_budget_item`, `update_budget_item`, `delete_budget_item` ya no existen
 **Herramienta probada:** listado de tools (`tools/list`) en `todo-api`
 **Precondición:** Ninguna.
 **Pasos:**
@@ -627,7 +627,7 @@ error del tipo `split of null`).
 
 ---
 
-### TC-MCP-034-013 — `list_expenses` con filtros `budgetId` y `status`
+### TC-MCP-035-013 — `list_expenses` con filtros `budgetId` y `status`
 **Herramienta probada:** `list_expenses` en `todo-api`
 **Precondición:** Mes A tiene gastos en los tres estados
 (`planned`/`executed`/`settled`).

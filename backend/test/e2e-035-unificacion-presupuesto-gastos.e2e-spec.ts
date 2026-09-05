@@ -1,8 +1,8 @@
-// spec-034 — Unificación de presupuesto y gastos.
+// spec-035 — Unificación de presupuesto y gastos.
 //
 // Redactado en modo test-first (@tester), ANTES de que exista la
 // implementación: se espera que TODO este archivo esté en rojo hasta que
-// spec-034 se implemente (fusión de BudgetItem en Expense, migración
+// spec-035 se implemente (fusión de BudgetItem en Expense, migración
 // 1787100000000-UnifyBudgetItemsIntoExpenses, DTOs con amount/date
 // opcionales, auto-vínculo, agregados rediseñados en budgets.service.ts, y
 // el portado de la maquinaria de deudas de spec-026 a Expense).
@@ -13,7 +13,7 @@
 // `executionStatus`, `plannedTotal`/`executedTotal`/`variance`/
 // `pendingPlannedTotal`/`unplannedTotal`/`byType`/`cardTotals`,
 // `plannedExpensesCopied`) se tomaron literalmente de
-// `spec/spec-034-unificacion-presupuesto-gastos.md`. Si la implementación
+// `spec/spec-035-unificacion-presupuesto-gastos.md`. Si la implementación
 // final se desvía de alguno, es una razón para revisar el nombre, no para
 // relajar la aserción.
 //
@@ -91,7 +91,7 @@ function parseToolResult(rpcResponse: any): any {
   return JSON.parse(text);
 }
 
-describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
+describe('spec-035 — Unificación de presupuesto y gastos (e2e)', () => {
   let app: INestApplication<App>;
   let authCookies: string[];
 
@@ -175,7 +175,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
     const response = await api()
       .post('/api/v1/finances/budgets')
       .set('Cookie', authCookies)
-      .send({ name: 'Presupuesto de prueba spec-034', ...overrides });
+      .send({ name: 'Presupuesto de prueba spec-035', ...overrides });
     if (response.status === 201 && response.body?.data?.id) {
       createdBudgetIds.push(response.body.data.id);
     }
@@ -190,7 +190,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       .post('/api/v1/finances/expenses')
       .set('Cookie', authCookies)
       .send({
-        description: 'Gasto de prueba spec-034',
+        description: 'Gasto de prueba spec-035',
         type: 'basico',
         ...overrides,
       });
@@ -229,7 +229,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       .post('/api/v1/finances/debts')
       .set('Cookie', authCookies)
       .send({
-        description: 'Deuda de prueba spec-034',
+        description: 'Deuda de prueba spec-035',
         productValue: 300000,
         installmentValue: 100000,
         totalInstallments: 3,
@@ -310,11 +310,12 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
           },
         ],
       });
-      expect(response.status).toBe(201);
-      // `items` no está en el DTO — con whitelist:true, el body debe
-      // ignorarse (no rechazarse) y el presupuesto debe nacer vacío.
-      const budget = await getBudget(response.body.data.id);
-      expect(budget.expenses ?? []).toEqual([]);
+      // `items` no está en `CreateBudgetDto` y `ValidationPipe` corre con
+      // `forbidNonWhitelisted: true` (main.ts): un campo no declarado se
+      // rechaza con 400, no se ignora en silencio. El presupuesto no llega
+      // a crearse, así que no hace falta (ni se puede) verificar que nazca
+      // vacío por esta vía.
+      expect(response.status).toBe(400);
     });
   });
 
@@ -324,7 +325,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
   describe('AC-2: validación de los tres estados de un gasto', () => {
     it('crea un gasto solo con plannedAmount (planeado)', async () => {
       const response = await createExpense({
-        description: '[E2E-034] AC2 — solo planeado',
+        description: '[E2E-035] AC2 — solo planeado',
         plannedAmount: 250000,
       });
       expect(response.body.data.plannedAmount).not.toBeNull();
@@ -334,7 +335,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
 
     it('crea un gasto solo con amount + date (ejecutado)', async () => {
       const response = await createExpense({
-        description: '[E2E-034] AC2 — solo ejecutado',
+        description: '[E2E-035] AC2 — solo ejecutado',
         amount: 50000,
         date: dateInMonth(currentYear + 22, 1),
       });
@@ -344,7 +345,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
 
     it('crea un gasto con plannedAmount + amount + date (liquidado)', async () => {
       const response = await createExpense({
-        description: '[E2E-034] AC2 — liquidado',
+        description: '[E2E-035] AC2 — liquidado',
         plannedAmount: 100000,
         amount: 95000,
         date: dateInMonth(currentYear + 22, 2),
@@ -355,7 +356,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
 
     it('rechaza (400) un gasto sin ningún monto', async () => {
       await createExpense(
-        { description: '[E2E-034] AC2 — sin ningún monto, debe fallar' },
+        { description: '[E2E-035] AC2 — sin ningún monto, debe fallar' },
         400,
       );
     });
@@ -363,7 +364,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
     it('rechaza (400) un gasto con amount pero sin date', async () => {
       await createExpense(
         {
-          description: '[E2E-034] AC2 — amount sin date, debe fallar',
+          description: '[E2E-035] AC2 — amount sin date, debe fallar',
           amount: 30000,
         },
         400,
@@ -373,7 +374,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
     it('rechaza (400) un gasto con date pero sin amount', async () => {
       await createExpense(
         {
-          description: '[E2E-034] AC2 — date sin amount, debe fallar',
+          description: '[E2E-035] AC2 — date sin amount, debe fallar',
           date: dateInMonth(currentYear + 22, 3),
         },
         400,
@@ -382,7 +383,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
 
     it('rechaza (400) al actualizar un gasto ejecutado quitándole solo la date (estado resultante inválido)', async () => {
       const created = await createExpense({
-        description: '[E2E-034] AC2 — update rompe el par amount/date',
+        description: '[E2E-035] AC2 — update rompe el par amount/date',
         amount: 40000,
         date: dateInMonth(currentYear + 22, 4),
       });
@@ -404,7 +405,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const budgetId = budgetResponse.body.data.id;
 
       const expenseResponse = await createExpense({
-        description: '[E2E-034] AC3 — auto-vínculo',
+        description: '[E2E-035] AC3 — auto-vínculo',
         amount: 60000,
         date: dateInMonth(currentYear + 23, 5),
       });
@@ -427,7 +428,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       expect(before.body.data.length).toBe(0);
 
       const expenseResponse = await createExpense({
-        description: '[E2E-034] AC3 — sin presupuesto, queda suelto',
+        description: '[E2E-035] AC3 — sin presupuesto, queda suelto',
         amount: 70000,
         date: dateInMonth(year, month),
       });
@@ -463,7 +464,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
 
       // Created with a date inside month A → auto-linked to budget A.
       const expenseResponse = await createExpense({
-        description: '[E2E-034] AC4 — anclado a mes A',
+        description: '[E2E-035] AC4 — anclado a mes A',
         amount: 90000,
         date: dateInMonth(monthA.year, monthA.month),
       });
@@ -552,7 +553,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       await createBudget({ month, year });
 
       await createExpense({
-        description: '[E2E-034] AC6 — sin doble conteo',
+        description: '[E2E-035] AC6 — sin doble conteo',
         plannedAmount: 100000,
         amount: 95000,
         date: dateInMonth(year, month),
@@ -583,7 +584,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const budgetId = budgetResponse.body.data.id;
 
       await createExpense({
-        description: '[E2E-034] AC6 — byType sin doble conteo',
+        description: '[E2E-035] AC6 — byType sin doble conteo',
         plannedAmount: 200000,
         amount: 180000,
         date: dateInMonth(year, month),
@@ -621,7 +622,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const budgetId = budgetResponse.body.data.id;
 
       await createExpense({
-        description: '[E2E-034] AC7 — settled en origen',
+        description: '[E2E-035] AC7 — settled en origen',
         plannedAmount: 100000,
         amount: 90000,
         date: dateInMonth(source.year, source.month),
@@ -656,7 +657,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
 
     it('duplicar un gasto individual copia amount y date desplazados (comportamiento sin cambios de spec-023)', async () => {
       const source = await createExpense({
-        description: '[E2E-034] AC7 — duplicar gasto individual',
+        description: '[E2E-035] AC7 — duplicar gasto individual',
         amount: 45000,
         date: dateInMonth(currentYear + 30, 3, 15),
       });
@@ -672,9 +673,15 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       expect(response.body.data.date).toEqual(`${currentYear + 30}-06-15`);
     });
 
-    it('duplicar un gasto plan-only (sin date) no revienta (Fase 2, "tolerante a plan-only")', async () => {
+    it('duplicar un gasto plan-only (sin date) se ancla al presupuesto del mes/año destino, no queda huérfano', async () => {
+      const destBudget = await createBudget({
+        month: 7,
+        year: currentYear + 30,
+      });
+      expect(destBudget.status).toBe(201);
+
       const source = await createExpense({
-        description: '[E2E-034] AC7 — duplicar gasto plan-only',
+        description: '[E2E-035] AC7 — duplicar gasto plan-only',
         plannedAmount: 300000,
       });
 
@@ -688,6 +695,169 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       expect(Number(response.body.data.plannedAmount)).toBe(300000);
       expect(response.body.data.amount).toBeNull();
       expect(response.body.data.date).toBeNull();
+      // Bug real detectado en revisión de código (@reviewer, previo al
+      // [DONE]): al no tener `date`, la copia ignoraba dto.month/dto.year
+      // para el vínculo y quedaba sin budgetId — invisible en cualquier mes.
+      // Corregido: el destino sin `date` se ancla por (dto.month, dto.year).
+      const persisted = await getExpense(response.body.data.id);
+      expect(persisted.budget?.id).toBe(destBudget.body.data.id);
+    });
+
+    it('duplicar un gasto plan-only a un mes sin presupuesto queda suelto, sin crear uno nuevo', async () => {
+      const source = await createExpense({
+        description: '[E2E-035] AC7 — duplicar gasto plan-only sin destino',
+        plannedAmount: 150000,
+      });
+
+      const response = await api()
+        .post(`/api/v1/finances/expenses/${source.body.data.id}/duplicate`)
+        .set('Cookie', authCookies)
+        .send({ month: 8, year: currentYear + 30 })
+        .expect(201);
+
+      createdExpenseIds.push(response.body.data.id);
+      const persisted = await getExpense(response.body.data.id);
+      expect(persisted.budget).toBeNull();
+
+      const budgetsCheck = await api()
+        .get('/api/v1/finances/budgets')
+        .query({ year: currentYear + 30, month: 8, limit: 100 })
+        .set('Cookie', authCookies)
+        .expect(200);
+      expect(
+        (budgetsCheck.body.data as Array<{ month: number; year: number }>)
+          .filter((b) => b.month === 8 && b.year === currentYear + 30),
+      ).toHaveLength(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Filtros de GET /finances/expenses: `planned`, `executed` y `budgetId`
+  // (Fase 2 y Fase 5 del spec). Sin bloque AC propio en el spec, pero son
+  // entregables explícitos — agregados en revisión de código (@reviewer,
+  // previo al [DONE]) tras detectar que `planned`/`executed` no tenían
+  // ninguna cobertura y escondían un bug real (`@Type(() => Boolean)`
+  // interpretaba `?planned=false` como `true`, por ser un string truthy en
+  // JS — corregido con `@Transform` explícito).
+  // ---------------------------------------------------------------------
+  describe('Filtros de GET /finances/expenses: planned, executed, budgetId', () => {
+    it('?planned=true devuelve solo gastos sin ejecutar; ?planned=false no filtra (devuelve ambos)', async () => {
+      const budget = await createBudget({
+        month: 9,
+        year: currentYear + 32,
+      });
+      const plannedOnly = await createExpense({
+        description: '[E2E-035] filtro planned=true',
+        plannedAmount: 50000,
+        budgetId: budget.body.data.id,
+      });
+      const executed = await createExpense({
+        description: '[E2E-035] filtro planned=false (ejecutado)',
+        amount: 20000,
+        date: dateInMonth(currentYear + 32, 9, 5),
+        budgetId: budget.body.data.id,
+      });
+
+      const plannedResponse = await api()
+        .get('/api/v1/finances/expenses')
+        .query({ budgetId: budget.body.data.id, planned: 'true' })
+        .set('Cookie', authCookies)
+        .expect(200);
+      const plannedIds = (plannedResponse.body.data as Array<{ id: string }>)
+        .map((e) => e.id);
+      expect(plannedIds).toContain(plannedOnly.body.data.id);
+      expect(plannedIds).not.toContain(executed.body.data.id);
+
+      // El servicio solo filtra cuando el flag es truthy
+      // (`if (planned) qb.andWhere(...)`); `planned=false` significa "no
+      // restringir", no "lo contrario de planned=true" — mismo criterio que
+      // `executed` en el test siguiente.
+      const bothResponse = await api()
+        .get('/api/v1/finances/expenses')
+        .query({ budgetId: budget.body.data.id, planned: 'false' })
+        .set('Cookie', authCookies)
+        .expect(200);
+      const bothIds = (bothResponse.body.data as Array<{ id: string }>).map(
+        (e) => e.id,
+      );
+      // El bug real: antes de la corrección, `@Type(() => Boolean)`
+      // interpretaba el string "false" como `true` (JS: `Boolean("false")`
+      // es truthy), así que `?planned=false` filtraba igual que
+      // `?planned=true` — devolvía solo `plannedOnly` y excluía `executed`.
+      expect(bothIds).toContain(plannedOnly.body.data.id);
+      expect(bothIds).toContain(executed.body.data.id);
+    });
+
+    it('?executed=true devuelve solo gastos con amount; ?executed=false no filtra por ejecución', async () => {
+      const budget = await createBudget({
+        month: 10,
+        year: currentYear + 32,
+      });
+      const plannedOnly = await createExpense({
+        description: '[E2E-035] filtro executed=true (planeado)',
+        plannedAmount: 70000,
+        budgetId: budget.body.data.id,
+      });
+      const executed = await createExpense({
+        description: '[E2E-035] filtro executed=true (ejecutado)',
+        amount: 30000,
+        date: dateInMonth(currentYear + 32, 10, 5),
+        budgetId: budget.body.data.id,
+      });
+
+      const executedTrueResponse = await api()
+        .get('/api/v1/finances/expenses')
+        .query({ budgetId: budget.body.data.id, executed: 'true' })
+        .set('Cookie', authCookies)
+        .expect(200);
+      const executedIds = (
+        executedTrueResponse.body.data as Array<{ id: string }>
+      ).map((e) => e.id);
+      expect(executedIds).toContain(executed.body.data.id);
+      expect(executedIds).not.toContain(plannedOnly.body.data.id);
+
+      const executedFalseResponse = await api()
+        .get('/api/v1/finances/expenses')
+        .query({ budgetId: budget.body.data.id, executed: 'false' })
+        .set('Cookie', authCookies)
+        .expect(200);
+      const bothIds = (
+        executedFalseResponse.body.data as Array<{ id: string }>
+      ).map((e) => e.id);
+      expect(bothIds).toContain(executed.body.data.id);
+      expect(bothIds).toContain(plannedOnly.body.data.id);
+    });
+
+    it('?budgetId= devuelve solo los gastos de ese presupuesto', async () => {
+      const budgetA = await createBudget({
+        month: 11,
+        year: currentYear + 32,
+      });
+      const budgetB = await createBudget({
+        month: 12,
+        year: currentYear + 32,
+      });
+      const inA = await createExpense({
+        description: '[E2E-035] filtro budgetId — en A',
+        plannedAmount: 10000,
+        budgetId: budgetA.body.data.id,
+      });
+      const inB = await createExpense({
+        description: '[E2E-035] filtro budgetId — en B',
+        plannedAmount: 20000,
+        budgetId: budgetB.body.data.id,
+      });
+
+      const response = await api()
+        .get('/api/v1/finances/expenses')
+        .query({ budgetId: budgetA.body.data.id })
+        .set('Cookie', authCookies)
+        .expect(200);
+      const ids = (response.body.data as Array<{ id: string }>).map(
+        (e) => e.id,
+      );
+      expect(ids).toContain(inA.body.data.id);
+      expect(ids).not.toContain(inB.body.data.id);
     });
   });
 
@@ -701,7 +871,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
     it('un gasto de deuda conserva debtId + installmentNumber tal como los tenía BudgetItem', async () => {
       const start = shiftMonth(currentYear + 31, 1, 0);
       const debtResponse = await createDebt({
-        description: '[E2E-034] AC8 — integridad debtId/installmentNumber',
+        description: '[E2E-035] AC8 — integridad debtId/installmentNumber',
         installmentValue: 100000,
         totalInstallments: 2,
         startMonth: start.month,
@@ -734,7 +904,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       // invariante en base de datos (Fase 1.2), para que la revisión de
       // la migración lo busque por nombre.
       await createExpense(
-        { description: '[E2E-034] AC8 — CHK_expenses_has_amount' },
+        { description: '[E2E-035] AC8 — CHK_expenses_has_amount' },
         400,
       );
     });
@@ -743,7 +913,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       await createExpense(
         {
           description:
-            '[E2E-034] AC8 — CHK_expenses_amount_date_together (amount)',
+            '[E2E-035] AC8 — CHK_expenses_amount_date_together (amount)',
           amount: 10000,
         },
         400,
@@ -751,7 +921,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       await createExpense(
         {
           description:
-            '[E2E-034] AC8 — CHK_expenses_amount_date_together (date)',
+            '[E2E-035] AC8 — CHK_expenses_amount_date_together (date)',
           date: dateInMonth(currentYear + 31, 2),
         },
         400,
@@ -768,7 +938,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const totalInstallments = 3;
 
       const debtResponse = await createDebt({
-        description: '[E2E-034] AC9 — calendario básico',
+        description: '[E2E-035] AC9 — calendario básico',
         installmentValue: 100000,
         totalInstallments,
         startMonth: start.month,
@@ -811,7 +981,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const newValue = 120000;
 
       const debtResponse = await createDebt({
-        description: '[E2E-034] AC9 — regeneración parcial',
+        description: '[E2E-035] AC9 — regeneración parcial',
         installmentValue: originalValue,
         totalInstallments,
         startMonth: start.month,
@@ -857,7 +1027,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const totalInstallments = 3; // 2 elapsed, 1 future
 
       const debtResponse = await createDebt({
-        description: '[E2E-034] AC9 — borrado de deuda',
+        description: '[E2E-035] AC9 — borrado de deuda',
         totalInstallments,
         startMonth: start.month,
         startYear: start.year,
@@ -912,7 +1082,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const totalInstallments = 4; // prev + current elapsed (2), 2 future
 
       const debtResponse = await createDebt({
-        description: '[E2E-034] AC9 — pay-off',
+        description: '[E2E-035] AC9 — pay-off',
         installmentValue,
         totalInstallments,
         startMonth: start.month,
@@ -939,7 +1109,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
   });
 
   // ---------------------------------------------------------------------
-  // AC-10: BudgetDetailView — cubierto en test-034 (manual, UI). Este
+  // AC-10: BudgetDetailView — cubierto en test-035 (manual, UI). Este
   // bloque valida el contrato REST subyacente que la UI consume.
   // ---------------------------------------------------------------------
   describe('AC-10: el detalle de presupuesto expone plan y real por gasto', () => {
@@ -950,7 +1120,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const budgetId = budgetResponse.body.data.id;
 
       await createExpense({
-        description: '[E2E-034] AC10 — plan y real en la misma fila',
+        description: '[E2E-035] AC10 — plan y real en la misma fila',
         plannedAmount: 100000,
         amount: 80000,
         date: dateInMonth(year, month),
@@ -963,7 +1133,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       expect(detail).not.toHaveProperty('typeSummary');
       const row = (detail.expenses as Array<any>).find(
         (e) =>
-          e.description === '[E2E-034] AC10 — plan y real en la misma fila',
+          e.description === '[E2E-035] AC10 — plan y real en la misma fila',
       );
       expect(Number(row.plannedAmount)).toBe(100000);
       expect(Number(row.amount)).toBe(80000);
@@ -976,7 +1146,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const budgetId = budgetResponse.body.data.id;
 
       const created = await createExpense({
-        description: '[E2E-034] AC10 — registrar ejecución',
+        description: '[E2E-035] AC10 — registrar ejecución',
         plannedAmount: 150000,
         budgetId,
       });
@@ -1003,19 +1173,19 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const budgetId = budgetResponse.body.data.id;
 
       await createExpense({
-        description: '[E2E-034] AC11 — ejecutado 1',
+        description: '[E2E-035] AC11 — ejecutado 1',
         amount: 50000,
         date: dateInMonth(year, month),
         budgetId,
       });
       await createExpense({
-        description: '[E2E-034] AC11 — ejecutado 2',
+        description: '[E2E-035] AC11 — ejecutado 2',
         amount: 30000,
         date: dateInMonth(year, month, 15),
         budgetId,
       });
       await createExpense({
-        description: '[E2E-034] AC11 — solo planeado',
+        description: '[E2E-035] AC11 — solo planeado',
         plannedAmount: 20000,
         budgetId,
       });
@@ -1051,7 +1221,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
         .set('Accept', 'application/json, text/event-stream')
         .send({
           jsonrpc: '2.0',
-          id: 'e2e-034-tools-list',
+          id: 'e2e-035-tools-list',
           method: 'tools/list',
           params: {},
         })
@@ -1076,12 +1246,12 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const rpcResponse = await callMcpTool(
         'create_expense',
         {
-          description: '[E2E-034] AC12 — MCP planeado',
+          description: '[E2E-035] AC12 — MCP planeado',
           plannedAmount: 220000,
           budgetId,
           type: 'basico',
         },
-        'e2e-034-ac12-create',
+        'e2e-035-ac12-create',
       );
 
       expect(rpcResponse.error).toBeUndefined();
@@ -1096,7 +1266,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
         .post('/api/v1/finances/credit-cards')
         .set('Cookie', authCookies)
         .send({
-          name: '[E2E-034] Visa MCP',
+          name: '[E2E-035] Visa MCP',
           bank: 'Banco de pruebas',
           interestRate: 0.2,
           monthlyFee: 5000,
@@ -1112,13 +1282,13 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const rpcResponse = await callMcpTool(
         'create_expense',
         {
-          description: '[E2E-034] AC12 — MCP con tarjeta',
+          description: '[E2E-035] AC12 — MCP con tarjeta',
           amount: 100000,
           date: dateInMonth(year, month),
           creditCardId: cardResponse.body.data.id,
           type: 'lujo',
         },
-        'e2e-034-ac12-card',
+        'e2e-035-ac12-card',
       );
 
       expect(rpcResponse.error).toBeUndefined();
@@ -1131,7 +1301,7 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const summaryResponse = await callMcpTool(
         'get_monthly_expense_summary',
         { year, month },
-        'e2e-034-ac12-summary',
+        'e2e-035-ac12-summary',
       );
       const summary = parseToolResult(summaryResponse);
       const cardRow = (
@@ -1144,17 +1314,25 @@ describe('spec-034 — Unificación de presupuesto y gastos (e2e)', () => {
       const rpcResponse = await callMcpTool(
         'create_expense',
         {
-          description: '[E2E-034] AC12 — MCP sin monto, debe fallar',
+          description: '[E2E-035] AC12 — MCP sin monto, debe fallar',
           type: 'basico',
         },
-        'e2e-034-ac12-invalid',
+        'e2e-035-ac12-invalid',
       );
 
-      // Zod validation errors surface as JSON-RPC protocol errors
-      // (`-32602 Invalid params`), unlike NotFoundException which uses the
-      // ok()/err() text-content convention — see e2e-023's note on
-      // err()/ok() vs JSON-RPC-level error.
-      expect(rpcResponse.error).toBeDefined();
+      // Verificado en vivo contra /mcp: el SDK de MCP no propaga el fallo
+      // de validación de `registerTool` como error de protocolo JSON-RPC
+      // top-level (a diferencia de lo que asumía este caso originalmente);
+      // lo devuelve como resultado de tool con `isError: true` y el mensaje
+      // del `.refine()` embebido en `content[0].text`, misma convención
+      // ok()/err() que usa NotFoundException — ver nota de e2e-023. Lo que
+      // sí es un criterio de aceptación real (AC-12) es que la tool
+      // rechace la llamada y no cree nada.
+      expect(rpcResponse.result?.isError).toBe(true);
+      const text = rpcResponse.result?.content?.[0]?.text as string;
+      expect(text).toContain(
+        'Debe enviar al menos plannedAmount, o amount y date juntos',
+      );
     });
   });
 });

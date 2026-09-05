@@ -8,7 +8,7 @@ import {
   Min,
 } from 'class-validator';
 
-// spec-034, decisión 11: el presupuesto nace vacío. Los gastos se agregan
+// spec-035, decisión 11: el presupuesto nace vacío. Los gastos se agregan
 // después vía POST /finances/expenses con `budgetId`.
 export class CreateBudgetDto {
   @ApiProperty({ example: 'Presupuesto junio 2026', maxLength: 255 })

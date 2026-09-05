@@ -34,7 +34,7 @@ export function useExpense(id: string) {
   });
 }
 
-// spec-034: todas las mutations de gastos invalidan también ['budgets'] —
+// spec-035: todas las mutations de gastos invalidan también ['budgets'] —
 // un gasto (plan o ejecución) es ahora contenido directo del presupuesto,
 // no una entidad independiente que solo se sumaba al final.
 export function useCreateExpense() {

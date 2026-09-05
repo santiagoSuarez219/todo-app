@@ -59,7 +59,7 @@ export class ExpensesController {
   @Get()
   @ApiOperation({
     summary:
-      'List expenses (paginated). Filters by year/month (anchored by budget, not date — see spec-034), budgetId, planned/executed status, description search.',
+      'List expenses (paginated). Filters by year/month (anchored by budget, not date — see spec-035), budgetId, planned/executed status, description search.',
   })
   @ApiOkResponse({ type: [Expense] })
   findAll(@Query() query: ExpensesQueryDto): Promise<Expense[]> {

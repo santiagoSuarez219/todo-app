@@ -44,7 +44,7 @@ export class ExpensesService {
     if (dto.budgetId) {
       expense.budget = await this.getBudgetOrThrow(dto.budgetId);
     } else if (dto.date) {
-      // spec-034, decisión 4: auto-vínculo si el mes de `date` ya tiene
+      // spec-035, decisión 4: auto-vínculo si el mes de `date` ya tiene
       // presupuesto. Nunca se auto-crea uno.
       expense.budget = await this.findBudgetForDate(dto.date);
     }
@@ -67,6 +67,7 @@ export class ExpensesService {
       .createQueryBuilder('expense')
       .leftJoinAndSelect('expense.creditCard', 'creditCard')
       .leftJoinAndSelect('expense.budget', 'budget')
+      .leftJoinAndSelect('expense.debt', 'debt')
       .orderBy('expense.date', 'DESC', 'NULLS LAST')
       .addOrderBy('expense.createdAt', 'DESC')
       .skip((page - 1) * limit)
@@ -94,6 +95,7 @@ export class ExpensesService {
       .createQueryBuilder('expense')
       .leftJoinAndSelect('expense.creditCard', 'creditCard')
       .leftJoinAndSelect('expense.budget', 'budget')
+      .leftJoinAndSelect('expense.debt', 'debt')
       .where('expense.id = :id', { id })
       .getOne();
     if (!expense) throw new NotFoundException(`Expense ${id} not found`);
@@ -182,6 +184,17 @@ export class ExpensesService {
 
     if (destDate) {
       newExpense.budget = await this.findBudgetForDate(destDate);
+    } else {
+      // spec-035: el origen no tiene `date` (gasto solo planeado, sin
+      // ejecución) — no hay fecha de la que derivar el mes destino, pero
+      // `dto.month`/`dto.year` sí lo declaran explícitamente. Sin este
+      // fallback, la copia quedaba sin `budgetId` y sin `date`: invisible
+      // para `applyMonthScope()` en cualquier mes, huérfana de cualquier
+      // presupuesto (bug real, detectado en revisión de código).
+      newExpense.budget = await this.budgetsRepository.findOneBy({
+        month: dto.month,
+        year: dto.year,
+      });
     }
 
     const savedExpense = await this.expensesRepository.save(newExpense);
@@ -189,7 +202,7 @@ export class ExpensesService {
   }
 
   /**
-   * spec-034: un gasto pertenece al mes de su presupuesto, no de su `date`
+   * spec-035: un gasto pertenece al mes de su presupuesto, no de su `date`
    * (decisión 3). Un gasto sin presupuesto se ubica por su `date`.
    * Compartido por findAll() y por los agregados de BudgetsService.
    */
@@ -225,7 +238,7 @@ export class ExpensesService {
 
   /**
    * Replica en el servicio las dos invariantes protegidas por CHECK en la
-   * base de datos (ver spec-034, "Semántica derivada"), para devolver un
+   * base de datos (ver spec-035, "Semántica derivada"), para devolver un
    * 400 legible en vez de un error crudo de Postgres.
    */
   private assertConsistent(

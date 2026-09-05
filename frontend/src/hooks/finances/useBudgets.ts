@@ -41,7 +41,7 @@ export function useUpdateBudget() {
   });
 }
 
-// spec-034, decisión 12: el resultado indica cuántos gastos ejecutados se
+// spec-035, decisión 12: el resultado indica cuántos gastos ejecutados se
 // perdieron en cascada — el caller (BudgetDetailView) lo usa para el
 // ConfirmDialog. Sigue invalidando ['expenses']: los gastos del presupuesto
 // desaparecieron de verdad.

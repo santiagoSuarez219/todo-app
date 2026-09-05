@@ -158,7 +158,7 @@
     alcance de spec-033, que no toca `dueDate` ni `ActivityForm` más allá de
     agregar la opción de estado.
 
-## spec-034 — Unificación de presupuesto y gastos
+## spec-035 — Unificación de presupuesto y gastos
 
 - **`BudgetsService.findAll()` hidrata todos los `expenses` de cada
   presupuesto de la página, solo para calcular `plannedTotal`.**
@@ -171,12 +171,12 @@
   acumula muchos gastos, el listado se vuelve más pesado de lo necesario.
   Corregirlo implica una agregación `SUM`/`COUNT` por `budgetId` en el propio
   query en vez de traer las entidades completas — fuera del alcance
-  quirúrgico de spec-034, que reutilizó el patrón de `findOne()` por
+  quirúrgico de spec-035, que reutilizó el patrón de `findOne()` por
   simplicidad. Análogo al hallazgo ya registrado de `findByMonth()` en
   spec-024, aunque aquí no hay truncamiento silencioso, solo sobre-fetch.
 - **`Expense.executionStatus` no tiene `@ApiProperty` en la entidad**
   (`backend/src/finances/entities/expense.entity.ts`) — es un campo calculado
-  no persistido (ver "Semántica derivada" en spec-034), documentado con un
+  no persistido (ver "Semántica derivada" en spec-035), documentado con un
   comentario pero sin decorador Swagger, así que no aparece tipado en
   `/api/v1/docs` aunque el backend sí lo devuelve en cada respuesta. Bajo
   impacto (cosmético, no afecta el contrato real), pendiente si se retoma
@@ -184,14 +184,7 @@
 - **Gap de validación `.strict()` en tools MCP — reducido, no cerrado.**
   Continuación del hallazgo de spec-030: `create_expense`, `update_expense` y
   `create_budget` se migraron a `server.registerTool()` con `.strict()` como
-  parte de la Fase 6 de spec-034 (mismo precedente de `create_activity`). El
+  parte de la Fase 6 de spec-035 (mismo precedente de `create_activity`). El
   resto de tools de escritura de `mcp.service.ts` (`update_project`,
   `create_income`, y las ~25 restantes) sigue sin `.strict()`. Sin cambios
   respecto de la evaluación pendiente ya registrada en spec-030.
-- **`e2e-034-unificacion-presupuesto-gastos.e2e-spec.ts` no se ejecutó contra
-  una base de datos real en esta sesión** — Docker no estuvo disponible en el
-  entorno de implementación (confirmado también por `@tester` y
-  `@mcp-builder` en sus respectivas fases). El archivo compila y los 110
-  tests unitarios de backend pasan en verde, pero los 12 bloques e2e (uno por
-  criterio de aceptación, incluida la migración real de datos) requieren
-  correrse en un entorno con Postgres antes de dar la Fase 10 por cerrada.

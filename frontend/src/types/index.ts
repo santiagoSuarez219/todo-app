@@ -199,7 +199,7 @@ export type PurchaseStatus = (typeof PurchaseStatus)[keyof typeof PurchaseStatus
 
 // ─── Finances — Entities ─────────────────────────────────────────────────────
 
-// spec-034: Expense absorbe a BudgetItem — un gasto puede ser solo planeado
+// spec-035: Expense absorbe a BudgetItem — un gasto puede ser solo planeado
 // (plannedAmount, sin amount/date), solo ejecutado (amount+date, sin
 // plannedAmount) o ambos ("settled"). `executionStatus` es calculado por el
 // backend, no se envía en los DTOs de escritura.
@@ -216,7 +216,7 @@ export interface Expense {
   creditCard: CreditCard | null;
   /**
    * Presente cuando el gasto es una cuota generada automáticamente por una
-   * deuda (spec-026, portado a Expense en spec-034).
+   * deuda (spec-026, portado a Expense en spec-035).
    */
   debt?: { id: string } | null;
   installmentNumber?: number | null;
@@ -332,7 +332,7 @@ export interface CreatePurchaseDto {
 
 export type UpdatePurchaseDto = Partial<CreatePurchaseDto>;
 
-// spec-034: amount/date dejan de ser obligatorios — un gasto puede nacer
+// spec-035: amount/date dejan de ser obligatorios — un gasto puede nacer
 // solo planeado (plannedAmount, sin amount/date). El backend valida que al
 // menos uno de los dos esté presente, y que amount/date vayan juntos.
 export interface CreateExpenseDto {
@@ -359,10 +359,10 @@ export interface CreateIncomeDto {
 
 export type UpdateIncomeDto = Partial<CreateIncomeDto>;
 
-// spec-034: BudgetItem se elimina — un ítem de presupuesto es ahora un
+// spec-035: BudgetItem se elimina — un ítem de presupuesto es ahora un
 // Expense con plannedAmount y budgetId. TypeBreakdown reemplaza a
 // BudgetTypeSummary: planeado y ejecutado ya no se suman en el mismo
-// acumulador (esa suma era la causa del doble conteo pre-spec-034).
+// acumulador (esa suma era la causa del doble conteo pre-spec-035).
 export interface TypeBreakdown {
   type: ExpenseType;
   planned: number;
@@ -389,7 +389,7 @@ export interface Budget {
 
 // ─── Finances — Budget DTOs ──────────────────────────────────────────────────
 
-// spec-034, decisión 11: el presupuesto nace vacío. Los gastos se agregan
+// spec-035, decisión 11: el presupuesto nace vacío. Los gastos se agregan
 // después vía POST /finances/expenses con `budgetId`.
 export interface CreateBudgetDto {
   name: string;
@@ -415,7 +415,7 @@ export interface DuplicateBudgetResult {
   incomesCopied: number;
 }
 
-/** spec-034, decisión 12: borrar un presupuesto borra sus gastos en cascada. */
+/** spec-035, decisión 12: borrar un presupuesto borra sus gastos en cascada. */
 export interface RemoveBudgetResult {
   executedExpensesRemoved: number;
   executedTotalRemoved: number;

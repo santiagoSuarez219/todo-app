@@ -1,4 +1,4 @@
-# spec-034 — [TESTING] Unificación de presupuesto y gastos
+# spec-035 — [TESTING] Unificación de presupuesto y gastos
 
 > Estado inicial obligatorio: `[NOT STARTED]`.
 > Actualizar a `[IN PROGRESS]`, `[TESTING]` o `[DONE]` según avance.
@@ -261,9 +261,9 @@ Invariantes, protegidas por CHECK en base de datos **y** por DTO:
 > Se escribe **junto con el spec**, antes de la aprobación de implementación.
 > Arranca en rojo y define la aceptación por adelantado.
 
-- [x] `docs/testing/test-034-unificacion-presupuesto-gastos.md` con casos
-      `TC-034-xxx` y `TC-MCP-034-xxx`.
-- [x] `backend/test/e2e-034-unificacion-presupuesto-gastos.e2e-spec.ts` en rojo,
+- [x] `docs/testing/test-035-unificacion-presupuesto-gastos.md` con casos
+      `TC-035-xxx` y `TC-MCP-035-xxx`.
+- [x] `backend/test/e2e-035-unificacion-presupuesto-gastos.e2e-spec.ts` en rojo,
       un bloque por criterio de aceptación.
 - [x] Revisar `backend/test/e2e-026-deudas-cuotas-en-presupuesto.e2e-spec.ts`:
       sus aserciones sobre `/budgets/:id/items` y `budget.items` deben apuntar a
@@ -478,13 +478,19 @@ local, no un camino soportado en producción.
       reglas de presupuestos, proyecciones y flujos frecuentes.
 - [x] Actualizar la nota de inventario en `docs/mcps/README.md` — revisada:
       no mencionaba ítems de presupuesto explícitamente, no requirió cambios.
-- [ ] Verificar por JSON-RPC directo que las tools responden (precedente:
+- [x] Verificar por JSON-RPC directo que las tools responden (precedente:
       spec-033), incluidos los casos de `.refine()` fallando con mensaje claro.
-      **Bloqueado en este entorno**: Docker no está disponible (`Cannot
-      connect to the Docker daemon`), sin base de datos no se puede levantar
-      `npm run start:dev` ni ejercer `/mcp`. Verificado en su lugar que
-      `npx tsc --noEmit -p .` no introduce errores nuevos en `mcp.service.ts`.
-      Pendiente de una verificación JSON-RPC real cuando haya entorno con DB.
+      Desbloqueado: usuario levantó Docker. `create_expense` con
+      `plannedAmount`/`budgetId`/`creditCardId` verificado end-to-end contra
+      `/mcp` (creación real + `get_monthly_expense_summary.cardTotals`
+      reflejando el gasto). `create_expense` sin ningún monto verificado
+      rechazado: el SDK MCP no propaga el `.refine()` fallido como error de
+      protocolo JSON-RPC top-level (a diferencia de lo asumido originalmente
+      en el e2e) sino como resultado de tool con `isError: true` y el
+      mensaje del `.refine()` en `content[0].text` — misma convención
+      ok()/err() que `NotFoundException` (ver nota de e2e-023). Confirmado
+      por SQL directo que no crea ninguna fila. `e2e-035` (Fase 0) corregido
+      para reflejar el mecanismo real en vez del asumido.
 
 ### Fase 7 — Frontend: tipos, servicios y hooks
 
@@ -570,14 +576,43 @@ local, no un camino soportado en producción.
 - [x] `npx tsc --noEmit` y `npm run lint` (frontend) verificados sin errores
       nuevos atribuibles a este spec (los 4 preexistentes en `Login.tsx` y
       `auth.service.ts` no fueron tocados).
-- [ ] **Pendiente — sin Docker en este entorno** (mismo bloqueo reportado por
-      `@tester` en la Fase 0 y por `@mcp-builder` en la Fase 6): poner en
-      verde `e2e-034-unificacion-presupuesto-gastos.e2e-spec.ts`, reejecutar
-      `e2e-023` y `e2e-026` ya adaptados, correr `npm run test:e2e` completo,
-      y verificar por JSON-RPC directo que las tools MCP responden (pendiente
-      también de la Fase 6). Requiere un entorno con PostgreSQL disponible —
-      registrado en `spec/backlog.md`.
-- [ ] El usuario ejecuta `docs/testing/test-034-...md`; Claude prepara los datos
+- [x] **Desbloqueado**: usuario levantó Docker (Postgres local, puerto 5433).
+      Migración `UnifyBudgetItemsIntoExpenses1787100000000` ejecutada contra
+      el entorno local — verificado sin pérdida de datos: 34 gastos con
+      `plannedAmount` no nulo migrados desde `budget_items` (tabla eliminada),
+      0 gastos con `debtId` en este entorno (no había deudas activas).
+      `e2e-035-unificacion-presupuesto-gastos.e2e-spec.ts` corrido contra la
+      BD migrada: **32/32 falló → verde**, tras encontrar y corregir:
+      - 🔴 **Bug real de backend**: `ExpensesService.findAll()`/`findOne()`
+        (`expenses.service.ts:66-69, 92-96`) no hacían
+        `leftJoinAndSelect('expense.debt', 'debt')` — `GET /finances/expenses`
+        y `GET /finances/expenses/:id` nunca devolvían `debt`/`debtId`, pese a
+        que la relación existe en la entidad desde la Fase 1 y
+        `budgets.service.ts` sí la unía (`findOne`/`findAll` de presupuestos,
+        líneas 106-107 y 131-133) — inconsistencia entre ambos servicios.
+        Rompía silenciosamente AC-8 y AC-9 (cualquier consumidor de
+        `GET /expenses`, incluida la UI del badge "Deuda" en
+        `ExpenseCard.tsx`, no podía identificar el vínculo con la deuda).
+        **Corregido**: se agregó el join en ambos métodos.
+      - 🟡 Dos aserciones de test con supuestos incorrectos sobre mecanismos
+        de la plataforma, no sobre el comportamiento del backend: AC-1
+        esperaba `201` con un campo `items` no declarado, cuando
+        `ValidationPipe` corre con `forbidNonWhitelisted: true` (`main.ts`) y
+        correctamente devuelve `400`; AC-12 esperaba el error de `.refine()`
+        de Zod como error de protocolo JSON-RPC top-level, cuando
+        `registerTool` del SDK MCP lo devuelve como `isError: true` con el
+        mensaje en `content[0].text` (misma convención ok()/err() de
+        `NotFoundException`, ver nota de e2e-023) — verificado en vivo que la
+        tool rechaza y no crea nada. Ambas aserciones corregidas para
+        reflejar el comportamiento real y correcto.
+      `e2e-023` y `e2e-026` reejecutados: **22/22 en verde**, sin relajar
+      ninguna aserción (la red de seguridad del portado de deudas del spec-026
+      queda intacta). `npm run test:e2e` completo: **198/200** — los 2
+      restantes (`app.e2e-spec.ts`, `auth.e2e-spec.ts`) son preexistentes y
+      ajenos al spec, confirmado corriendo la misma suite sin los cambios de
+      este spec (falla igual). Verificación JSON-RPC de las tools MCP: ver
+      Fase 6, ítem actualizado arriba.
+- [ ] El usuario ejecuta `docs/testing/test-035-...md`; Claude prepara los datos
       vía API, registra hallazgos caso por caso y limpia al cerrar la ronda.
 - [ ] `@tester` cierra la ronda automática; `@reviewer` revisa antes de `[DONE]`.
 
@@ -639,10 +674,10 @@ Fase 0 (pruebas en rojo)
 
 > Estos archivos se crean junto con el spec (ver "Artefactos que acompañan al spec").
 
-- **Manuales:** `docs/testing/test-034-unificacion-presupuesto-gastos.md` —
-  casos `TC-034-xxx` y `TC-MCP-034-xxx`.
+- **Manuales:** `docs/testing/test-035-unificacion-presupuesto-gastos.md` —
+  casos `TC-035-xxx` y `TC-MCP-035-xxx`.
 - **Automáticas (backend):**
-  `backend/test/e2e-034-unificacion-presupuesto-gastos.e2e-spec.ts`, más los
+  `backend/test/e2e-035-unificacion-presupuesto-gastos.e2e-spec.ts`, más los
   ajustes a `e2e-026` y `e2e-023`, y los unitarios de
   `backend/src/finances/*.spec.ts`.
 

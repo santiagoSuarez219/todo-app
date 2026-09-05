@@ -47,7 +47,7 @@ describe('ExpensesService - duplicate()', () => {
       findOneBy: jest.fn(),
     };
 
-    // spec-034: duplicate() intenta auto-vincular el destino a un
+    // spec-035: duplicate() intenta auto-vincular el destino a un
     // presupuesto existente de ese mes — por defecto, ninguno (gasto
     // suelto), salvo que un test lo sobreescriba.
     mockBudgetsRepository = {

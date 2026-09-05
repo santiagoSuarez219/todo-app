@@ -5,11 +5,11 @@ export interface GetExpensesFilters {
   year?: number;
   month?: number;
   search?: string;
-  /** spec-034: gastos de un presupuesto puntual. */
+  /** spec-035: gastos de un presupuesto puntual. */
   budgetId?: string;
-  /** spec-034: solo planeados sin ejecutar (amount IS NULL). */
+  /** spec-035: solo planeados sin ejecutar (amount IS NULL). */
   planned?: boolean;
-  /** spec-034: solo ejecutados (amount IS NOT NULL). */
+  /** spec-035: solo ejecutados (amount IS NOT NULL). */
   executed?: boolean;
 }
 

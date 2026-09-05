@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ExpenseType } from '../../types';
 import type { CreateExpenseDto } from '../../types';
 
-// spec-034: reemplaza a BudgetItemForm — agregar un ítem al presupuesto es
+// spec-035: reemplaza a BudgetItemForm — agregar un ítem al presupuesto es
 // ahora crear un Expense con `plannedAmount` + `budgetId`, sin `amount`/
 // `date` (queda "planned" hasta que se registre su ejecución).
 const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {

@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * spec-034 — Fase 1: fusiona `budget_items` en `expenses`. A partir de aquí
- * un gasto planeado y uno ejecutado son la misma fila (ver spec-034,
+ * spec-035 — Fase 1: fusiona `budget_items` en `expenses`. A partir de aquí
+ * un gasto planeado y uno ejecutado son la misma fila (ver spec-035,
  * "Semántica derivada"): `amount`/`date` pasan a nullable, se agregan
  * `plannedAmount`, `budgetId`, `debtId` e `installmentNumber` (heredados de
  * `BudgetItem`), y la tabla `budget_items` desaparece.
@@ -20,7 +20,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * `down()` es una reconstrucción best-effort y **con pérdida**: los gastos
  * "solo plan" (`amount IS NULL`) no tienen representación en el esquema
  * anterior y se eliminan al revertir. Es un recurso de emergencia local, no
- * un camino soportado en producción — ver spec-034, riesgo 1.
+ * un camino soportado en producción — ver spec-035, riesgo 1.
  */
 export class UnifyBudgetItemsIntoExpenses1787100000000 implements MigrationInterface {
   name = 'UnifyBudgetItemsIntoExpenses1787100000000';
