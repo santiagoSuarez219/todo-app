@@ -171,15 +171,15 @@ externas). Autenticación: no implementada — app de uso personal, un solo usua
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `GET` | `/activities` | Lista paginada |
+| `GET` | `/activities` | Lista paginada. **Excluye plantillas y subtareas por defecto** — `?includeTemplates=true` / `?includeSubtasks=true` para incluirlas. Acepta `?status=` (uno o varios, separados por coma) y `?dueFilter=overdue\|no_date` (spec-034) |
+| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas. Acepta `?projectId=`, `?includeTemplates=`, `?includeSubtasks=` (spec-034) |
 | `GET` | `/activities/today` | `dueDate` en el día actual o `scheduledForToday = true` |
 | `GET` | `/activities/tomorrow` | `dueDate` mañana |
 | `GET` | `/activities/this-week` | Semana actual (Lun–Dom) por `dueDate` |
 | `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
 | `GET` | `/activities/schedule` | Cronograma mensual — `?year=&month=`, ver lógica |
-| `GET` | `/activities/without-project` | Sin proyecto asociado |
-| `GET` | `/activities/project/:projectId` | Por proyecto |
-| `GET` | `/activities/type/:type` | Por tipo |
+| `GET` | `/activities/without-project` | Sin proyecto asociado. Excluye plantillas y subtareas (spec-034) |
+| `GET` | `/activities/project/:projectId` | Por proyecto. Mismos filtros y mismo comportamiento por defecto que `GET /activities` (spec-034) |
 | `GET` | `/activities/priority/:priority` | Por prioridad |
 | `GET` | `/activities/status/:status` | Por status |
 | `GET` | `/activities/search/:query` | ILIKE en name, description, project.name |

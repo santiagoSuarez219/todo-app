@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   useActivities,
+  useActivitiesSummary,
   useTodayActivities,
   useOverdueActivities,
   useThisWeekActivities,
@@ -9,21 +10,18 @@ import {
 } from '../hooks/useActivities';
 import { useDebounce } from '../hooks/useDebounce';
 import ActivityCard from '../components/ActivityCard';
+import ActivityStatusFilter from '../components/ActivityStatusFilter';
 import EmptyState from '../components/EmptyState';
+import Pagination from '../components/Pagination';
 import { SearchBar } from '../components/SearchBar';
+import {
+  DEFAULT_ACTIVITY_FILTER,
+  activityFilterToParams,
+  getActivityFilter,
+  type ActivityFilterKey,
+} from '../lib/activityFilters';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type FilterTab = 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'no_date';
-
-const TABS: { key: FilterTab; label: string }[] = [
-  { key: 'all',         label: 'Todas' },
-  { key: 'pending',     label: 'Pendientes' },
-  { key: 'in_progress', label: 'En progreso' },
-  { key: 'completed',   label: 'Completadas' },
-  { key: 'overdue',     label: 'Atrasadas' },
-  { key: 'no_date',     label: 'Sin fecha' },
-];
+const LIMIT = 20;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -79,41 +77,40 @@ function StatCard({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [activeFilter, setActiveFilter] = useState<ActivityFilterKey>(DEFAULT_ACTIVITY_FILTER);
+  const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
 
   const todayQ = useTodayActivities({ limit: 100 });
   const overdueQ = useOverdueActivities({ limit: 100 });
   const weekQ = useThisWeekActivities({ limit: 100 });
-  const allQ = useActivities({ limit: 50 });
+  const summaryQ = useActivitiesSummary();
+  const listQ = useActivities({ page, limit: LIMIT, ...activityFilterToParams(activeFilter) });
   const searchQ = useSearchActivities(debouncedSearch, { limit: 50 });
 
-  const now = new Date();
   const isSearching = debouncedSearch.trim().length >= 2;
-  const sourceList = isSearching ? (searchQ.data ?? []) : (allQ.data ?? []);
+  // spec-034: /activities ya excluye subtareas y plantillas server-side; el
+  // buscador (fuera de alcance de este spec, sigue siendo client-side) no
+  // aplica esa exclusión, así que se conserva el filtro acá para sus
+  // resultados.
+  const sourceList = isSearching ? (searchQ.data ?? []) : (listQ.data ?? []);
   const list = sourceList.filter((a) => !a.parent);
 
   // Loading inicial (sin datos que mostrar aún) vs. refresco (ya hay datos
   // previos visibles mientras llega el nuevo set → transición suave).
-  const isInitialLoading = isSearching ? searchQ.isLoading : allQ.isLoading;
-  const isRefreshing = isSearching && searchQ.isFetching && !searchQ.isLoading;
-  const hasError = isSearching ? searchQ.isError : allQ.isError;
+  const isInitialLoading = isSearching ? searchQ.isLoading : listQ.isLoading;
+  const isRefreshing = isSearching
+    ? searchQ.isFetching && !searchQ.isLoading
+    : listQ.isFetching && !listQ.isLoading;
+  const hasError = isSearching ? searchQ.isError : listQ.isError;
 
-  const filteredActivities = (() => {
-    switch (activeTab) {
-      case 'pending':   return list.filter((a) => a.status === 'pending');
-      case 'in_progress': return list.filter((a) => a.status === 'in_progress');
-      case 'completed': return list.filter((a) => a.status === 'completed');
-      case 'overdue':   return list.filter((a) => {
-        if (a.status === 'completed') return false;
-        return !!a.dueDate && new Date(a.dueDate) < now;
-      });
-      case 'no_date':   return list.filter((a) => !a.dueDate);
-      default:          return list.filter((a) => a.status !== 'completed');
-    }
-  })();
+  function handleFilterChange(key: ActivityFilterKey) {
+    setActiveFilter(key);
+    setPage(1);
+  }
 
+  const now = new Date();
   const dateLabel = now.toLocaleDateString('es-CO', {
     weekday: 'long',
     year: 'numeric',
@@ -171,43 +168,25 @@ export default function Dashboard() {
             value={searchInput}
             onChange={setSearchInput}
             placeholder="Buscar tareas..."
-            onClear={() => {
-              setSearchInput('');
-              setActiveTab('all');
-            }}
+            onClear={() => setSearchInput('')}
           />
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-0 mb-5 border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-none">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm transition-colors border-b-2 -mb-px whitespace-nowrap ${activeTab === tab.key
-                ? 'border-blue-700 dark:border-blue-400 text-blue-700 dark:text-blue-400 font-medium'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-            >
-              {tab.label}
-              {tab.key !== 'all' && allQ.data && (
-                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.key
-                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                  }`}>
-                  {tab.key === 'overdue'
-                    ? list.filter((a) => {
-                        if (a.status === 'completed') return false;
-                        return !!a.dueDate && new Date(a.dueDate) < now;
-                      }).length
-                    : tab.key === 'no_date'
-                    ? list.filter((a) => !a.dueDate).length
-                    : list.filter((a) => a.status === tab.key).length}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Filter tabs — deshabilitados mientras se busca: la búsqueda es un
+            scope propio (todo, sin importar estado), no compone con el
+            filtro de estado. */}
+        <div className={isSearching ? 'opacity-50 pointer-events-none' : undefined}>
+          <ActivityStatusFilter
+            value={activeFilter}
+            onChange={handleFilterChange}
+            summary={summaryQ.data}
+          />
         </div>
+        {isSearching && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3 mb-4">
+            Los filtros de estado se desactivan mientras buscas.
+          </p>
+        )}
 
         {/* Activity list */}
         {isInitialLoading && (
@@ -225,7 +204,7 @@ export default function Dashboard() {
           <p className="text-sm text-red-600 dark:text-red-400">Error al cargar actividades.</p>
         )}
 
-        {!isInitialLoading && !hasError && filteredActivities.length === 0 && (
+        {!isInitialLoading && !hasError && list.length === 0 && (
           <EmptyState
             message={
               isSearching
@@ -235,16 +214,25 @@ export default function Dashboard() {
           />
         )}
 
-        {!isInitialLoading && filteredActivities.length > 0 && (
+        {!isInitialLoading && list.length > 0 && (
           <div
             className={`grid gap-3 sm:grid-cols-1 transition-opacity duration-200 ${
               isRefreshing ? 'opacity-50' : 'opacity-100'
             }`}
           >
-            {filteredActivities.map((activity) => (
+            {list.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))}
           </div>
+        )}
+
+        {!isSearching && !isInitialLoading && !hasError && list.length > 0 && summaryQ.data && (
+          <Pagination
+            page={page}
+            total={getActivityFilter(activeFilter).count(summaryQ.data)}
+            limit={LIMIT}
+            onPageChange={setPage}
+          />
         )}
       </div>
     </div>

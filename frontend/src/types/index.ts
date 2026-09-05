@@ -149,6 +149,39 @@ export interface ScheduleParams {
   month: number;
 }
 
+// spec-034: filtros server-side compartidos por GET /activities y
+// GET /activities/project/:projectId — deben coincidir con
+// `ListActivitiesQueryDto` (backend).
+export const DueFilter = {
+  OVERDUE: 'overdue',
+  NO_DATE: 'no_date',
+} as const;
+export type DueFilter = (typeof DueFilter)[keyof typeof DueFilter];
+
+export interface ActivityListParams extends PaginationParams {
+  /** Uno o varios estados (unión). Se serializa separado por comas. */
+  status?: ActivityStatus[];
+  dueFilter?: DueFilter;
+  /** Default `false` en el backend — se omite para dejarlo en su default. */
+  includeTemplates?: boolean;
+  /** Default `false` en el backend — se omite para dejarlo en su default. */
+  includeSubtasks?: boolean;
+}
+
+export interface ActivitiesSummaryParams {
+  projectId?: string;
+  includeTemplates?: boolean;
+  includeSubtasks?: boolean;
+}
+
+/** Debe coincidir con `ActivitiesSummary` (backend, `activities.service.ts`). */
+export interface ActivitiesSummary {
+  total: number;
+  byStatus: Record<ActivityStatus, number>;
+  overdue: number;
+  noDate: number;
+}
+
 // ─── Finances — Enums ────────────────────────────────────────────────────────
 
 export const ExpenseType = {

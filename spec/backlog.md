@@ -188,3 +188,48 @@
   resto de tools de escritura de `mcp.service.ts` (`update_project`,
   `create_income`, y las ~25 restantes) sigue sin `.strict()`. Sin cambios
   respecto de la evaluación pendiente ya registrada en spec-030.
+
+## spec-034 — Corrección del listado de actividades y filtros por estado
+
+- **`frontend/CLAUDE.md` (sección "Interfaces principales") sigue muy
+  desactualizado más allá de lo que corrigió este spec.** Se corrigió el
+  enum `ActivityStatus` (faltaban `testing`/`waiting`) y se eliminó la ruta
+  inexistente `GET /activities/type/:type`, pero la interfaz `Activity`
+  documentada ahí sigue arrastrando `scheduledForToday` / `notionUrl` /
+  `isRecurring` (eliminados en spec-027/spec-031) y le faltan los campos
+  vigentes desde entonces: `scheduledFor`, `deferUntil`, `waitingFor`,
+  `waitingSince`, `completedAt`, `postponementCount`. Se dejó un comentario
+  inline señalándolo y remitiendo a `types/index.ts` como fuente de verdad
+  real. Reescribir el snippet completo quedó fuera de este spec (no era el
+  scope aprobado por el usuario) — hacerlo en una pasada dedicada de
+  limpieza de documentación.
+- **`backend/CLAUDE.md` documentaba `GET /activities/type/:type`**, una ruta
+  que no existe en `activities.controller.ts` (no hay `type` en el modelo
+  desde spec-027). Se corrigió al mismo tiempo que se documentaban los
+  filtros nuevos de spec-034, por estar en la misma tabla — no es parte del
+  alcance funcional de este spec, solo higiene de documentación adyacente.
+- **`backend/CLAUDE.md` tampoco documentaba `GET /activities/deferred`**
+  (existe desde spec-030). No se agregó en esta pasada para no ampliar el
+  scope de documentación más allá de lo tocado por spec-034 — pendiente.
+- **Falta un `TC-034` dedicado a "tab Completadas + búsqueda activa" en
+  ProjectDetail.** `@reviewer` encontró (y se corrigió antes del commit) un
+  bug real donde "Limpiar completadas" podía borrar actividades de cualquier
+  estado si había una búsqueda escrita con el tab Completadas seleccionado —
+  ni TC-034-013 (búsqueda + tabs) ni TC-034-018 (texto del diálogo) cubrían
+  esa combinación específica. La corrección quedó verificada por
+  tipos/build/lint, pero no se volvió a ejecutar en el navegador (los
+  servidores y los datos de prueba ya estaban desmontados). Si se abre una
+  ronda de regresión sobre `/projects/:id`, agregar ese caso.
+- **`TC-034-E2E-08`/`TC-034-E2E-11` tienen un riesgo residual menor de
+  flakiness** bajo `npm run test:e2e` (BD compartida en paralelo):
+  `/activities/overdue` y `/activities/without-project` no aceptan `status`
+  para acotar (fuera de la Fase 1 del spec, que solo lo agregó a
+  `findAll`/`findByProject`), así que sus aserciones positivas dependen de
+  `limit: 100` como única mitigación. Si algún día se vuelven intermitentes,
+  extender `status`/`dueFilter` a `findWithoutProject` (y considerar si
+  `findOverdue` también debería aceptarlos) resolvería la causa raíz.
+- **`test/jest-e2e.json` no fija `maxWorkers: 1`**, así que todas las suites
+  `e2e-*` corren en paralelo contra la misma BD de desarrollo compartida —
+  causa raíz genérica detrás de cualquier flakiness de este tipo, no solo la
+  de spec-034. Fijarlo a 1 worker lo resolvería de raíz para toda la suite,
+  pero es un cambio de configuración global fuera del alcance de este spec.

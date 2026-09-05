@@ -4,14 +4,28 @@ import {
   getTodayActivities, getThisWeekActivities, getOverdueActivities,
   getActivitiesByProject, searchActivities, getActivitySubtasks, createSubtask,
   getWithoutProjectActivities, getActivityInstances, cancelFutureInstances,
-  getScheduleActivities,
+  getScheduleActivities, getActivitiesSummary,
 } from '../services/activities.service';
-import type { CreateActivityDto, UpdateActivityDto, PaginationParams, ActivitySearchParams } from '../types';
+import type {
+  CreateActivityDto, UpdateActivityDto, PaginationParams, ActivitySearchParams,
+  ActivityListParams, ActivitiesSummaryParams,
+} from '../types';
 
-export function useActivities(params?: PaginationParams) {
+export function useActivities(params?: ActivityListParams) {
   return useQuery({
     queryKey: ['activities', params],
     queryFn: () => getActivities(params),
+    // Evita el flash a skeleton al cambiar de tab o de página — mismo patrón
+    // que useSearchActivities / useScheduleActivities.
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useActivitiesSummary(params?: ActivitiesSummaryParams) {
+  return useQuery({
+    queryKey: ['activities', 'summary', params],
+    queryFn: () => getActivitiesSummary(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -44,11 +58,12 @@ export function useOverdueActivities(params?: PaginationParams) {
   });
 }
 
-export function useActivitiesByProject(projectId: string, params?: PaginationParams) {
+export function useActivitiesByProject(projectId: string, params?: ActivityListParams) {
   return useQuery({
     queryKey: ['activities', 'project', projectId, params],
     queryFn: () => getActivitiesByProject(projectId, params),
     enabled: !!projectId,
+    placeholderData: keepPreviousData,
   });
 }
 

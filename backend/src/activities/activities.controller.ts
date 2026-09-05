@@ -29,8 +29,11 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { SearchActivitiesQueryDto } from './dto/search-activities-query.dto';
 import { DeferredActivitiesQueryDto } from './dto/deferred-activities-query.dto';
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
+import { ListActivitiesQueryDto } from './dto/list-activities-query.dto';
+import { ActivitiesSummaryQueryDto } from './dto/activities-summary-query.dto';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { Priority } from '../common/enums/priority.enum';
+import type { ActivitiesSummary } from './activities.service';
 
 @ApiTags('activities')
 @Controller('activities')
@@ -47,13 +50,34 @@ export class ActivitiesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all activities (paginated)' })
+  @ApiOperation({
+    summary:
+      'Get all activities (paginated). By default excludes recurring ' +
+      'templates and subtasks — see includeTemplates/includeSubtasks. ' +
+      'Accepts status (one or more, comma-separated) and dueFilter ' +
+      '(overdue | no_date)',
+  })
   @ApiOkResponse({ type: [Activity] })
-  findAll(@Query() pagination: PaginationDto): Promise<Activity[]> {
-    return this.activitiesService.findAll(pagination);
+  findAll(@Query() query: ListActivitiesQueryDto): Promise<Activity[]> {
+    return this.activitiesService.findAll(query);
   }
 
   // ─── Consultas especializadas (deben ir ANTES de /:id) ──────────────────────
+
+  @Get('summary')
+  @ApiOperation({
+    summary:
+      'Get activity counts grouped by status, plus overdue and no-date ' +
+      'counts, without fetching the rows. Excludes templates and subtasks ' +
+      'by default (same defaults as GET /activities). Optional projectId ' +
+      'scopes the counts to a single project.',
+  })
+  @ApiOkResponse({ description: 'ActivitiesSummary' })
+  getSummary(
+    @Query() query: ActivitiesSummaryQueryDto,
+  ): Promise<ActivitiesSummary> {
+    return this.activitiesService.getSummary(query);
+  }
 
   @Get('today')
   @ApiOperation({ summary: "Get today's activities (by actionDate)" })
@@ -117,14 +141,19 @@ export class ActivitiesController {
   }
 
   @Get('project/:projectId')
-  @ApiOperation({ summary: 'Get activities by project' })
+  @ApiOperation({
+    summary:
+      'Get activities by project. Same defaults as GET /activities: ' +
+      'excludes templates and subtasks unless includeTemplates/' +
+      'includeSubtasks is set',
+  })
   @ApiParam({ name: 'projectId', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: [Activity] })
   findByProject(
     @Param('projectId', ParseUUIDPipe) projectId: string,
-    @Query() pagination: PaginationDto,
+    @Query() query: ListActivitiesQueryDto,
   ): Promise<Activity[]> {
-    return this.activitiesService.findByProject(projectId, pagination);
+    return this.activitiesService.findByProject(projectId, query);
   }
 
   @Get('priority/:priority')
