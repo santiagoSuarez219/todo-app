@@ -803,10 +803,11 @@ inesperado, lentitud, detalle visual… o "sin observaciones"}}
 
 | Campo              | Valor                                      |
 |--------------------|--------------------------------------------|
-| Proveedor          | **Neon** (Postgres serverless). En local, en cambio, es PostgreSQL 16 vía `docker-compose.yml` (puerto 5433, sin SSL) |
-| Proyecto / Cluster | `{{nombre del proyecto en Neon}}`          |
-| Base de datos      | `todo_db`                                  |
-| Región             | `{{región de producción}}`                 |
+| Proveedor          | **Neon** (Postgres serverless), plan `free_v3`. En local, en cambio, es PostgreSQL 16 vía `docker-compose.yml` (puerto 5433, sin SSL) |
+| Proyecto / Cluster | `to-do` (`proud-bar-87722527`) · rama por defecto `production` (`br-green-grass-aq3nn6w0`) |
+| Base de datos      | **`neondb`**, rol `neondb_owner` (⚠️ **no** `todo_db` / `todo_user`: esos son los nombres **locales** de `docker-compose.yml`) |
+| Versión de Postgres | **18** en producción · **16** en local — la diferencia es real: una migración probada solo en local no está probada contra producción |
+| Región             | `aws-us-east-1`                            |
 | Variable de conexión | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` en `.env` (no `DATABASE_URL`: `data-source.ts` arma la conexión con campos sueltos) |
 | Panel de control   | `https://console.neon.tech`                |
 
@@ -823,10 +824,17 @@ inesperado, lentitud, detalle visual… o "sin observaciones"}}
 > primero: es el único ensayo fiel contra datos reales sin arriesgarlos. Ver
 > "Proceso de despliegue — Backend", paso 2.
 
-> **Point-in-time restore.** Neon conserva historial según el plan
-> (`{{ventana de retención — confirmar en la consola}}`), lo que da un
-> camino de recuperación si una migración sale mal en producción. Confirmar
-> la ventana **antes** de desplegar un cambio de esquema destructivo.
+> **Point-in-time restore: solo 6 horas.** El plan `free_v3` tiene
+> `history_retention_seconds: 21600`. Si una migración corrompe datos y no
+> se detecta dentro de esa ventana, el PITR ya no sirve. Por eso, antes de
+> un despliegue con esquema destructivo, crear también una rama de respaldo
+> (ej. `backup-pre-vX.Y.Z`) y **dejarla intacta**: una rama es un punto de
+> restauración permanente, congelado y ajeno a la ventana de 6 h.
+
+> **Ojo con `set -a; . ./archivo.env`** para cargar credenciales al probar:
+> el shell expande los `$` de un hash bcrypt (`$2b$10$…`) y lo corrompe en
+> silencio, produciendo un `401` incomprensible en el login. Entrecomillar
+> los valores (`CLAVE='valor'`) al generar ese archivo.
 
 #### Backend
 
