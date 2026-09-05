@@ -290,7 +290,7 @@ src/
 | `startDate` | `date` | requerido |
 | `endDate` | `date` | nullable |
 | `activities` | relación | `OneToMany → Activity` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Activity (`activities`)
 
@@ -318,7 +318,7 @@ src/
 | `recurrenceDayOfMonth` | `integer` | nullable — día del mes (1–31) |
 | `recurrenceEndDate` | `timestamptz` | nullable — hasta cuándo generar instancias |
 | `instanceDate` | `date` | nullable — fecha de esta instancia específica |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Expense (`expenses`)
 
@@ -338,7 +338,7 @@ src/
 | `creditCard` | FK → `credit_cards` | nullable, `onDelete: SET NULL` |
 | `debt` | FK → `debts` | nullable, `onDelete: CASCADE` — cuota de deuda materializada (heredado de `BudgetItem`, spec-026) |
 | `installmentNumber` | `int` | nullable — heredado de `BudgetItem` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 Invariantes en DB (`CHK_expenses_has_amount`, `CHK_expenses_amount_date_together`):
 no puede haber una fila sin `plannedAmount` ni `amount`, y `amount`/`date`
@@ -358,7 +358,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `amount` | `decimal(12,2)` | COP |
 | `date` | `date` | requerido |
 | `type` | `enum` | `sueldo \| freelance \| intereses \| dividendos \| otro` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Purchase (`purchases`)
 
@@ -372,7 +372,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `status` | `enum` | default `pendiente` |
 | `url` | `varchar` | nullable |
 | `notes` | `text` | nullable |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Account (`accounts`)
 
@@ -384,7 +384,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `bank` | `varchar(255)` | requerido |
 | `currentBalance` | `decimal(15,2)` | COP |
 | `interestRate` | `decimal(5,4)` | nullable, decimal (0.045 = 4.5%) |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### CreditCard (`credit_cards`)
 
@@ -397,7 +397,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `monthlyFee` | `decimal(10,2)` | COP |
 | `totalLimit` | `decimal(15,2)` | COP |
 | `availableLimit` | `decimal(15,2)` | COP |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Cdt (`cdts`)
 
@@ -409,7 +409,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `interestRate` | `decimal(5,4)` | anual, decimal |
 | `startDate` | `date` | requerido |
 | `endDate` | `date` | requerido, debe ser posterior a `startDate` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 Activo si `endDate >= hoy` (calculado en `findActive()`, no persistido).
 
@@ -426,7 +426,7 @@ Activo si `endDate >= hoy` (calculado en `findActive()`, no persistido).
 | `month` | `integer` | 1–12 |
 | `year` | `integer` | requerido, índice único `(month, year)` |
 | `expenses` | relación | `OneToMany → Expense`, **sin `cascade`** — el borrado en cascada de sus gastos es una decisión de negocio explícita en `BudgetsService.remove()`, no un efecto de TypeORM |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 `totalIncome`, `plannedTotal`, `executedTotal`, `variance` y `byType` no son
 columnas — se calculan en `budgets.service.ts` al leer.
@@ -448,7 +448,7 @@ columnas — se calculan en `budgets.service.ts` al leer.
 | `startYear` | `int` | año de la primera cuota |
 | `paidOffAt` | `timestamptz` | nullable, fecha del pago total anticipado (`pay-off`) |
 | `status` | `enum` | default `activa`; se persiste `pagada` solo por pago total o normalización perezosa (ver abajo) |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 `paidInstallments` **no es columna** (se eliminó en spec-026, Fase 7) — se
 deriva en cada lectura a partir de `startMonth`/`startYear`, `totalInstallments`
@@ -459,6 +459,29 @@ deriva, para uso de la UI.
 
 Las cuotas de deuda se materializan como `Expense` (`debt` + `installmentNumber`,
 heredados de `BudgetItem` en spec-035) — ver `Expense` arriba.
+
+### Nota sobre los tipos de fecha
+
+Verificado contra la base de producción (2026-09-05). No todas las columnas
+temporales son del mismo tipo, y la diferencia importa:
+
+| Tipo real | Columnas |
+|---|---|
+| `timestamp` **sin** zona horaria | Los 20 `createdAt` / `updatedAt` de todas las tablas |
+| `timestamptz` (con zona) | `activities.dueDate`, `activities.completedAt`, `activities.recurrenceEndDate`, `debts.paidOffAt` |
+| `date` (día puro) | `activities.deferUntil`, `activities.scheduledFor`, `activities.waitingSince`, `expenses.date`, `incomes.date`, `cdts.startDate`/`endDate` |
+
+Los `createdAt`/`updatedAt` salen `timestamp` sin zona porque
+`@CreateDateColumn()` / `@UpdateDateColumn()` se usan **sin opciones**, y ese
+es el default de TypeORM en Postgres. Versiones anteriores de este archivo
+los documentaban como `timestamptz`, lo cual es falso.
+
+⚠️ **Consecuencia práctica:** un cliente que lea esas columnas las interpreta
+en **su** zona horaria, no en UTC. Al depurar con un script Node local
+(`-05:00`), un `updatedAt` recién escrito aparece 5 horas en el futuro —
+pasó de verdad al investigar un reporte durante el despliegue de v2.0.0 y
+casi lo confundimos con un bug de datos. Para comparar contra "ahora", usar
+`now()` **dentro** de la consulta SQL, no en el cliente.
 
 ### Enums
 
