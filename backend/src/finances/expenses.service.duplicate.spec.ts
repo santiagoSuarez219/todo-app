@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { Expense } from './entities/expense.entity';
 import { CreditCard } from './entities/credit-card.entity';
+import { Budget } from './entities/budget.entity';
 import { ExpenseType } from '../common/enums/expense-type.enum';
 
 /**
@@ -20,6 +21,7 @@ describe('ExpensesService - duplicate()', () => {
   let service: ExpensesService;
   let mockExpensesRepository: any;
   let mockCreditCardsRepository: any;
+  let mockBudgetsRepository: any;
 
   const buildExpense = (overrides: Partial<Expense> = {}): Expense =>
     ({
@@ -45,6 +47,13 @@ describe('ExpensesService - duplicate()', () => {
       findOneBy: jest.fn(),
     };
 
+    // spec-035: duplicate() intenta auto-vincular el destino a un
+    // presupuesto existente de ese mes — por defecto, ninguno (gasto
+    // suelto), salvo que un test lo sobreescriba.
+    mockBudgetsRepository = {
+      findOneBy: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExpensesService,
@@ -55,6 +64,10 @@ describe('ExpensesService - duplicate()', () => {
         {
           provide: getRepositoryToken(CreditCard),
           useValue: mockCreditCardsRepository,
+        },
+        {
+          provide: getRepositoryToken(Budget),
+          useValue: mockBudgetsRepository,
         },
       ],
     }).compile();

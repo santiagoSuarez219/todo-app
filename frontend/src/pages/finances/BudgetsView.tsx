@@ -17,7 +17,23 @@ const MONTHS = [
 const COP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
 function totalPlanned(budget: Budget): number {
-  return (budget.items ?? []).reduce((sum, item) => sum + Number(item.plannedAmount), 0);
+  if (budget.plannedTotal != null) return budget.plannedTotal;
+  return (budget.expenses ?? []).reduce(
+    (sum, e) => sum + (e.plannedAmount != null ? Number(e.plannedAmount) : 0),
+    0,
+  );
+}
+
+// spec-035, decisión 12: eliminar un presupuesto borra en cascada todos sus
+// gastos, incluidos los ya ejecutados. Se calcula en cliente (ya viene
+// embebido en `useBudgets`) para advertir antes de confirmar, sin request
+// adicional.
+function executedStats(budget: Budget): { count: number; total: number } {
+  const executed = (budget.expenses ?? []).filter((e) => e.amount != null);
+  return {
+    count: executed.length,
+    total: executed.reduce((sum, e) => sum + Number(e.amount), 0),
+  };
 }
 
 export default function BudgetsView() {
@@ -103,7 +119,7 @@ export default function BudgetsView() {
                     {MONTHS[budget.month - 1]} {budget.year}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {(budget.items ?? []).length} ítem{(budget.items ?? []).length !== 1 ? 's' : ''}
+                    {(budget.expenses ?? []).length} gasto{(budget.expenses ?? []).length !== 1 ? 's' : ''}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
@@ -167,9 +183,8 @@ export default function BudgetsView() {
             <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
               <p className="text-sm font-medium text-green-700 dark:text-green-300">¡Duplicación completada!</p>
               <div className="text-xs text-green-600 dark:text-green-400 mt-2 space-y-1">
-                <p>✓ {duplicateSuccess.itemsCopied} ítem{duplicateSuccess.itemsCopied !== 1 ? 's' : ''} copiado{duplicateSuccess.itemsCopied !== 1 ? 's' : ''}</p>
+                <p>✓ {duplicateSuccess.plannedExpensesCopied} gasto{duplicateSuccess.plannedExpensesCopied !== 1 ? 's' : ''} planeado{duplicateSuccess.plannedExpensesCopied !== 1 ? 's' : ''} copiado{duplicateSuccess.plannedExpensesCopied !== 1 ? 's' : ''}</p>
                 <p>✓ {duplicateSuccess.incomesCopied} ingreso{duplicateSuccess.incomesCopied !== 1 ? 's' : ''} recreado{duplicateSuccess.incomesCopied !== 1 ? 's' : ''}</p>
-                <p>✓ {duplicateSuccess.expensesCopied} gasto{duplicateSuccess.expensesCopied !== 1 ? 's' : ''} recreado{duplicateSuccess.expensesCopied !== 1 ? 's' : ''}</p>
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
@@ -197,7 +212,16 @@ export default function BudgetsView() {
       <ConfirmDialog
         open={!!toDelete}
         title="Eliminar presupuesto"
-        message={`¿Eliminar "${toDelete?.name}"? Se eliminarán también todos sus ítems.`}
+        message={
+          toDelete
+            ? (() => {
+                const { count, total } = executedStats(toDelete);
+                return count > 0
+                  ? `¿Eliminar "${toDelete.name}"? Se eliminarán en cascada todos sus gastos, incluidos ${count} ya ejecutado${count !== 1 ? 's' : ''} por un total de ${COP.format(total)}. Esta acción no se puede deshacer.`
+                  : `¿Eliminar "${toDelete.name}"? Se eliminarán también todos sus gastos planeados. Esta acción no se puede deshacer.`;
+              })()
+            : ''
+        }
         confirmLabel="Eliminar"
         onConfirm={() => remove(toDelete!.id, { onSuccess: () => setToDelete(null) })}
         onCancel={() => setToDelete(null)}

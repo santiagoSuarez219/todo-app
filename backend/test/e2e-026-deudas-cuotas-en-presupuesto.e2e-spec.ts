@@ -6,6 +6,14 @@
 // endpoints `pay-off`/`sync-budget-items`, y la baja de `POST
 // /finances/debts/:id/pay`).
 //
+// Adaptado por spec-034 (unificación presupuesto/gastos): `BudgetItem`
+// desaparece — las cuotas de deuda ahora son `Expense` con `plannedAmount` +
+// `budgetId`. `budget.items` → `budget.expenses`; los endpoints
+// `POST/PATCH/DELETE /finances/budgets/:id/items[...]` desaparecen en favor
+// de `POST/PATCH/DELETE /finances/expenses[...]`; `itemsCopied` →
+// `plannedExpensesCopied` en la respuesta de duplicar. Ninguna aserción se
+// relajó: son renombres 1:1 sobre el mismo comportamiento verificado.
+//
 // Redactado sin haber leído `spec/spec-026-deudas-cuotas-en-presupuesto.md`
 // (instrucción explícita — el spec se está redactando en paralelo). Los
 // nombres de campos (`startMonth`, `startYear`, `paidOffAt`,
@@ -139,10 +147,11 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
   });
 
   afterAll(async () => {
-    // Loose items first (they may belong to budgets we don't own).
-    for (const { budgetId, itemId } of looseItemRefs.reverse()) {
+    // Loose items first (they may belong to budgets we don't own). Un ítem
+    // de presupuesto es ahora un Expense — se borra por su propio id.
+    for (const { itemId } of looseItemRefs.reverse()) {
       await request(app.getHttpServer())
-        .delete(`/api/v1/finances/budgets/${budgetId}/items/${itemId}`)
+        .delete(`/api/v1/finances/expenses/${itemId}`)
         .set('Cookie', authCookies);
     }
     // Debts next (may cascade-delete future items / desassociate past ones).
@@ -200,10 +209,11 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       name: string;
       month: number;
       year: number;
-      items: Array<{
+      expenses: Array<{
         id: string;
         description: string;
-        plannedAmount: string | number;
+        plannedAmount: string | number | null;
+        amount: string | number | null;
         type: string;
         debt?: { id: string } | null;
         debtId?: string | null;
@@ -238,7 +248,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         for (const budget of budgets) ownedBudgetIds.push(budget.id);
 
         const item = budgets
-          .flatMap((b) => b.items)
+          .flatMap((b) => b.expenses)
           .find((i) => i.description.includes('AC1 — calendario básico'));
 
         expect(item).toBeDefined();
@@ -277,7 +287,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       expect(firstMonthBudgets.length).toBe(1);
       expect(firstMonthBudgets[0].id).toBe(preexisting.body.data.id);
       expect(
-        firstMonthBudgets[0].items.some((i) =>
+        firstMonthBudgets[0].expenses.some((i) =>
           i.description.includes('AC2 — reutiliza y autogenera'),
         ),
       ).toBe(true);
@@ -343,7 +353,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
         for (const budget of budgets) {
-          const item = budget.items.find((i) => itemDebtId(i) === debtId);
+          const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
           if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
         }
       }
@@ -373,7 +383,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
         for (const budget of budgets) {
-          const item = budget.items.find((i) => itemDebtId(i) === debtId);
+          const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
           if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
         }
       }
@@ -408,7 +418,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
         for (const budget of budgets) {
-          const item = budget.items.find((i) => itemDebtId(i) === debtId);
+          const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
           if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
         }
       }
@@ -440,7 +450,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       for (let k = 0; k < 2; k++) {
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
-        const item = budgets.flatMap((b) => b.items).find((i) => itemDebtId(i) === debtId);
+        const item = budgets.flatMap((b) => b.expenses).find((i) => itemDebtId(i) === debtId);
         expect(item).toBeDefined();
       }
 
@@ -448,7 +458,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       for (let k = 2; k < totalInstallments; k++) {
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
-        const item = budgets.flatMap((b) => b.items).find((i) => itemDebtId(i) === debtId);
+        const item = budgets.flatMap((b) => b.expenses).find((i) => itemDebtId(i) === debtId);
         expect(item).toBeUndefined();
       }
     });
@@ -466,7 +476,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
 
       const budgets = await getBudgetsForMonth(start.year, start.month);
       for (const budget of budgets) {
-        const item = budget.items.find((i) => itemDebtId(i) === debtId);
+        const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
         if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
       }
 
@@ -499,7 +509,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
         for (const budget of budgets) {
-          const item = budget.items.find((i) => itemDebtId(i) === debtId);
+          const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
           if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
         }
       }
@@ -519,7 +529,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       for (let k = 0; k < 3; k++) {
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
-        const item = budgets.flatMap((b) => b.items).find((i) => itemDebtId(i) === debtId);
+        const item = budgets.flatMap((b) => b.expenses).find((i) => itemDebtId(i) === debtId);
         expect(Number(item?.plannedAmount)).toBe(originalValue);
       }
 
@@ -527,7 +537,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       for (let k = 3; k < totalInstallments; k++) {
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
-        const items = budgets.flatMap((b) => b.items).filter((i) => itemDebtId(i) === debtId);
+        const items = budgets.flatMap((b) => b.expenses).filter((i) => itemDebtId(i) === debtId);
         expect(items.length).toBe(1);
         expect(Number(items[0].plannedAmount)).toBe(newValue);
         expect(items[0].installmentNumber).toBe(k + 1);
@@ -550,7 +560,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
         for (const budget of budgets) {
-          const item = budget.items.find((i) => itemDebtId(i) === debtId);
+          const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
           if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
         }
       }
@@ -564,7 +574,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       for (let k = 0; k < totalInstallments; k++) {
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
-        const item = budgets.flatMap((b) => b.items).find((i) => itemDebtId(i) === debtId);
+        const item = budgets.flatMap((b) => b.expenses).find((i) => itemDebtId(i) === debtId);
         expect(item?.description).toBe(
           `Cuota ${k + 1}/${totalInstallments} — [E2E-026] Propagación de description (renombrada)`,
         );
@@ -594,7 +604,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         const { year, month } = shiftMonth(start.year, start.month, k);
         const budgets = await getBudgetsForMonth(year, month);
         for (const budget of budgets) {
-          const item = budget.items.find((i) => itemDebtId(i) === debtId);
+          const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
           if (item) itemsByMonth.push({ year, month, budgetId: budget.id, itemId: item.id });
         }
       }
@@ -615,7 +625,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         const { budgetId, itemId } = itemsByMonth[k];
         const budgets = await getBudgetsForMonth(itemsByMonth[k].year, itemsByMonth[k].month);
         const budget = budgets.find((b) => b.id === budgetId);
-        const item = budget?.items.find((i) => i.id === itemId);
+        const item = budget?.expenses.find((i) => i.id === itemId);
         expect(item).toBeDefined();
         expect(itemDebtId(item!)).toBeNull();
         expect(item?.installmentNumber ?? null).toBeNull();
@@ -626,7 +636,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       const futureRef = itemsByMonth[2];
       const futureBudgets = await getBudgetsForMonth(futureRef.year, futureRef.month);
       const futureItem = futureBudgets
-        .flatMap((b) => b.items)
+        .flatMap((b) => b.expenses)
         .find((i) => i.id === futureRef.itemId);
       expect(futureItem).toBeUndefined();
     });
@@ -648,26 +658,27 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       const nextMonth = shiftMonth(start.year, start.month, 1);
       const budgetsNext = await getBudgetsForMonth(nextMonth.year, nextMonth.month);
       const nextBudget = budgetsNext[0];
-      const nextItem = nextBudget.items.find((i) => itemDebtId(i) === debtId)!;
+      const nextItem = nextBudget.expenses.find((i) => itemDebtId(i) === debtId)!;
       expect(nextItem).toBeDefined();
 
       // Track remaining items (current + the one two months out) for cleanup.
       const currentBudgets = await getBudgetsForMonth(start.year, start.month);
       for (const budget of currentBudgets) {
-        const item = budget.items.find((i) => itemDebtId(i) === debtId);
+        const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
         if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
       }
       const monthPlus2 = shiftMonth(start.year, start.month, 2);
       const budgetsPlus2 = await getBudgetsForMonth(monthPlus2.year, monthPlus2.month);
       for (const budget of budgetsPlus2) {
-        const item = budget.items.find((i) => itemDebtId(i) === debtId);
+        const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
         if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
       }
 
       // Manually delete the "next month" item, as if the user removed it
-      // from the budget detail view.
+      // from the budget detail view. Un ítem de presupuesto es ahora un
+      // Expense, se borra por su propio id.
       await api()
-        .delete(`/api/v1/finances/budgets/${nextBudget.id}/items/${nextItem.id}`)
+        .delete(`/api/v1/finances/expenses/${nextItem.id}`)
         .set('Cookie', authCookies)
         .expect(204);
 
@@ -680,7 +691,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
 
       const afterSync = await getBudgetsForMonth(nextMonth.year, nextMonth.month);
       const recreatedItems = afterSync
-        .flatMap((b) => b.items)
+        .flatMap((b) => b.expenses)
         .filter((i) => itemDebtId(i) === debtId);
       expect(recreatedItems.length).toBe(1);
       expect(recreatedItems[0].installmentNumber).toBe(2);
@@ -696,14 +707,14 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
 
       const afterSecondSync = await getBudgetsForMonth(nextMonth.year, nextMonth.month);
       const itemsAfterSecondSync = afterSecondSync
-        .flatMap((b) => b.items)
+        .flatMap((b) => b.expenses)
         .filter((i) => itemDebtId(i) === debtId);
       expect(itemsAfterSecondSync.length).toBe(1);
     });
   });
 
   describe('POST /api/v1/finances/budgets/:id/duplicate (AC-11)', () => {
-    it('no copia los ítems de deuda al mes destino; itemsCopied refleja solo los ítems normales', async () => {
+    it('no copia los ítems de deuda al mes destino; plannedExpensesCopied refleja solo los ítems normales', async () => {
       const start = shiftMonth(currentYear + 9, 2, 0);
       const dest = shiftMonth(start.year, start.month, 1);
 
@@ -719,11 +730,18 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
       const sourceBudget = sourceBudgets[0];
       ownedBudgetIds.push(sourceBudget.id);
 
-      // Add a normal (non-debt) item to the source budget.
+      // Add a normal (non-debt) planned expense to the source budget —
+      // spec-034: ya no existe POST /budgets/:id/items, un ítem de
+      // presupuesto es un Expense con budgetId + plannedAmount.
       await api()
-        .post(`/api/v1/finances/budgets/${sourceBudget.id}/items`)
+        .post('/api/v1/finances/expenses')
         .set('Cookie', authCookies)
-        .send({ description: 'Ítem normal AC11', plannedAmount: 50000, type: 'basico' })
+        .send({
+          description: 'Ítem normal AC11',
+          plannedAmount: 50000,
+          type: 'basico',
+          budgetId: sourceBudget.id,
+        })
         .expect(201);
 
       const duplicateResponse = await api()
@@ -732,10 +750,10 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
         .send({ month: dest.month, year: dest.year })
         .expect(201);
 
-      expect(duplicateResponse.body.data.itemsCopied).toBe(1);
+      expect(duplicateResponse.body.data.plannedExpensesCopied).toBe(1);
       ownedBudgetIds.push(duplicateResponse.body.data.budget.id);
 
-      const destItems = duplicateResponse.body.data.budget.items as Array<{
+      const destItems = duplicateResponse.body.data.budget.expenses as Array<{
         debt?: { id: string } | null;
         debtId?: string | null;
         description: string;
@@ -759,7 +777,7 @@ describe('spec-026 — Deudas: calendario de cuotas en presupuesto (e2e)', () =>
 
       const budgets = await getBudgetsForMonth(start.year, start.month);
       for (const budget of budgets) {
-        const item = budget.items.find((i) => itemDebtId(i) === debtId);
+        const item = budget.expenses.find((i) => itemDebtId(i) === debtId);
         if (item) looseItemRefs.push({ budgetId: budget.id, itemId: item.id });
       }
 

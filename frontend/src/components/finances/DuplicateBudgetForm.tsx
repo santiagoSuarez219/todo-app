@@ -82,7 +82,8 @@ export default function DuplicateBudgetForm({ origin, onSubmit, onCancel, loadin
       </div>
 
       <div className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-2">
-        Se copiarán: <strong>{(origin.items?.length ?? 0)} ítems</strong>, todos los ingresos y gastos del mes.
+        Se copiará <strong>solo el plan</strong>: {(origin.expenses ?? []).filter((e) => e.plannedAmount != null).length} gasto{(origin.expenses ?? []).filter((e) => e.plannedAmount != null).length !== 1 ? 's' : ''} planeado{(origin.expenses ?? []).filter((e) => e.plannedAmount != null).length !== 1 ? 's' : ''}
+        {' '}y todos los ingresos del mes. Los montos y fechas ya ejecutados <strong>no</strong> se copian — el mes destino arranca sin ejecutar.
       </div>
 
       <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">

@@ -18,11 +18,23 @@ const MONTHS = [
 
 interface EditState {
   description: string;
+  plannedAmount: string;
   amount: string;
   date: string;
   type: ExpenseType;
   creditCardId: string;
 }
+
+const EMPTY_EDIT_STATE: EditState = {
+  description: '',
+  plannedAmount: '',
+  amount: '',
+  date: '',
+  type: 'basico' as ExpenseType,
+  creditCardId: '',
+};
+
+type StatusFilter = 'all' | 'planned' | 'executed';
 
 export default function ExpensesView() {
   const now = new Date();
@@ -31,6 +43,7 @@ export default function ExpensesView() {
 
   const [filterYear, setFilterYear] = useState<number>(currentYear);
   const [filterMonth, setFilterMonth] = useState<number>(currentMonth);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
 
@@ -39,6 +52,10 @@ export default function ExpensesView() {
     filterYear,
     filterMonth,
     debouncedSearch.trim().length >= 2 ? debouncedSearch : undefined,
+    {
+      planned: statusFilter === 'planned' || undefined,
+      executed: statusFilter === 'executed' || undefined,
+    },
   );
 
   // Refresco: ya hay datos previos visibles mientras llega el nuevo set
@@ -53,13 +70,7 @@ export default function ExpensesView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Expense | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const [editState, setEditState] = useState<EditState>({
-    description: '',
-    amount: '',
-    date: '',
-    type: 'basico' as ExpenseType,
-    creditCardId: '',
-  });
+  const [editState, setEditState] = useState<EditState>(EMPTY_EDIT_STATE);
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [toDuplicate, setToDuplicate] = useState<Expense | null>(null);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
@@ -79,8 +90,9 @@ export default function ExpensesView() {
     setEditingExpenseId(expense.id);
     setEditState({
       description: expense.description,
-      amount: String(expense.amount),
-      date: expense.date,
+      plannedAmount: expense.plannedAmount != null ? String(expense.plannedAmount) : '',
+      amount: expense.amount != null ? String(expense.amount) : '',
+      date: expense.date ?? '',
       type: expense.type,
       creditCardId: expense.creditCard?.id ?? '',
     });
@@ -93,8 +105,12 @@ export default function ExpensesView() {
   async function saveEditing(expense: Expense) {
     const dto: UpdateExpenseDto = {};
     if (editState.description !== expense.description) dto.description = editState.description;
-    if (Number(editState.amount) !== Number(expense.amount)) dto.amount = Number(editState.amount);
-    if (editState.date !== expense.date) dto.date = editState.date;
+    const newPlanned = editState.plannedAmount ? Number(editState.plannedAmount) : undefined;
+    if (newPlanned !== (expense.plannedAmount ?? undefined)) dto.plannedAmount = newPlanned;
+    const newAmount = editState.amount ? Number(editState.amount) : undefined;
+    if (newAmount !== (expense.amount ?? undefined)) dto.amount = newAmount;
+    const newDate = editState.date || undefined;
+    if (newDate !== (expense.date ?? undefined)) dto.date = newDate;
     if (editState.type !== expense.type) dto.type = editState.type;
     if ((editState.creditCardId || undefined) !== (expense.creditCard?.id || undefined)) {
       dto.creditCardId = editState.creditCardId || null;
@@ -160,6 +176,16 @@ export default function ExpensesView() {
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-colors"
+            title="Filtrar por estado de ejecución"
+          >
+            <option value="all">Todos</option>
+            <option value="planned">Solo planeados</option>
+            <option value="executed">Solo ejecutados</option>
+          </select>
           <button
             onClick={openCreate}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-700 dark:bg-blue-600 text-white hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
@@ -207,7 +233,7 @@ export default function ExpensesView() {
             isEditing={editingExpenseId === expense.id}
             editDisabled={editingExpenseId !== null && editingExpenseId !== expense.id}
             creditCards={creditCards}
-            editState={editingExpenseId === expense.id ? editState : { description: '', amount: '', date: '', type: 'basico', creditCardId: '' }}
+            editState={editingExpenseId === expense.id ? editState : EMPTY_EDIT_STATE}
             onEditStateChange={(patch) => setEditState((s) => ({ ...s, ...patch }))}
             onStartEdit={startEditing}
             onSaveEdit={saveEditing}

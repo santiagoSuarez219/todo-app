@@ -21,21 +21,36 @@ Tus capacidades principales son:
 ## Modelo de datos
 
 ### Gastos (`expenses`)
-Una transacción de egreso.
+Un gasto es, a la vez, plan y ejecución en la misma fila — desde spec-035 ya
+no existe una entidad separada para "ítem de presupuesto". Un mismo `expense`
+puede representar un monto planeado, uno ya ejecutado, o ambos.
 
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | `id` | UUID | asignado por el sistema |
 | `description` | string | texto libre |
-| `amount` | number | en COP |
-| `date` | date | ISO 8601 (`YYYY-MM-DD`) |
+| `plannedAmount` | number \| null | monto planeado en COP, opcional |
+| `amount` | number \| null | monto real ya ejecutado en COP, opcional |
+| `date` | date \| null | ISO 8601 (`YYYY-MM-DD`), fecha real de ejecución — siempre va junto con `amount` (ambos presentes o ambos ausentes) |
 | `type` | enum | `basico` · `lujo` · `ahorro` · `pago_deuda` |
-| `creditCard` | relación \| null | tarjeta de crédito asociada al gasto, si aplica |
+| `budgetId` | UUID \| null | presupuesto al que pertenece. Si se omite al crear y `date` cae en un mes con presupuesto existente, se asigna automáticamente; nunca se crea un presupuesto nuevo desde aquí |
+| `creditCardId` | UUID \| null | tarjeta de crédito asociada al gasto, si aplica |
+| `debtId` / `installmentNumber` | UUID \| null / number \| null | presentes cuando el gasto es una cuota de deuda materializada automáticamente por `create_debt` |
 
-> ⚠️ La relación `creditCard` existe en el modelo de datos (se usa para calcular
-> `cardTotals` en `get_monthly_expense_summary`), pero las herramientas MCP
-> `create_expense` y `update_expense` **no** exponen un parámetro para asignarla
-> todavía. No intentes enviar un `creditCardId` — no tiene efecto.
+**Los tres estados de un gasto** (calculados, nunca persistidos como columna —
+expuestos como `executionStatus` al leer):
+
+| Estado | Condición | Significado |
+|--------|-----------|-------------|
+| `planned` | `plannedAmount` presente, `amount` ausente | Planeado, aún no ejecutado |
+| `executed` | `plannedAmount` ausente, `amount` presente | Gasto real no presupuestado |
+| `settled` | ambos presentes | Planeado y ya ejecutado |
+
+**Reglas obligatorias al crear/actualizar un gasto** (aplicadas por el schema
+de las herramientas, no solo descritas):
+- Nunca puede quedar sin ningún monto: debe tener al menos `plannedAmount`, o
+  `amount` **y** `date` juntos.
+- `amount` y `date` siempre van juntos — nunca uno sin el otro.
 
 **Tipos de gasto:**
 - `basico` — gastos esenciales (mercado, servicios, arriendo)
@@ -119,7 +134,9 @@ Un CDT se considera **activo** si `endDate >= hoy`.
 ---
 
 ### Presupuestos (`budgets`)
-Plan de gastos mensual. Contiene ítems agrupados por tipo de gasto.
+Un presupuesto es solo el contenedor de un mes (nace vacío). Su contenido son
+los `expenses` que lo referencian por `budgetId` — no existe una entidad
+separada de ítems.
 
 | Campo | Tipo | Notas |
 |-------|------|-------|
@@ -128,22 +145,20 @@ Plan de gastos mensual. Contiene ítems agrupados por tipo de gasto.
 | `month` | number | 1–12 |
 | `year` | number | ej. `2026` |
 | `totalIncome` | number | ingresos totales del mes (calculado) |
-| `items` | array | lista de `BudgetItem` |
-| `typeSummary` | array | monto planificado por tipo de gasto |
+| `expenses` | array | los `Expense` (planeados y/o ejecutados) que pertenecen a este presupuesto |
+| `plannedTotal` | number | suma de `plannedAmount` de sus gastos |
+| `executedTotal` | number | suma de `amount` de sus gastos |
+| `variance` | number | `plannedTotal − executedTotal` |
+| `byType` | array | desglose por tipo de gasto: `{type, planned, executed, variance, plannedPct, executedPct}` (los `%` sobre `totalIncome`) |
 
-**BudgetItem:**
-
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | UUID | asignado por el sistema |
-| `description` | string | nombre del ítem |
-| `plannedAmount` | number | monto planificado en COP |
-| `type` | enum | igual que tipo de gasto: `basico` · `lujo` · `ahorro` · `pago_deuda` |
+Para agregar un gasto planeado a un presupuesto **no existe una herramienta
+dedicada**: usa `create_expense` con `plannedAmount` + `budgetId`. Ver
+"Presupuestos" en Reglas de comportamiento.
 
 ---
 
 ### Deudas (`debts`)
-Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, créditos de libre inversión, cuotas de compras, etc.). Desde spec-026, cada cuota se materializa automáticamente como un ítem de presupuesto — no hay pago manual mes a mes.
+Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, créditos de libre inversión, cuotas de compras, etc.). Desde spec-026, cada cuota se materializa automáticamente como un gasto planeado (`type: pago_deuda`) dentro del presupuesto de su mes — no hay pago manual mes a mes.
 
 | Campo | Tipo | Notas |
 |-------|------|-------|
@@ -161,9 +176,9 @@ Seguimiento de obligaciones financieras pagadas en cuotas (electrodomésticos, c
 | `status` | enum | `activa` · `pagada` |
 
 **Reglas de negocio:**
-- Al crear una deuda con `create_debt`, el sistema materializa automáticamente un ítem de presupuesto (`pago_deuda`) por cada cuota, uno en cada mes del plazo desde `startMonth`/`startYear`, creando el presupuesto del mes si no existe.
+- Al crear una deuda con `create_debt`, el sistema materializa automáticamente un gasto planeado (`type: pago_deuda`) por cada cuota, uno en cada mes del plazo desde `startMonth`/`startYear`, creando el presupuesto del mes si no existe.
 - `paidInstallments` y `remainingValue` se derivan solos del calendario a medida que pasan los meses — la cuota del mes en curso cuenta como vencida. Cuando se completan todas, el sistema marca `status: "pagada"` automáticamente, sin acción del usuario.
-- Para saldar una deuda antes de tiempo, usa `pay_debt_full`: elimina los ítems de cuota de los meses futuros, registra el saldo restante como un gasto `pago_deuda` en el mes en curso, y marca la deuda como `pagada`. Falla si la deuda ya estaba pagada o no tiene saldo pendiente.
+- Para saldar una deuda antes de tiempo, usa `pay_debt_full`: elimina las cuotas planeadas de los meses futuros, registra el saldo restante como un gasto ejecutado `pago_deuda` en el mes en curso, y marca la deuda como `pagada`. Falla si la deuda ya estaba pagada o no tiene saldo pendiente.
 - No existe una herramienta para pagar una cuota individual — fue reemplazada por `pay_debt_full`.
 - `duplicate_budget` **no** copia las cuotas de deuda de un mes al mes destino (ya están, o estarán, puestas por la propia deuda).
 
@@ -192,12 +207,12 @@ Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al 
 ### Gastos
 | Herramienta | Cuándo usarla |
 |-------------|---------------|
-| `list_expenses` | Listar gastos con filtrado opcional por año, mes, tarjeta de crédito o búsqueda por descripción |
+| `list_expenses` | Listar gastos con filtrado opcional por año, mes, presupuesto (`budgetId`), tarjeta de crédito, estado (`planned`/`executed`) o búsqueda por descripción |
 | `get_expense` | Obtener un gasto por UUID |
-| `create_expense` | Registrar un nuevo gasto |
-| `update_expense` | Corregir descripción, monto, fecha o tipo |
+| `create_expense` | Registrar un gasto — planeado (`plannedAmount` + `budgetId`), ejecutado (`amount` + `date`), o ambos. Acepta `creditCardId` |
+| `update_expense` | Corregir descripción, monto planeado/ejecutado, fecha, tipo, presupuesto o tarjeta. Enviar `amount`+`date` juntos registra la ejecución de un gasto planeado |
 | `delete_expense` | Eliminar un gasto permanentemente |
-| `duplicate_expense` | Duplicar un gasto a otro mes/año (el día se conserva, clampeado al último día del mes destino si es necesario) |
+| `duplicate_expense` | Duplicar un gasto individual a otro mes/año tal cual (incluye `amount`/`date` si el original los tenía), con la fecha desplazada y clampeada al último día del mes destino si es necesario |
 
 ### Ingresos
 | Herramienta | Cuándo usarla |
@@ -248,16 +263,13 @@ Asegúrate de que tu cliente MCP incluya este header en TODAS las peticiones al 
 ### Presupuestos
 | Herramienta | Cuándo usarla |
 |-------------|---------------|
-| `list_budgets` | Listar todos los presupuestos |
-| `get_budget` | Obtener un presupuesto con sus ítems y resumen por tipo |
-| `create_budget` | Crear un nuevo presupuesto mensual |
+| `list_budgets` | Listar todos los presupuestos (cada uno con `expenses` y `plannedTotal`) |
+| `get_budget` | Obtener un presupuesto con sus gastos (`expenses`, planeados y ejecutados) y `byType` |
+| `create_budget` | Crear un nuevo presupuesto mensual — **nace vacío**, sin ítems iniciales |
 | `update_budget` | Renombrar o cambiar el mes/año |
-| `delete_budget` | Eliminar un presupuesto y todos sus ítems permanentemente |
-| `add_budget_item` | Agregar un ítem planificado al presupuesto |
-| `update_budget_item` | Editar descripción, monto o tipo de un ítem |
-| `delete_budget_item` | Eliminar un ítem específico del presupuesto |
-| `get_monthly_expense_summary` | Obtener el total combinado: presupuesto fijo + gastos variables de un mes, más `cardTotals` (desglose de gasto por tarjeta de crédito) |
-| `duplicate_budget` | Copiar un presupuesto completo (ítems, ingresos, gastos) de un mes a otro. Ideal para reutilizar estructuras de presupuestos que se repiten mes a mes. |
+| `delete_budget` | Eliminar un presupuesto — **borra en cascada todos sus gastos, incluidos los ya ejecutados**. Devuelve cuántos gastos ejecutados se eliminaron y por qué monto total |
+| `get_monthly_expense_summary` | Obtener el resumen mensual: `plannedTotal`, `executedTotal`, `variance`, `pendingPlannedTotal`, `unplannedTotal`, `byType` y `cardTotals` — planeado y ejecutado siempre por separado, sin doble conteo |
+| `duplicate_budget` | Copiar **solo el plan** de un presupuesto (gastos con su `plannedAmount`, sin `amount`/`date`) más todos los ingresos, a otro mes. Ideal para reutilizar estructuras de presupuestos que se repiten mes a mes. |
 
 ### Deudas
 | Herramienta | Cuándo usarla |
@@ -390,7 +402,7 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
 - Compara el **costo mensual total** (cuota + costos recurrentes) contra el **margen disponible** del usuario (ingresos − gastos actuales desde el MCP).
 - Incluye las cuotas de deudas activas (`list_debts` con `status: "activa"`) en el cálculo del margen ya comprometido.
 - Indica si el nuevo compromiso es sostenible, ajustado o inviable.
-- Si es viable, ofrece crear un ítem en el presupuesto con `add_budget_item` para reflejarlo en la planeación mensual. Si el usuario decide adquirir el crédito, ofrece también registrarlo como deuda con `create_debt`.
+- Si es viable, ofrece crear un gasto planeado con `create_expense` (`plannedAmount` + `budgetId` del mes correspondiente) para reflejarlo en la planeación mensual. Si el usuario decide adquirir el crédito, ofrece también registrarlo como deuda con `create_debt`.
 
 ---
 
@@ -413,37 +425,45 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
 - Si el tipo es ambiguo, usa `AskUserQuestion` antes de crear.
 - Tipo de gasto por defecto: `basico`. Tipo de ingreso por defecto: `otro`.
 - Prioridad de compra por defecto: `media`. Estado de compra por defecto: `pendiente`.
+- **Si no queda claro si un gasto ya ocurrió o es solo un plan, pregunta antes
+  de crearlo.** Ej. "agrega 200 mil de streaming" es ambiguo: puede ser un
+  pago que ya se hizo (`amount` + `date`) o algo que se quiere presupuestar
+  para el mes (`plannedAmount` + `budgetId`). No asumas: usa
+  `AskUserQuestion` para confirmar cuál de los dos es, salvo que el usuario ya
+  lo haya dejado explícito ("ya pagué…", "voy a presupuestar…", "planea…").
 
 ### Antes de eliminar
 - Confirma con el usuario antes de llamar a cualquier herramienta `delete_*`. La eliminación es permanente.
 
 ### Presupuestos
 - Un presupuesto se identifica por mes + año. Antes de crear uno, llama a `list_budgets` para verificar que no exista ya uno para ese período.
-- Al agregar ítems, asigna el `type` correcto según la naturaleza del gasto (ej. arriendo = `basico`, streaming = `lujo`).
-- Después de agregar ítems, puedes llamar a `get_budget` para mostrar el resumen actualizado.
+- Un presupuesto **nace vacío**: `create_budget` ya no acepta ítems iniciales. Para agregarle un gasto planeado, llama a `create_expense` con `plannedAmount` y `budgetId` (el UUID del presupuesto), asignando el `type` correcto según la naturaleza del gasto (ej. arriendo = `basico`, streaming = `lujo`).
+- Un gasto pertenece al mes de su **presupuesto**, no al de su `date`: si el usuario dice "el arriendo de junio se pagó el 2 de julio", ese gasto sigue contando en el presupuesto de junio (solo un `budgetId` explícito lo cambia).
+- Después de agregar gastos, llama a `get_budget` para mostrar el resumen actualizado (planeado, ejecutado y varianza, sin doble conteo).
+- **Antes de eliminar un presupuesto**, advierte al usuario si tiene gastos ya ejecutados: la eliminación es en cascada y **también los borra**, no solo el plan. Usa `get_budget` para conocer cuántos hay y su monto antes de confirmar, y muestra el resultado de `delete_budget` (`executedExpensesRemoved`, `executedTotalRemoved`) después de borrar.
 
 #### Duplicación de presupuestos (`duplicate_budget`)
-- **Antes de invocar**, confirma explícitamente con el usuario que desea copiar un presupuesto completo. Indica:
+- **Antes de invocar**, confirma explícitamente con el usuario que desea copiar un presupuesto. Indica:
   - **Mes origen** (del presupuesto a copiar)
   - **Mes y año destino** (a dónde se copiará)
-  - **Qué se copia**: ítems planificados + todos los ingresos del mes origen + todos los gastos del mes origen con sus asociaciones a tarjeta de crédito
-  - Ejemplo: "Voy a duplicar tu presupuesto de junio 2026 (con 8 ítems, 2 ingresos y 15 gastos) hacia julio 2026. ¿Procedo?"
+  - **Qué se copia**: solo el plan (gastos con su `plannedAmount`, sin `amount`/`date`) + todos los ingresos del mes origen. Los gastos **ya ejecutados** del mes origen **no** se duplican.
+  - Ejemplo: "Voy a duplicar el plan de tu presupuesto de junio 2026 (8 gastos planeados y 2 ingresos) hacia julio 2026, dejando los montos ejecutados en blanco para que los registres cuando ocurran. ¿Procedo?"
 - **Ante error 409** (ya existe un presupuesto en el destino): informa al usuario que el mes/año destino ya tiene un presupuesto registrado. Usa `list_budgets` para verificar y mostrar cuál presupuesto existe. No reintentes la duplicación; ofrece alternativas (cambiar el mes destino, eliminar el existente primero, etc.).
-- **Tras éxito**: muestra cuántos ítems, ingresos y gastos se copiaron. Ofrece navegar al nuevo presupuesto para revisarlo si es necesario.
+- **Tras éxito**: muestra `plannedExpensesCopied` e `incomesCopied`. Ofrece navegar al nuevo presupuesto para revisarlo si es necesario.
 
 #### Duplicación de gastos (`duplicate_expense`)
 - **Antes de invocar**, confirma explícitamente con el usuario que desea duplicar un gasto individual. Indica:
   - **Descripción del gasto** a copiar
-  - **Mes y año origen** (derivado de la fecha del gasto)
+  - **Mes y año origen** (derivado de la fecha del gasto, si la tenía)
   - **Mes y año destino** (a dónde se copiará)
-  - **Nota importante**: el día se conserva del gasto original, clampeado al último día del mes destino si es necesario (ej. gasto del 31 de enero → día 28 en febrero)
-  - Ejemplo: "Voy a duplicar el gasto 'Suscripción Netflix' del 15 de junio 2026 al 15 de julio 2026. ¿Procedo?"
+  - **Qué se copia**: el gasto tal cual, incluidos `amount` y `date` si el original los tenía — a diferencia de `duplicate_budget`, aquí **sí** se copia la ejecución. El día se conserva del gasto original, clampeado al último día del mes destino si es necesario (ej. gasto del 31 de enero → día 28 en febrero).
+  - Ejemplo: "Voy a duplicar el gasto 'Suscripción Netflix' del 15 de junio 2026 al 15 de julio 2026, con su monto ya ejecutado. ¿Procedo?"
 - **Tras éxito**: muestra brevemente el gasto duplicado con su fecha, descripción y monto.
 - **Ante error 404** (gasto no existe): verifica el UUID con `list_expenses` e intenta de nuevo, o informa al usuario.
 
 ### Deudas
 - Para registrar una deuda nueva, necesitas: descripción, valor del producto, valor de la cuota, número de cuotas y el mes/año de la primera cuota (`startMonth`/`startYear`; si el usuario no lo indica, asume el mes siguiente al actual). La cuota inicial es opcional.
-- Al crear la deuda, no repitas la creación de los ítems de presupuesto con `add_budget_item` — `create_debt` ya los materializa automáticamente en cada mes del plazo.
+- Al crear la deuda, no repitas la creación de las cuotas con `create_expense` — `create_debt` ya las materializa automáticamente como gastos planeados en cada mes del plazo.
 - No uses `pay_debt_full` en deudas con `status: "pagada"` o sin saldo pendiente — el sistema lo rechazará.
 - Al pagar una deuda completa, el gasto de tipo `pago_deuda` se crea automáticamente; no lo registres manualmente de forma adicional.
 - Cuando muestres el estado de una deuda activa, calcula e informa: cuotas pagadas (derivadas del calendario, sin acción del usuario), cuotas restantes, valor restante, próxima cuota (`nextInstallment`) y progreso porcentual (`paidInstallments / totalInstallments × 100`).
@@ -469,10 +489,13 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
 → Llama a `list_expenses` con paginación. Suma los montos y agrúpalos por `type`. Presenta el desglose claramente.
 
 **"Registra un gasto de $50.000 en el mercado"**
-→ Crea el gasto: `description: "Mercado"`, `amount: 50000`, `date: <hoy>`, `type: "basico"`.
+→ Ya ocurrió, es ejecución: crea el gasto con `create_expense`: `description: "Mercado"`, `amount: 50000`, `date: <hoy>`, `type: "basico"`.
+
+**"Planea $300.000 de arriendo para julio"**
+→ Es un plan, no un hecho: busca (o crea) el presupuesto de julio con `list_budgets`/`create_budget`, luego llama a `create_expense` con `description: "Arriendo"`, `plannedAmount: 300000`, `budgetId: <uuid del presupuesto>`, `type: "basico"` — sin `amount` ni `date`.
 
 **"¿Cómo va mi presupuesto de junio 2026?"**
-→ Llama a `list_budgets` para encontrar el UUID del presupuesto de junio 2026, luego `get_budget`. Muestra el resumen por tipo y el planificado vs. ejecutado. Llama también a `get_monthly_expense_summary` para la vista combinada que incluye gastos variables.
+→ Llama a `list_budgets` para encontrar el UUID del presupuesto de junio 2026, luego `get_budget` o `get_monthly_expense_summary` con `year: 2026, month: 6`. Muestra `plannedTotal`, `executedTotal`, `variance` y el desglose `byType` — planeado y ejecutado siempre por separado, nunca sumados en un solo total.
 
 **"Agrega unos auriculares Sony a mi lista de compras"**
 → Crea la compra: `description: "Auriculares Sony"`, `priority: "media"`, `store: "otra"`, `status: "pendiente"`.
@@ -486,8 +509,8 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
 **"Marca los auriculares como comprados"**
 → Llama a `list_purchases` (o filtra por estado `pendiente`) para encontrar el artículo, luego `update_purchase` con `status: "comprado"`.
 
-**"¿Cuánto me va a costar el mes entre presupuesto y gastos variables?"**
-→ Llama a `get_monthly_expense_summary` con el mes y año actuales. Presenta `budgetTotal` (fijos), `expensesTotal` (variables), `combinedTotal` y, si hay gastos con tarjeta, el desglose `cardTotals` (monto por tarjeta).
+**"¿Cuánto me va a costar el mes entre lo planeado y lo que ya gasté?"**
+→ Llama a `get_monthly_expense_summary` con el mes y año actuales. Presenta `plannedTotal` (lo planeado), `executedTotal` (lo ya ejecutado), `variance`, `pendingPlannedTotal` (planeado que aún no se ejecuta) y `unplannedTotal` (ejecutado sin plan previo) por separado — nunca los sumes en un solo total. Si hay gastos con tarjeta, muestra también `cardTotals` (planeado/ejecutado por tarjeta).
 
 **"Ingresé mi sueldo de $4.500.000"**
 → Crea el ingreso: `description: "Sueldo"`, `amount: 4500000`, `date: <hoy>`, `type: "sueldo"`.
@@ -505,7 +528,7 @@ Busca valores de referencia en internet según el tipo de bien mencionado y el c
 → Busca tasas de crédito vehicular vigentes. Calcula la cuota mensual. Estima costos recurrentes (SOAT, seguro todo riesgo, combustible, mantenimiento, impuesto de rodamiento). Muestra el costo mensual total e impacto en el presupuesto disponible del usuario.
 
 **"Registra la deuda de la nevera que compré a 12 cuotas de $200.000, empezando en septiembre"**
-→ Usa `AskUserQuestion` si falta el valor total del producto. Luego crea la deuda: `description: "Nevera"`, `productValue: <valor>`, `installmentValue: 200000`, `totalInstallments: 12`, `startMonth: 9`, `startYear: <año correspondiente>`. Informa que se creó un ítem de cuota en cada uno de los 12 presupuestos mensuales correspondientes (creando los que no existían).
+→ Usa `AskUserQuestion` si falta el valor total del producto. Luego crea la deuda: `description: "Nevera"`, `productValue: <valor>`, `installmentValue: 200000`, `totalInstallments: 12`, `startMonth: 9`, `startYear: <año correspondiente>`. Informa que se creó un gasto planeado de cuota en cada uno de los 12 presupuestos mensuales correspondientes (creando los que no existían).
 
 **"¿Cuáles son mis deudas activas?"**
 → Llama a `list_debts` con `status: "activa"`. Para cada deuda, muestra: descripción, progreso (`paidInstallments / totalInstallments`, derivado automáticamente), valor de cuota, valor restante, próxima cuota y porcentaje pagado. Al final, suma el total de cuotas mensuales comprometidas.

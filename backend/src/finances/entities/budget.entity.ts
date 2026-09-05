@@ -7,8 +7,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { BudgetItem } from './budget-item.entity';
+import { Expense } from './expense.entity';
 
+// spec-035: Budget deja de tener ítems propios (BudgetItem eliminada). Su
+// contenido son los Expense que lo referencian por `budgetId`. Sin
+// `cascade: true`: el borrado en cascada de sus gastos es una decisión de
+// negocio explícita en BudgetsService.remove(), no un efecto de TypeORM.
 @Entity('budgets')
 @Index('UQ_budgets_month_year', ['month', 'year'], { unique: true })
 export class Budget {
@@ -24,8 +28,8 @@ export class Budget {
   @Column({ type: 'integer' })
   year: number;
 
-  @OneToMany(() => BudgetItem, (item) => item.budget, { cascade: true })
-  items: BudgetItem[];
+  @OneToMany(() => Expense, (expense) => expense.budget)
+  expenses: Expense[];
 
   @CreateDateColumn()
   createdAt: Date;
