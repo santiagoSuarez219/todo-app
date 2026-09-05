@@ -840,29 +840,34 @@ inesperado, lentitud, detalle visual… o "sin observaciones"}}
 
 | Campo            | Valor                                          |
 |------------------|--------------------------------------------------|
-| Proveedor        | `Railway` (confirmado: `backend/railway.toml`, build vía Dockerfile) |
-| Proyecto         | `{{nombre del proyecto en Railway}}`           |
-| Servicio         | `{{nombre del servicio}}`                      |
-| Entorno          | `production`                                   |
+| Proveedor        | `Railway` (build vía Dockerfile, ver `backend/railway.toml`) |
+| Proyecto         | `graceful-beauty` (`6e64b5a5-8028-45ef-a264-14b660e3ed45`) |
+| Servicio         | `steadfast-ambition` (`490429f5-93da-4737-8c4c-7a4485c2d794`) |
+| Entorno          | `production` (`9186f32b-d69d-443b-8b4a-0879a06b4f22`) |
 | Healthcheck      | `/api/v1/docs` (definido en `railway.toml`)    |
-| URL producción   | `{{url del servicio desplegado}}`              |
-| Deploy trigger   | `{{push a main / deploy automático / manual}}` |
-| Panel de control | `https://railway.app/project/{{project-id}}`   |
+| URL producción   | `https://steadfast-ambition-production.up.railway.app` |
+| Deploy trigger   | **Automático al hacer push a `main`.** El push dispara build + deploy, y `entrypoint.sh` corre las migraciones pendientes antes de arrancar el server |
+| Panel de control | `https://railway.app/project/6e64b5a5-8028-45ef-a264-14b660e3ed45` |
 
 #### Frontend
 
 | Campo            | Valor                                          |
 |------------------|--------------------------------------------------|
-| Proveedor        | `Vercel` (confirmado: `frontend/vercel.json`, rewrites de SPA) |
-| Proyecto         | `{{nombre del proyecto en Vercel}}`            |
+| Proveedor        | `Vercel` (rewrites de SPA en `frontend/vercel.json`) |
+| Proyecto         | **`todo-backend`** (`prj_5MGesM4WPafJfATi8mAe51gLg7N5`) — ⚠️ el nombre engaña: este proyecto sirve el **frontend**. El backend está en Railway |
+| Equipo           | `santiago-suarez-cortes-projects` (`team_UrkjAmj3hPNfGUbN1rJXESVd`), plan Pro |
 | Rama de producción | `main`                                       |
-| URL producción   | `{{url del proyecto desplegado}}`              |
-| Deploy trigger   | `{{push a main / deploy automático / manual}}` |
-| Panel de control | `https://vercel.com/{{equipo}}/{{proyecto}}`   |
+| URL producción   | `{{url pública — las URLs de deployment devuelven 302 por deployment protection; anotar la real}}` |
+| Deploy trigger   | **Automático al hacer push a `main`** (mismo push que dispara Railway). También despliega previews desde `development` |
+| Panel de control | `https://vercel.com/santiago-suarez-cortes-projects/todo-backend` |
 
-> Existe una rama `deploy/vercel` en el historial de git — confirmar con el
-> usuario si sigue siendo el flujo vigente antes de asumir el nombre de rama
-> de despliegue para el frontend.
+> La rama `deploy/vercel` del historial **ya no es el flujo vigente**:
+> verificado en el despliegue de v2.0.0 (2026-09-05) que Vercel despliega a
+> producción por sí solo con cada push a `main`, sin rama intermedia. El
+> mismo push dispara Railway y Vercel a la vez; no hay que promover nada a
+> mano. La rama `deploy/vX.Y.Z` sigue siendo útil como punto de
+> preparación/revisión antes de mergear a `main`, pero no es un destino de
+> despliegue en sí.
 
 ---
 
