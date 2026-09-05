@@ -15,6 +15,20 @@ herramientas expuestas.
 > herramientas y un rol distinto: uno de productividad/calendario, otro de
 > finanzas personales.
 
+## Referencias de capacidades
+
+Además de los system prompts (que instruyen al agente), esta carpeta tiene
+documentos **descriptivos** del servidor: qué herramientas existen, con qué
+parámetros y con qué límites. Útiles para revisar el contrato sin leer
+`mcp.service.ts`.
+
+| Documento | Cubre |
+|---|---|
+| [`finanzas-personales.capacidades.md`](./finanzas-personales.capacidades.md) | Las 42 herramientas del dominio financiero (gastos, ingresos, presupuestos, deudas, tarjetas, cuentas, CDTs, lista de deseos), con parámetros exactos, límites conocidos y trampas |
+
+De las 68 herramientas del servidor, 42 son financieras y 26 de
+proyectos/actividades.
+
 ## Autenticación (spec-021)
 
 El endpoint `/mcp` requiere autenticación por API key:
