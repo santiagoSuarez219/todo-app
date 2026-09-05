@@ -614,6 +614,39 @@ local, no un camino soportado en producción.
       Fase 6, ítem actualizado arriba.
 - [ ] El usuario ejecuta `docs/testing/test-035-...md`; Claude prepara los datos
       vía API, registra hallazgos caso por caso y limpia al cerrar la ronda.
+- [x] `@reviewer` revisó antes de las pruebas manuales: veredicto inicial
+      **CAMBIOS REQUERIDOS**. Hallazgos corregidos:
+      - 🔴 **Colisión de numeración**: `development` ya tenía un
+        `spec-034` distinto ("filtros y listado de actividades", `2653fab`).
+        Renumerado este spec, su `test-NNN` y su `e2e-NNN` a **035**, con
+        todas sus referencias internas.
+      - 🔴 El fix del `leftJoinAndSelect('expense.debt', ...)` y las 2
+        correcciones de test de la ronda anterior estaban sin commitear —
+        commiteados.
+      - 🟠 Bug real en `ExpensesQueryDto`: `planned`/`executed` usaban
+        `@Type(() => Boolean)`, y `Boolean("false")` es `true` en JS —
+        `?planned=false` se comportaba como `?planned=true`. Corregido con
+        `@Transform` explícito; agregada cobertura e2e para
+        `planned`/`executed`/`budgetId`, que no tenía ninguna.
+      - 🟠 `ExpensesService.duplicate()` con un gasto origen sin `date`
+        (plan-only) ignoraba `dto.month`/`dto.year` para el vínculo,
+        dejando la copia huérfana (sin `budgetId` ni `date`, invisible en
+        cualquier mes). Corregido: se ancla al presupuesto de
+        `(dto.month, dto.year)` si existe.
+      - 🟠 Rama 2 commits detrás de `development` con conflicto simulado.
+        Mergeado `development` real (conflicto mecánico en
+        `spec/backlog.md`, resuelto conservando ambas secciones); build,
+        unit y e2e reverificados sobre el merge real, no en simulación.
+      - Hallazgos 🟡/🔵 (8-16 del reporte) registrados como deuda técnica
+        en `spec/backlog.md`, sin bloquear.
+      Reverificado tras las correcciones: `e2e-035` 36/36 (32 originales +
+      4 nuevos: 2 de `duplicate()` plan-only, 3 de filtros
+      `planned`/`executed`/`budgetId` — neto +4 por el split de un caso en
+      dos), `e2e-023`+`e2e-026` 22/22 sin relajar aserciones, `npm run test`
+      110/110, `npm run test:e2e` completo sobre el merge con `development`:
+      **216/218** (los 2 restantes preexistentes y ajenos, confirmado sin
+      los cambios de este spec). Build backend y `tsc --noEmit` frontend
+      limpios.
 - [ ] `@tester` cierra la ronda automática; `@reviewer` revisa antes de `[DONE]`.
 
 ## Dependencias entre fases
