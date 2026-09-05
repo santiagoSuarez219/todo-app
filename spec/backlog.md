@@ -158,6 +158,73 @@
     alcance de spec-033, que no toca `dueDate` ni `ActivityForm` más allá de
     agregar la opción de estado.
 
+## spec-035 — Unificación de presupuesto y gastos
+
+- **`BudgetsService.findAll()` hidrata todos los `expenses` de cada
+  presupuesto de la página, solo para calcular `plannedTotal`.**
+  (`backend/src/finances/budgets.service.ts`) — cada `GET /finances/budgets`
+  hace `leftJoinAndSelect('budget.expenses', ...)` con join a `debt`, trae
+  todas las filas de gasto de cada presupuesto listado y luego suma en
+  memoria. `BudgetsView` (la única vista que consume este endpoint) no
+  necesita el detalle de gastos, solo el conteo y el total planeado. Para el
+  volumen actual (uso personal) es intrascendente, pero si un presupuesto
+  acumula muchos gastos, el listado se vuelve más pesado de lo necesario.
+  Corregirlo implica una agregación `SUM`/`COUNT` por `budgetId` en el propio
+  query en vez de traer las entidades completas — fuera del alcance
+  quirúrgico de spec-035, que reutilizó el patrón de `findOne()` por
+  simplicidad. Análogo al hallazgo ya registrado de `findByMonth()` en
+  spec-024, aunque aquí no hay truncamiento silencioso, solo sobre-fetch.
+- **`Expense.executionStatus` no tiene `@ApiProperty` en la entidad**
+  (`backend/src/finances/entities/expense.entity.ts`) — es un campo calculado
+  no persistido (ver "Semántica derivada" en spec-035), documentado con un
+  comentario pero sin decorador Swagger, así que no aparece tipado en
+  `/api/v1/docs` aunque el backend sí lo devuelve en cada respuesta. Bajo
+  impacto (cosmético, no afecta el contrato real), pendiente si se retoma
+  trabajo en la documentación Swagger del módulo de finanzas.
+- **Gap de validación `.strict()` en tools MCP — reducido, no cerrado.**
+  Continuación del hallazgo de spec-030: `create_expense`, `update_expense` y
+  `create_budget` se migraron a `server.registerTool()` con `.strict()` como
+  parte de la Fase 6 de spec-035 (mismo precedente de `create_activity`). El
+  resto de tools de escritura de `mcp.service.ts` (`update_project`,
+  `create_income`, y las ~25 restantes) sigue sin `.strict()`. Sin cambios
+  respecto de la evaluación pendiente ya registrada en spec-030.
+- **Previsualización de `DuplicateBudgetForm` sobrecuenta los gastos a
+  copiar cuando hay cuotas de deuda en el mes.** (`frontend/src/components/finances/DuplicateBudgetForm.tsx:85`)
+  — el texto "Se copiará solo el plan: N gastos planeados..." cuenta
+  `origin.expenses.filter(e => e.plannedAmount != null).length`, sin restar
+  los gastos con `debt != null` (excluidos del duplicado por decisión 9,
+  heredada de spec-026). Detectado en ronda manual de `test-035`
+  (TC-035-009): con una cuota de deuda en el mes origen, el modal anunciaba
+  "5 gastos planeados" antes de confirmar, y el resultado real fue "4
+  gastos planeados copiados" — el comportamiento real es correcto, solo la
+  previsualización es optimista. Corregirlo implica replicar en el
+  frontend el mismo filtro `expense.debt == null` que ya aplica
+  `BudgetsService.duplicate()` en el backend.
+- **Badge "Sin presupuesto" en `ExpenseCard.tsx` es una etiqueta engañosa.**
+  (`frontend/src/components/finances/ExpenseCard.tsx:56-72`,
+  `statusBadge()`) — se muestra cuando `executionStatus === 'executed' &&
+  !expense.plannedAmount`, es decir, "ejecutado sin `plannedAmount`" (sin
+  plan). El texto sugiere en cambio que el gasto no tiene `budgetId`
+  asignado, que es un campo distinto. Detectado en ronda manual de
+  `test-035` (TC-035-014): gastos auto-vinculados a un presupuesto por
+  fecha (con `budgetId` real) se etiquetan igual que uno genuinamente sin
+  presupuesto. Corregirlo implica cambiar el texto a algo como "Sin plan" o
+  agregar una condición/etiqueta separada para "sin presupuesto" basada en
+  `expense.budget == null`.
+- **Inconsistencia de nombre del identificador entre tools MCP del dominio
+  de finanzas.** (`backend/src/mcp/mcp.service.ts`) — `update_expense`
+  espera el campo `id`; `duplicate_expense` espera `expenseId`;
+  `duplicate_budget` espera `sourceBudgetId` (no `budgetId`, que sí es el
+  nombre correcto en `create_expense`/`update_expense`/`list_expenses`).
+  Detectado en ronda manual de `test-035` (TC-MCP-035-006/010/011): un
+  agente que generaliza el nombre del campo desde una tool a otra del mismo
+  dominio falla con `Unrecognized key` o "expected string, received
+  undefined". No es un bug de validación (cada schema es internamente
+  correcto y consistente con su propio DTO), pero es fricción evitable —
+  unificar el nombre del identificador entre las tools de un mismo dominio
+  (ej. todas `id`, o todas `<recurso>Id`) mejoraría la ergonomía del MCP
+  para agentes.
+
 ## spec-034 — Corrección del listado de actividades y filtros por estado
 
 - **`frontend/CLAUDE.md` (sección "Interfaces principales") sigue muy

@@ -232,13 +232,28 @@ export type PurchaseStatus = (typeof PurchaseStatus)[keyof typeof PurchaseStatus
 
 // ─── Finances — Entities ─────────────────────────────────────────────────────
 
+// spec-035: Expense absorbe a BudgetItem — un gasto puede ser solo planeado
+// (plannedAmount, sin amount/date), solo ejecutado (amount+date, sin
+// plannedAmount) o ambos ("settled"). `executionStatus` es calculado por el
+// backend, no se envía en los DTOs de escritura.
+export type ExpenseExecutionStatus = 'planned' | 'executed' | 'settled';
+
 export interface Expense {
   id: string;
   description: string;
-  amount: number;
-  date: string;
+  amount: number | null;
+  date: string | null;
+  plannedAmount: number | null;
   type: ExpenseType;
+  budget: { id: string; name: string; month: number; year: number } | null;
   creditCard: CreditCard | null;
+  /**
+   * Presente cuando el gasto es una cuota generada automáticamente por una
+   * deuda (spec-026, portado a Expense en spec-035).
+   */
+  debt?: { id: string } | null;
+  installmentNumber?: number | null;
+  executionStatus?: ExpenseExecutionStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -350,15 +365,23 @@ export interface CreatePurchaseDto {
 
 export type UpdatePurchaseDto = Partial<CreatePurchaseDto>;
 
+// spec-035: amount/date dejan de ser obligatorios — un gasto puede nacer
+// solo planeado (plannedAmount, sin amount/date). El backend valida que al
+// menos uno de los dos esté presente, y que amount/date vayan juntos.
 export interface CreateExpenseDto {
   description: string;
-  amount: number;
-  date: string;
+  amount?: number;
+  date?: string;
+  plannedAmount?: number;
   type: ExpenseType;
+  budgetId?: string;
   creditCardId?: string | null;
 }
 
-export type UpdateExpenseDto = Partial<CreateExpenseDto>;
+export type UpdateExpenseDto = Partial<Omit<CreateExpenseDto, 'budgetId'>> & {
+  /** `null` explícito desvincula el gasto de su presupuesto. */
+  budgetId?: string | null;
+};
 
 export interface CreateIncomeDto {
   description: string;
@@ -369,26 +392,17 @@ export interface CreateIncomeDto {
 
 export type UpdateIncomeDto = Partial<CreateIncomeDto>;
 
-export interface BudgetItem {
-  id: string;
-  description: string;
-  plannedAmount: number;
+// spec-035: BudgetItem se elimina — un ítem de presupuesto es ahora un
+// Expense con plannedAmount y budgetId. TypeBreakdown reemplaza a
+// BudgetTypeSummary: planeado y ejecutado ya no se suman en el mismo
+// acumulador (esa suma era la causa del doble conteo pre-spec-035).
+export interface TypeBreakdown {
   type: ExpenseType;
-  /**
-   * Presente cuando el ítem es una cuota generada automáticamente por una
-   * deuda (spec-026) — el backend devuelve la relación completa vía
-   * `leftJoinAndSelect`, no un `debtId` plano.
-   */
-  debt?: { id: string } | null;
-  installmentNumber?: number | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BudgetTypeSummary {
-  type: ExpenseType;
-  total: number;
-  percentage: number;
+  planned: number;
+  executed: number;
+  variance: number;
+  plannedPct: number;
+  executedPct: number;
 }
 
 export interface Budget {
@@ -396,26 +410,24 @@ export interface Budget {
   name: string;
   month: number;
   year: number;
-  items: BudgetItem[];
-  typeSummary?: BudgetTypeSummary[];
+  expenses: Expense[];
+  byType?: TypeBreakdown[];
   totalIncome?: number;
+  plannedTotal?: number;
+  executedTotal?: number;
+  variance?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 // ─── Finances — Budget DTOs ──────────────────────────────────────────────────
 
-export interface CreateBudgetItemDto {
-  description: string;
-  plannedAmount: number;
-  type: ExpenseType;
-}
-
+// spec-035, decisión 11: el presupuesto nace vacío. Los gastos se agregan
+// después vía POST /finances/expenses con `budgetId`.
 export interface CreateBudgetDto {
   name: string;
   month: number;
   year: number;
-  items?: CreateBudgetItemDto[];
 }
 
 export interface UpdateBudgetDto {
@@ -423,8 +435,6 @@ export interface UpdateBudgetDto {
   month?: number;
   year?: number;
 }
-
-export type UpdateBudgetItemDto = Partial<Pick<BudgetItem, 'description' | 'plannedAmount' | 'type'>>;
 
 export interface DuplicateBudgetDto {
   month: number;
@@ -434,24 +444,34 @@ export interface DuplicateBudgetDto {
 
 export interface DuplicateBudgetResult {
   budget: Budget;
-  itemsCopied: number;
+  plannedExpensesCopied: number;
   incomesCopied: number;
-  expensesCopied: number;
+}
+
+/** spec-035, decisión 12: borrar un presupuesto borra sus gastos en cascada. */
+export interface RemoveBudgetResult {
+  executedExpensesRemoved: number;
+  executedTotalRemoved: number;
 }
 
 export interface CardTotal {
   creditCardId: string;
   name: string;
-  total: number;
+  planned: number;
+  executed: number;
 }
 
 export interface MonthlySummary {
   year: number;
   month: number;
-  budgetTotal: number;
-  expensesTotal: number;
-  combinedTotal: number;
   budgetId: string | null;
+  totalIncome: number;
+  plannedTotal: number;
+  executedTotal: number;
+  variance: number;
+  pendingPlannedTotal: number;
+  unplannedTotal: number;
+  byType: TypeBreakdown[];
   cardTotals: CardTotal[];
 }
 

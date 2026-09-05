@@ -794,9 +794,7 @@ export class McpService {
               .min(1)
               .max(31)
               .optional()
-              .describe(
-                'Day of month (1-31). Required for monthly frequency.',
-              ),
+              .describe('Day of month (1-31). Required for monthly frequency.'),
             recurrenceEndDate: z
               .string()
               .optional()
@@ -876,7 +874,7 @@ export class McpService {
   private registerExpenseTools(server: McpServer): void {
     server.tool(
       'list_expenses',
-      'List expenses with optional filtering by year, month, credit card, or description search',
+      "List expenses with optional filtering by year, month, budget, credit card, planned/executed status, or description search. year/month scope by the expense's budget when it has one — see get_monthly_expense_summary for the full rule.",
       {
         page: z
           .number()
@@ -912,6 +910,21 @@ export class McpService {
           .uuid()
           .optional()
           .describe('Filter by credit card UUID'),
+        budgetId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('Filter by budget UUID'),
+        planned: z
+          .boolean()
+          .optional()
+          .describe(
+            'If true, only planned expenses not yet executed (amount IS NULL)',
+          ),
+        executed: z
+          .boolean()
+          .optional()
+          .describe('If true, only executed expenses (amount IS NOT NULL)'),
         search: z
           .string()
           .optional()
@@ -928,7 +941,7 @@ export class McpService {
 
     server.tool(
       'get_expense',
-      'Get a single expense by its UUID',
+      'Get a single expense by its UUID, including its planned amount, executed amount/date, budget, credit card and debt linkage if any',
       { id: z.string().uuid().describe('Expense UUID') },
       async ({ id }) => {
         try {
@@ -939,16 +952,66 @@ export class McpService {
       },
     );
 
-    server.tool(
+    server.registerTool(
       'create_expense',
-      'Create a new expense record',
       {
-        description: z.string().min(1).max(255).describe('Expense description'),
-        amount: z.number().positive().describe('Amount in COP'),
-        date: z.string().describe('Date in ISO 8601 format (YYYY-MM-DD)'),
-        type: z
-          .enum(['basico', 'lujo', 'ahorro', 'pago_deuda'])
-          .describe('Expense type: basico, lujo, ahorro or pago_deuda'),
+        description:
+          'Create a new expense record. An expense has three possible states, derived from which fields are present (never persisted as a status column): planned (only plannedAmount), executed (only amount + date), or settled (both). Use plannedAmount + budgetId to add a planned expense to a budget; use amount + date to record something already spent.',
+        inputSchema: z
+          .object({
+            description: z
+              .string()
+              .min(1)
+              .max(255)
+              .describe('Expense description'),
+            amount: z
+              .number()
+              .positive()
+              .optional()
+              .describe(
+                'Monto real ya ejecutado en COP. Requiere `date` en la misma llamada.',
+              ),
+            date: z
+              .string()
+              .optional()
+              .describe(
+                'Fecha real de ejecución (YYYY-MM-DD). Requiere `amount` en la misma llamada.',
+              ),
+            plannedAmount: z
+              .number()
+              .positive()
+              .optional()
+              .describe('Monto planeado del presupuesto en COP.'),
+            type: z
+              .enum(['basico', 'lujo', 'ahorro', 'pago_deuda'])
+              .describe('Expense type: basico, lujo, ahorro or pago_deuda'),
+            budgetId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe(
+                'Presupuesto al que pertenece. Si se omite y `date` cae en un mes con presupuesto existente, se asigna automáticamente; nunca se crea un presupuesto nuevo desde aquí.',
+              ),
+            creditCardId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe('Tarjeta de crédito asociada al gasto.'),
+          })
+          .strict()
+          .refine(
+            (data) =>
+              data.plannedAmount != null ||
+              (data.amount != null && data.date != null),
+            {
+              message:
+                'Debe enviar al menos plannedAmount, o amount y date juntos. Un gasto nunca puede quedar sin ningún monto.',
+            },
+          )
+          .refine((data) => (data.amount == null) === (data.date == null), {
+            message:
+              'amount y date deben enviarse juntos: un gasto ejecutado siempre tiene fecha, y viceversa.',
+          }),
       },
       async (dto) => {
         try {
@@ -959,15 +1022,44 @@ export class McpService {
       },
     );
 
-    server.tool(
+    server.registerTool(
       'update_expense',
-      'Update an existing expense',
       {
-        id: z.string().uuid().describe('Expense UUID'),
-        description: z.string().min(1).max(255).optional(),
-        amount: z.number().positive().optional(),
-        date: z.string().optional(),
-        type: z.enum(['basico', 'lujo', 'ahorro', 'pago_deuda']).optional(),
+        description:
+          'Update an existing expense. Send `amount` + `date` together to register the execution of a planned expense (moving it from planned to settled). Send `budgetId: null` explicitly to detach the expense from its budget.',
+        inputSchema: z
+          .object({
+            id: z.string().uuid().describe('Expense UUID'),
+            description: z.string().min(1).max(255).optional(),
+            amount: z
+              .number()
+              .positive()
+              .optional()
+              .describe('Requiere `date` en la misma llamada si se envía.'),
+            date: z
+              .string()
+              .optional()
+              .describe('Requiere `amount` en la misma llamada si se envía.'),
+            plannedAmount: z.number().positive().optional(),
+            type: z.enum(['basico', 'lujo', 'ahorro', 'pago_deuda']).optional(),
+            budgetId: z
+              .string()
+              .uuid()
+              .nullable()
+              .optional()
+              .describe(
+                'Un budgetId explícito manda sobre la fecha una vez asignado. Enviar null para desvincular.',
+              ),
+            creditCardId: z.string().uuid().optional(),
+          })
+          .strict()
+          .refine(
+            (data) => (data.amount === undefined) === (data.date === undefined),
+            {
+              message:
+                'amount y date deben enviarse juntos al actualizar: ambos en la misma llamada, o ninguno.',
+            },
+          ),
       },
       async ({ id, ...dto }) => {
         try {
@@ -994,7 +1086,7 @@ export class McpService {
 
     server.tool(
       'duplicate_expense',
-      'Duplicate an expense to another month with date shifted to destination month (day clamped to last day if necessary)',
+      'Duplicate a single expense to another month, copying it as-is: plannedAmount, amount and date (if the source had them) are all carried over, with date shifted to the destination month (day clamped to last day if necessary). Asymmetric on purpose with duplicate_budget, which copies only the plan: this tool clones a fact, duplicate_budget plans a new month.',
       {
         expenseId: z.string().uuid().describe('Source expense UUID'),
         month: z
@@ -1547,7 +1639,7 @@ export class McpService {
 
     server.tool(
       'get_budget',
-      'Get a single budget by UUID, including all its items',
+      'Get a single budget by UUID, including its expenses (each with planned/executed amount), totalIncome, plannedTotal, executedTotal, variance and byType (breakdown per ExpenseType with planned/executed/variance/plannedPct/executedPct)',
       { id: z.string().uuid().describe('Budget UUID') },
       async ({ id }) => {
         try {
@@ -1558,22 +1650,18 @@ export class McpService {
       },
     );
 
-    server.tool(
+    server.registerTool(
       'create_budget',
-      'Create a new monthly budget, optionally with initial items',
       {
-        name: z.string().min(1).max(255).describe('Budget name'),
-        month: z.number().int().min(1).max(12).describe('Month (1–12)'),
-        year: z.number().int().min(2020).describe('Year (>= 2020)'),
-        items: z
-          .array(
-            z.object({
-              description: z.string().min(1).max(255),
-              plannedAmount: z.number().positive(),
-            }),
-          )
-          .optional()
-          .describe('Initial budget items'),
+        description:
+          "Create a new monthly budget. It always starts empty — there is no way to attach items on creation anymore. Add planned expenses afterwards with create_expense, passing plannedAmount and this budget's id as budgetId.",
+        inputSchema: z
+          .object({
+            name: z.string().min(1).max(255).describe('Budget name'),
+            month: z.number().int().min(1).max(12).describe('Month (1–12)'),
+            year: z.number().int().min(2020).describe('Year (>= 2020)'),
+          })
+          .strict(),
       },
       async (dto) => {
         try {
@@ -1604,70 +1692,11 @@ export class McpService {
 
     server.tool(
       'delete_budget',
-      'Delete a budget and all its items by UUID',
+      'Delete a budget by UUID. Cascades to ALL its expenses, including already executed ones — this destroys real spending history, not just the plan. The result reports executedExpensesRemoved (count) and executedTotalRemoved (sum) so the caller can warn before/after acting on it.',
       { id: z.string().uuid().describe('Budget UUID') },
       async ({ id }) => {
         try {
-          await this.budgetsService.remove(id);
-          return ok({ message: `Budget ${id} deleted successfully` });
-        } catch (e) {
-          return err(e);
-        }
-      },
-    );
-
-    server.tool(
-      'add_budget_item',
-      'Add a new item to an existing budget',
-      {
-        budgetId: z.string().uuid().describe('Budget UUID'),
-        description: z.string().min(1).max(255).describe('Item description'),
-        plannedAmount: z.number().positive().describe('Planned amount in COP'),
-        type: z
-          .enum(['basico', 'lujo', 'ahorro', 'pago_deuda'])
-          .describe('Expense type: basico, lujo, ahorro or pago_deuda'),
-      },
-      async ({ budgetId, ...dto }) => {
-        try {
-          return ok(await this.budgetsService.addItem(budgetId, dto as any));
-        } catch (e) {
-          return err(e);
-        }
-      },
-    );
-
-    server.tool(
-      'update_budget_item',
-      'Update description, amount or type of an existing budget item',
-      {
-        budgetId: z.string().uuid().describe('Budget UUID'),
-        itemId: z.string().uuid().describe('Budget item UUID'),
-        description: z.string().min(1).max(255).optional(),
-        plannedAmount: z.number().positive().optional(),
-        type: z.enum(['basico', 'lujo', 'ahorro', 'pago_deuda']).optional(),
-      },
-      async ({ budgetId, itemId, ...dto }) => {
-        try {
-          return ok(
-            await this.budgetsService.updateItem(budgetId, itemId, dto as any),
-          );
-        } catch (e) {
-          return err(e);
-        }
-      },
-    );
-
-    server.tool(
-      'delete_budget_item',
-      'Remove a specific item from a budget',
-      {
-        budgetId: z.string().uuid().describe('Budget UUID'),
-        itemId: z.string().uuid().describe('Budget item UUID'),
-      },
-      async ({ budgetId, itemId }) => {
-        try {
-          await this.budgetsService.removeItem(budgetId, itemId);
-          return ok({ message: `Budget item ${itemId} deleted successfully` });
+          return ok(await this.budgetsService.remove(id));
         } catch (e) {
           return err(e);
         }
@@ -1676,7 +1705,7 @@ export class McpService {
 
     server.tool(
       'get_monthly_expense_summary',
-      'Get consolidated monthly expense summary combining fixed budget items and variable expenses for a given month. Returns budgetTotal, expensesTotal, combinedTotal and the budgetId if a budget exists for that month.',
+      'Get the consolidated monthly summary for year/month: totalIncome, plannedTotal (SUM plannedAmount), executedTotal (SUM amount), variance (planned − executed), pendingPlannedTotal (planned expenses not yet executed), unplannedTotal (executed expenses with no plan), byType breakdown and cardTotals per credit card. budgetId is null if no budget exists for that month. There is no combined/double-counted total: planned and executed are always reported separately.',
       {
         year: z.number().int().min(2000).max(2100).describe('Year (e.g. 2026)'),
         month: z.number().int().min(1).max(12).describe('Month (1–12)'),
@@ -1692,7 +1721,7 @@ export class McpService {
 
     server.tool(
       'duplicate_budget',
-      'Duplicate a complete month of budgets, incomes and expenses from a source budget to a destination month/year. All items, incomes, and expenses are copied; dates are shifted to the destination month (clamped to month-end). Returns the duplicated budget and counts of copied records.',
+      'Duplicate a budget to another month/year, copying only the plan: expenses are recreated with their plannedAmount, but amount and date are left null in the destination even if the source had them executed. Incomes are copied as-is with dates shifted. Debt installment expenses are never duplicated here — they materialize on their own from the debt. Returns plannedExpensesCopied and incomesCopied (not itemsCopied/expensesCopied). Asymmetric on purpose with duplicate_expense, which clones a single expense including its execution.',
       {
         sourceBudgetId: z
           .string()
@@ -1750,7 +1779,7 @@ export class McpService {
 
     server.tool(
       'create_debt',
-      'Crea una nueva deuda a cuotas. productValue es el valor total del producto; installmentValue es el valor de cada cuota mensual; totalInstallments es el número de cuotas; initialPayment es la cuota inicial opcional. startMonth/startYear indican el mes de la primera cuota (por defecto, el mes siguiente al actual). IMPORTANTE: esta herramienta crea automáticamente un ítem de presupuesto (tipo pago_deuda) por cada cuota, uno en cada mes del plazo, y crea el presupuesto del mes si no existe — no uses add_budget_item para las cuotas de esta deuda.',
+      'Crea una nueva deuda a cuotas. productValue es el valor total del producto; installmentValue es el valor de cada cuota mensual; totalInstallments es el número de cuotas; initialPayment es la cuota inicial opcional. startMonth/startYear indican el mes de la primera cuota (por defecto, el mes siguiente al actual). IMPORTANTE: esta herramienta crea automáticamente un gasto planeado (tipo pago_deuda) por cada cuota, uno en cada mes del plazo, y crea el presupuesto del mes si no existe — no uses create_expense para las cuotas de esta deuda, ya quedan materializadas.',
       {
         description: z
           .string()

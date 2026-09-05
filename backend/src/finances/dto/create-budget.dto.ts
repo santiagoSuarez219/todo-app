@@ -1,18 +1,15 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsArray,
   IsInt,
   IsNotEmpty,
-  IsOptional,
   IsString,
   Max,
   MaxLength,
   Min,
-  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { CreateBudgetItemDto } from './create-budget-item.dto';
 
+// spec-035, decisión 11: el presupuesto nace vacío. Los gastos se agregan
+// después vía POST /finances/expenses con `budgetId`.
 export class CreateBudgetDto {
   @ApiProperty({ example: 'Presupuesto junio 2026', maxLength: 255 })
   @IsString()
@@ -30,11 +27,4 @@ export class CreateBudgetDto {
   @IsInt()
   @Min(2020)
   year: number;
-
-  @ApiPropertyOptional({ type: [CreateBudgetItemDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateBudgetItemDto)
-  @IsOptional()
-  items?: CreateBudgetItemDto[];
 }

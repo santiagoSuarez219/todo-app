@@ -3,8 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -14,23 +12,23 @@ import {
 import {
   ApiConflictResponse,
   ApiCreatedResponse,
-  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { BudgetsService, DuplicateBudgetResult } from './budgets.service';
+import {
+  BudgetsService,
+  DuplicateBudgetResult,
+  RemoveBudgetResult,
+} from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { DuplicateBudgetDto } from './dto/duplicate-budget.dto';
-import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
-import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 import { MonthlySummaryQueryDto } from './dto/monthly-summary-query.dto';
 import { MonthlySummary } from './budgets.service';
 import { BudgetsQueryDto } from './dto/budgets-query.dto';
 import { Budget } from './entities/budget.entity';
-import { BudgetItem } from './entities/budget-item.entity';
 
 @ApiTags('finances / budgets')
 @Controller('finances/budgets')
@@ -38,7 +36,10 @@ export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new budget (optionally with items)' })
+  @ApiOperation({
+    summary:
+      'Create a new budget. Nace vacío: los gastos se agregan vía POST /finances/expenses con budgetId.',
+  })
   @ApiCreatedResponse({ type: Budget })
   create(@Body() dto: CreateBudgetDto): Promise<Budget> {
     return this.budgetsService.create(dto);
@@ -46,11 +47,14 @@ export class BudgetsController {
 
   @Post(':id/duplicate')
   @ApiOperation({
-    summary: 'Duplicate a budget to another month/year with all items, incomes, and expenses',
+    summary:
+      'Duplicate a budget to another month/year. Copia solo el plan de los gastos (plannedAmount) y todos los ingresos; amount/date quedan en null en el destino.',
   })
   @ApiCreatedResponse()
   @ApiNotFoundResponse({ description: 'Source budget not found' })
-  @ApiConflictResponse({ description: 'Budget already exists for destination month/year' })
+  @ApiConflictResponse({
+    description: 'Budget already exists for destination month/year',
+  })
   duplicate(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: DuplicateBudgetDto,
@@ -59,7 +63,9 @@ export class BudgetsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List budgets, optionally filtered by year and/or month' })
+  @ApiOperation({
+    summary: 'List budgets, optionally filtered by year and/or month',
+  })
   @ApiOkResponse({ type: [Budget] })
   findAll(@Query() query: BudgetsQueryDto): Promise<Budget[]> {
     const { year, month, ...pagination } = query;
@@ -67,14 +73,21 @@ export class BudgetsController {
   }
 
   @Get('monthly-summary')
-  @ApiOperation({ summary: 'Get consolidated monthly expense summary (budget + variable expenses)' })
+  @ApiOperation({
+    summary:
+      'Get consolidated monthly summary: planned vs executed, variance, pending/unplanned totals and card breakdown.',
+  })
   @ApiOkResponse()
-  getMonthlySummary(@Query() query: MonthlySummaryQueryDto): Promise<MonthlySummary> {
+  getMonthlySummary(
+    @Query() query: MonthlySummaryQueryDto,
+  ): Promise<MonthlySummary> {
     return this.budgetsService.getMonthlySummary(query.year, query.month);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a budget by ID (includes items)' })
+  @ApiOperation({
+    summary: 'Get a budget by ID (includes its expenses, planned and executed)',
+  })
   @ApiOkResponse({ type: Budget })
   @ApiNotFoundResponse()
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Budget> {
@@ -93,46 +106,13 @@ export class BudgetsController {
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a budget (cascades to items)' })
-  @ApiNoContentResponse()
+  @ApiOperation({
+    summary:
+      'Delete a budget. Cascades to ALL its expenses, including already executed ones (spec-035, decisión 12) — el resultado indica cuántos y por qué monto para que la UI advierta antes de confirmar.',
+  })
+  @ApiOkResponse()
   @ApiNotFoundResponse()
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  remove(@Param('id', ParseUUIDPipe) id: string): Promise<RemoveBudgetResult> {
     return this.budgetsService.remove(id);
-  }
-
-  @Post(':id/items')
-  @ApiOperation({ summary: 'Add an item to a budget' })
-  @ApiCreatedResponse({ type: BudgetItem })
-  @ApiNotFoundResponse()
-  addItem(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: CreateBudgetItemDto,
-  ): Promise<BudgetItem> {
-    return this.budgetsService.addItem(id, dto);
-  }
-
-  @Patch(':budgetId/items/:itemId')
-  @ApiOperation({ summary: 'Update an item in a budget' })
-  @ApiOkResponse({ type: BudgetItem })
-  @ApiNotFoundResponse()
-  updateItem(
-    @Param('budgetId', ParseUUIDPipe) budgetId: string,
-    @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: UpdateBudgetItemDto,
-  ): Promise<BudgetItem> {
-    return this.budgetsService.updateItem(budgetId, itemId, dto);
-  }
-
-  @Delete(':budgetId/items/:itemId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Remove an item from a budget' })
-  @ApiNoContentResponse()
-  @ApiNotFoundResponse()
-  removeItem(
-    @Param('budgetId', ParseUUIDPipe) budgetId: string,
-    @Param('itemId', ParseUUIDPipe) itemId: string,
-  ): Promise<void> {
-    return this.budgetsService.removeItem(budgetId, itemId);
   }
 }

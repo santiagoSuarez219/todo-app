@@ -803,12 +803,38 @@ inesperado, lentitud, detalle visual… o "sin observaciones"}}
 
 | Campo              | Valor                                      |
 |--------------------|--------------------------------------------|
-| Proveedor          | `{{proveedor de BD en producción — no confirmado; en local es PostgreSQL 16 vía docker-compose.yml}}` |
-| Proyecto / Cluster | `{{nombre del proyecto en el proveedor}}`  |
-| Base de datos      | `todo_db`                                  |
-| Región             | `{{región de producción}}`                 |
-| Variable de conexión | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` en `.env` |
-| Panel de control   | `{{url del dashboard del proveedor}}`      |
+| Proveedor          | **Neon** (Postgres serverless), plan `free_v3`. En local, en cambio, es PostgreSQL 16 vía `docker-compose.yml` (puerto 5433, sin SSL) |
+| Proyecto / Cluster | `to-do` (`proud-bar-87722527`) · rama por defecto `production` (`br-green-grass-aq3nn6w0`) |
+| Base de datos      | **`neondb`**, rol `neondb_owner` (⚠️ **no** `todo_db` / `todo_user`: esos son los nombres **locales** de `docker-compose.yml`) |
+| Versión de Postgres | **18** en producción · **16** en local — la diferencia es real: una migración probada solo en local no está probada contra producción |
+| Región             | `aws-us-east-1`                            |
+| Variable de conexión | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` en `.env` (no `DATABASE_URL`: `data-source.ts` arma la conexión con campos sueltos) |
+| Panel de control   | `https://console.neon.tech`                |
+
+> **SSL:** Neon lo exige. `data-source.ts` y `app.module.ts` activan
+> `ssl: { rejectUnauthorized: false }` **solo** cuando `NODE_ENV === 'production'`.
+> Por eso el contenedor local `todo_backend` (que corre con
+> `NODE_ENV=production`) entra en crash-loop contra el Postgres de Docker:
+> exige SSL a un servidor que no lo ofrece. Para desarrollo local se usa
+> `npm run start:dev` con `NODE_ENV=development`, no ese contenedor.
+
+> **Branching de Neon para ensayar migraciones.** Antes de un despliegue con
+> cambios de esquema, crear una rama de la base de producción en Neon
+> (instantánea, copy-on-write) y correr la migración **contra esa rama**
+> primero: es el único ensayo fiel contra datos reales sin arriesgarlos. Ver
+> "Proceso de despliegue — Backend", paso 2.
+
+> **Point-in-time restore: solo 6 horas.** El plan `free_v3` tiene
+> `history_retention_seconds: 21600`. Si una migración corrompe datos y no
+> se detecta dentro de esa ventana, el PITR ya no sirve. Por eso, antes de
+> un despliegue con esquema destructivo, crear también una rama de respaldo
+> (ej. `backup-pre-vX.Y.Z`) y **dejarla intacta**: una rama es un punto de
+> restauración permanente, congelado y ajeno a la ventana de 6 h.
+
+> **Ojo con `set -a; . ./archivo.env`** para cargar credenciales al probar:
+> el shell expande los `$` de un hash bcrypt (`$2b$10$…`) y lo corrompe en
+> silencio, produciendo un `401` incomprensible en el login. Entrecomillar
+> los valores (`CLAVE='valor'`) al generar ese archivo.
 
 #### Backend
 
@@ -872,13 +898,34 @@ development ──merge──▶ deploy/vX.Y.Z ──merge──▶ main ──p
    git checkout -b deploy/{{versión}}
    ```
 
-2. **Ejecutar migraciones** *(solo si hay cambios de esquema)*
+2. **Ensayar la migración en una rama de Neon** *(solo si hay cambios de esquema)*
    > ⚠️ Requiere confirmación explícita del usuario antes de ejecutar.
+
+   **La migración NO se ejecuta a mano en producción:** `backend/entrypoint.sh`
+   corre `npm run migration:run:prod` automáticamente al arrancar el
+   contenedor, así que el `git push origin main` del paso 4 la dispara solo.
+   Con `set -e`, si falla, el contenedor no arranca y Railway lo reintenta
+   (`restartPolicyType = "on_failure"`) — un fallo de migración es un deploy
+   caído, no una app degradada.
+
+   Por eso el ensayo previo contra una rama de Neon es el paso que de verdad
+   protege: es la única forma de correr la migración contra los datos reales
+   sin tocarlos.
    ```bash
+   # 1. Crear la rama de producción en la consola de Neon.
+   # 2. Volcar sus credenciales en backend/.env.neon.local
+   #    (gitignored por el patrón `.env.*.local`; NUNCA usar un nombre
+   #    fuera de ese patrón: `.env.neon-branch`, por ejemplo, SÍ se commitea).
+   #    Incluir NODE_ENV=production para que se active el SSL que Neon exige.
+   # 3. Correr la migración contra la rama, sin tocar el .env local:
+   cd backend
+   set -a; . ./.env.neon.local; set +a
    npx typeorm migration:run -d src/data-source.ts
    ```
-   Verificar en el panel de la base de datos que la migración aplicó correctamente
-   antes de continuar.
+   Verificar el resultado contra los criterios de aceptación del spec (ej.
+   conteos de filas antes/después) y **eliminar la rama de Neon** al terminar.
+   Si el ensayo falla, corregir la migración antes de seguir: el mismo fallo
+   tumbaría el deploy real.
 
 3. **Merge a `main`**
    > ⚠️ Requiere confirmación explícita del usuario.

@@ -12,6 +12,11 @@ import {
 } from 'class-validator';
 import { ExpenseType } from '../../common/enums/expense-type.enum';
 
+// spec-035: amount/date dejan de ser obligatorios — un gasto puede nacer
+// solo planeado (plannedAmount, sin amount/date). La validación cruzada
+// (al menos uno de los dos; amount y date siempre juntos) se hace en
+// ExpensesService, no aquí, porque depende del estado combinado del dto
+// (ver "Semántica derivada" en spec-035).
 export class CreateExpenseDto {
   @ApiProperty({ example: 'Mercado semanal', maxLength: 255 })
   @IsString()
@@ -19,18 +24,44 @@ export class CreateExpenseDto {
   @MaxLength(255)
   description: string;
 
-  @ApiProperty({ example: 150000 })
+  @ApiPropertyOptional({
+    example: 150000,
+    description: 'Monto real ya ejecutado. Requiere `date` si se envía.',
+  })
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
-  amount: number;
+  @IsOptional()
+  amount?: number;
 
-  @ApiProperty({ example: '2026-06-24' })
+  @ApiPropertyOptional({
+    example: '2026-06-24',
+    description: 'Fecha real de ejecución. Requiere `amount` si se envía.',
+  })
   @IsDateString()
-  date: string;
+  @IsOptional()
+  date?: string;
+
+  @ApiPropertyOptional({
+    example: 150000,
+    description: 'Monto planeado del presupuesto.',
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive()
+  @IsOptional()
+  plannedAmount?: number;
 
   @ApiProperty({ enum: ExpenseType })
   @IsEnum(ExpenseType)
   type: ExpenseType;
+
+  @ApiPropertyOptional({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description:
+      'Presupuesto al que pertenece. Si se omite y `date` cae en un mes con presupuesto, se asigna automáticamente.',
+  })
+  @IsUUID()
+  @IsOptional()
+  budgetId?: string;
 
   @ApiPropertyOptional({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @IsUUID()

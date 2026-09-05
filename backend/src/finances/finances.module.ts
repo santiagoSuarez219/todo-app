@@ -7,7 +7,6 @@ import { Account } from './entities/account.entity';
 import { CreditCard } from './entities/credit-card.entity';
 import { Cdt } from './entities/cdt.entity';
 import { Budget } from './entities/budget.entity';
-import { BudgetItem } from './entities/budget-item.entity';
 import { Debt } from './entities/debt.entity';
 import { ExpensesService } from './expenses.service';
 import { IncomesService } from './incomes.service';
@@ -36,7 +35,6 @@ import { DebtsController } from './debts.controller';
       CreditCard,
       Cdt,
       Budget,
-      BudgetItem,
       Debt,
     ]),
   ],

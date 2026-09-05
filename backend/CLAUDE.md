@@ -203,8 +203,9 @@ Todos siguen el mismo patrón CRUD base (`POST`, `GET` paginado, `GET /:id`, `PA
 |---------|-------------|-------|
 | `purchases` | — | `GET` acepta `?status=` |
 | `cdts` | `GET /cdts/active` | CDTs con `endDate >= hoy` |
-| `budgets` | `GET /budgets/monthly-summary?year=&month=` | `budgetTotal` + `expensesTotal` + `combinedTotal` + `cardTotals` |
-| `budgets` | `POST /:id/items`, `PATCH /:budgetId/items/:itemId`, `DELETE /:budgetId/items/:itemId` | Gestión de `BudgetItem` |
+| `budgets` | `GET /budgets/monthly-summary?year=&month=` | `plannedTotal` + `executedTotal` + `variance` + `pendingPlannedTotal` + `unplannedTotal` + `byType` + `cardTotals` (spec-035 — ya no `budgetTotal`/`expensesTotal`/`combinedTotal`) |
+| `budgets` | `DELETE /:id` | Borra el presupuesto **en cascada con todos sus gastos**, incluidos los ya ejecutados (spec-035); devuelve `{ executedExpensesRemoved, executedTotalRemoved }` |
+| `expenses` | `POST` / `PATCH /:id` | Aceptan `plannedAmount` y `budgetId` (spec-035); `amount`/`date` pasan a opcionales — ver "Expense" abajo |
 | `debts` | `POST /:id/pay-off`, `POST /:id/sync-budget-items` | Pago total anticipado y sincronización del calendario de cuotas (ver lógica de negocio abajo) |
 
 `debts` sí tiene `PATCH /:id` y `DELETE /:id` a nivel REST (usados por el frontend en `/finances/debts`), pero **no están expuestos como tools MCP** — el agente de finanzas no puede editar ni eliminar deudas. El antiguo `POST /:id/pay` (pago de cuota individual) ya no existe (spec-026).
@@ -273,7 +274,8 @@ src/
     ├── 1782749715235-CreateDebts.ts
     ├── 1782908224127-AddCreditCardToExpenses.ts
     ├── 1786714977098-AddDebtScheduleAndBudgetItemLink.ts   spec-026: startMonth/startYear/paidOffAt, budget_items.debtId
-    └── 1786715738000-DropPaidInstallmentsFromDebts.ts      spec-026: columna reemplazada por cálculo derivado
+    ├── 1786715738000-DropPaidInstallmentsFromDebts.ts      spec-026: columna reemplazada por cálculo derivado
+    └── 1787100000000-UnifyBudgetItemsIntoExpenses.ts       spec-035: fusiona budget_items en expenses, elimina la tabla
 ```
 
 ### Entidades
@@ -320,15 +322,32 @@ src/
 
 #### Expense (`expenses`)
 
+> spec-035 fusionó `BudgetItem` en `Expense`: un gasto planeado y uno
+> ejecutado son ahora la misma fila. Ver "Lógica de Negocio Importante →
+> Presupuestos" para la semántica derivada (`planned | executed | settled`).
+
 | Campo | Tipo DB | Notas |
 |-------|---------|-------|
 | `id` | `uuid` PK | generado |
 | `description` | `varchar(255)` | requerido |
-| `amount` | `decimal(12,2)` | COP |
-| `date` | `date` | requerido |
+| `amount` | `decimal(12,2)` | COP, **nullable** — monto real ejecutado |
+| `date` | `date` | **nullable** — fecha real de ejecución; siempre junto con `amount` |
+| `plannedAmount` | `decimal(12,2)` | nullable — monto planeado del presupuesto |
 | `type` | `enum` | `basico \| lujo \| ahorro \| pago_deuda` |
-| `creditCard` | FK → `credit_cards` | nullable, `onDelete: SET NULL` — no expuesto aún en tools MCP |
+| `budget` | FK → `budgets` | nullable, `onDelete: CASCADE` — presupuesto al que pertenece (spec-035) |
+| `creditCard` | FK → `credit_cards` | nullable, `onDelete: SET NULL` |
+| `debt` | FK → `debts` | nullable, `onDelete: CASCADE` — cuota de deuda materializada (heredado de `BudgetItem`, spec-026) |
+| `installmentNumber` | `int` | nullable — heredado de `BudgetItem` |
 | `createdAt` / `updatedAt` | `timestamptz` | auto |
+
+Invariantes en DB (`CHK_expenses_has_amount`, `CHK_expenses_amount_date_together`):
+no puede haber una fila sin `plannedAmount` ni `amount`, y `amount`/`date`
+siempre van juntos. Índices: `UQ_expenses_debt_installment` (parcial, portado
+de `BudgetItem`) e `IDX_expenses_budgetId`.
+
+`executionStatus` (`'planned' | 'executed' | 'settled'`) **no es columna** —
+se calcula en `expenses.service.ts` (`withExecutionStatus()`,
+`expense-execution-status.util.ts`) al serializar cada respuesta.
 
 #### Income (`incomes`)
 
@@ -394,20 +413,23 @@ src/
 
 Activo si `endDate >= hoy` (calculado en `findActive()`, no persistido).
 
-#### Budget (`budgets`) / BudgetItem (`budget_items`)
+#### Budget (`budgets`)
+
+> spec-035: `BudgetItem` **fue eliminada** (entidad y tabla `budget_items`).
+> `Budget` ya no tiene ítems propios: su contenido son los `Expense` que lo
+> referencian por `budgetId`.
 
 | Campo | Tipo DB | Notas |
 |-------|---------|-------|
 | `id` | `uuid` PK | generado |
 | `name` | `varchar(255)` | requerido |
 | `month` | `integer` | 1–12 |
-| `year` | `integer` | requerido |
-| `items` | relación | `OneToMany → BudgetItem`, `cascade: true` |
+| `year` | `integer` | requerido, índice único `(month, year)` |
+| `expenses` | relación | `OneToMany → Expense`, **sin `cascade`** — el borrado en cascada de sus gastos es una decisión de negocio explícita en `BudgetsService.remove()`, no un efecto de TypeORM |
 | `createdAt` / `updatedAt` | `timestamptz` | auto |
 
-**BudgetItem:** `id`, `budget` (FK, `onDelete: CASCADE`), `description`, `plannedAmount` (`decimal(12,2)`), `type` (`enum ExpenseType`), `createdAt`/`updatedAt`.
-
-`totalIncome` y `typeSummary` no son columnas — se calculan en `budgets.service.ts` al leer.
+`totalIncome`, `plannedTotal`, `executedTotal`, `variance` y `byType` no son
+columnas — se calculan en `budgets.service.ts` al leer.
 
 #### Debt (`debts`)
 
@@ -435,11 +457,8 @@ y la fecha actual (`computePaidInstallments()` en `debts.service.ts`).
 installmentValue`. `nextInstallment` (`{number, month, year} | null`) también se
 deriva, para uso de la UI.
 
-`BudgetItem` gana en spec-026 una FK opcional `debt` (`ManyToOne`, nullable,
-`onDelete: CASCADE`) + `installmentNumber` (`int`, nullable) — presente cuando
-el ítem es una cuota generada automáticamente por una deuda. Índice único
-parcial `(debtId, installmentNumber) WHERE "debtId" IS NOT NULL`. `Budget`
-tiene además un índice único `(month, year)`.
+Las cuotas de deuda se materializan como `Expense` (`debt` + `installmentNumber`,
+heredados de `BudgetItem` en spec-035) — ver `Expense` arriba.
 
 ### Enums
 
@@ -525,45 +544,81 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
 - Al vivir en el servicio, aplica igual desde REST (`PATCH /activities/:id`),
   MCP (`update_activity`) y la UI — sin lógica duplicada en el frontend.
 
-#### Deudas (`debts.service.ts`, spec-026)
+#### Deudas (`debts.service.ts`, spec-026, portado a `Expense` en spec-035)
 
 - `create(dto)`: transacción atómica que guarda la deuda y materializa un
-  `BudgetItem` (`type: pago_deuda`, `description: "Cuota k/N — <descripción>"`)
-  por cada cuota, uno en cada mes consecutivo desde `startMonth`/`startYear`.
-  Reutiliza el `Budget` del mes si existe; si no, lo crea con nombre
-  autogenerado `"Presupuesto <Mes> <Año>"`.
+  `Expense` (`type: pago_deuda`, `description: "Cuota k/N — <descripción>"`,
+  `plannedAmount = installmentValue`, `amount`/`date` en `null` — es plan
+  hasta que se paga) por cada cuota, uno en cada mes consecutivo desde
+  `startMonth`/`startYear`. Reutiliza el `Budget` del mes si existe; si no,
+  lo crea con nombre autogenerado `"Presupuesto <Mes> <Año>"`.
 - **Derivación de progreso** (sin pago manual): `paidInstallments` = cuotas
   vencidas según el calendario, comparado contra la fecha del servidor — la
   cuota del **mes en curso cuenta como vencida**. `findAll()`/`findOne()`
   normalizan de forma perezosa: si el calendario ya completó todas las cuotas
   pero `status` seguía en `activa`, lo persisten como `pagada` antes de
   devolver la deuda.
-- `payOff(debtId)` (`POST /:id/pay-off`): pago total anticipado — elimina los
-  `BudgetItem` de la deuda en meses **estrictamente futuros**, crea un
-  `Expense` (`description: "Pago total: <descripción>"`) por el saldo
-  restante con fecha de hoy, y marca `status: pagada` + `paidOffAt`. Rechaza
-  si la deuda ya está pagada o no tiene saldo pendiente.
-- `syncBudgetItems(debtId)` (`POST /:id/sync-budget-items`): idempotente,
-  recrea únicamente las cuotas futuras que falten (p. ej. tras borrar un ítem
-  manualmente, o para materializar las cuotas de una deuda creada antes de
-  spec-026). No toca cuotas vencidas ni deudas pagadas.
+- `payOff(debtId)` (`POST /:id/pay-off`): pago total anticipado — elimina las
+  cuotas de la deuda en meses **estrictamente futuros**, crea un `Expense`
+  real (`description: "Pago total: <descripción>"`, `amount = remainingValue`,
+  `date` de hoy, `plannedAmount: null`) por el saldo restante, pasando por el
+  mismo **auto-vínculo** de mes que `ExpensesService.create()`, y marca
+  `status: pagada` + `paidOffAt`. Rechaza si la deuda ya está pagada o no
+  tiene saldo pendiente.
+- `syncBudgetItems(debtId)` (`POST /:id/sync-budget-items` — la ruta conserva
+  el nombre por decisión de spec-035; internamente ya no habla de "budget
+  items"): idempotente, recrea únicamente las cuotas futuras que falten (p.
+  ej. tras borrar una manualmente, o para materializar las cuotas de una
+  deuda creada antes de spec-026). No toca cuotas vencidas ni deudas pagadas.
 - `update(id, dto)`: si el cambio toca `installmentValue`, `totalInstallments`,
-  `startMonth` o `startYear`, se **regeneran solo los ítems futuros** (se
-  borran y se recrean); los vencidos, incluido el del mes en curso, no se
+  `startMonth` o `startYear`, se **regeneran solo las cuotas futuras** (se
+  borran y se recrean); las vencidas, incluida la del mes en curso, no se
   tocan. Rechaza editar el calendario de una deuda ya `pagada`. Si cambia
-  `description`, se propaga a todos los ítems (vencidos y futuros).
-- `remove(id)`: los ítems **vencidos** quedan en el presupuesto histórico
-  desasociados (`debtId`/`installmentNumber` a `null`); los **futuros** se
-  eliminan. Luego se borra la deuda.
-- `budgets.service.ts → duplicate()` excluye los ítems con `debt != null` al
+  `description`, se propaga a todas las cuotas (vencidas y futuras).
+- `remove(id)`: las cuotas **vencidas** quedan en el presupuesto histórico
+  desasociadas (`debtId`/`installmentNumber` a `null` — siguen siendo gastos
+  planeados válidos); las **futuras** se eliminan. Luego se borra la deuda.
+- `budgets.service.ts → duplicate()` excluye los gastos con `debt != null` al
   clonar un mes — las cuotas de deuda no se duplican, ya están (o estarán)
   puestas por la propia deuda en el mes destino.
 - No existe pago de cuota individual — el antiguo `payInstallment()` /
   `POST /:id/pay` se eliminó por completo en spec-026.
 
-#### Presupuestos (`budgets.service.ts`)
+#### Presupuestos (`budgets.service.ts`, rediseñado en spec-035)
 
-- `getMonthlySummary(year, month)` combina el presupuesto fijo del mes (`budgetTotal`, suma de `BudgetItem.plannedAmount`) con los gastos variables reales (`expensesTotal`, suma de `Expense.amount` filtrado por fecha) en `combinedTotal`, y agrega `cardTotals`: el gasto del mes agrupado por `creditCardId` (solo gastos con tarjeta asociada).
+> spec-035 fusionó `BudgetItem` en `Expense`. Un ítem de presupuesto es un
+> gasto con `plannedAmount` + `budgetId`; puede o no tener ejecución
+> (`amount`/`date`) en la misma fila.
+
+- Un gasto pertenece al mes de su `budget` (FK), **no** de su `date` — un
+  gasto planeado en junio y pagado el 2 de julio sigue contando en junio. Un
+  gasto sin presupuesto se ubica por su `date`. `ExpensesService.applyMonthScope()`
+  encapsula esta regla; la usan tanto `ExpensesService.findAll()` como los
+  agregados de `BudgetsService`.
+- **Auto-vínculo**: al crear un gasto con `date` en un mes que ya tiene
+  presupuesto, se le asigna ese `budgetId` automáticamente
+  (`ExpensesService.create()`). Nunca se auto-crea un presupuesto desde un
+  gasto (a diferencia de las cuotas de deuda, que sí lo hacen).
+- `getMonthlySummary(year, month)` ya **no** suma planeado + ejecutado en un
+  solo total (esa suma causaba doble conteo cuando el mismo gasto tenía
+  ambos). Devuelve `plannedTotal`, `executedTotal`, `variance` (planeado −
+  ejecutado), `pendingPlannedTotal` (planeados sin ejecutar),
+  `unplannedTotal` (ejecutados sin plan previo), `byType` (desglose planeado/
+  ejecutado por `ExpenseType`) y `cardTotals` (ídem, por tarjeta).
+- `BudgetsService.remove(id)` **borra en cascada todos los gastos del
+  presupuesto**, incluidos los ya ejecutados (`ON DELETE CASCADE` en
+  `expenses.budgetId`) — decisión consciente del spec, con advertencia
+  explícita en la UI antes de confirmar. Devuelve
+  `{ executedExpensesRemoved, executedTotalRemoved }`.
+- `duplicate()` copia **solo el plan**: los gastos del mes destino nacen con
+  `plannedAmount` pero `amount`/`date` en `null`, aunque el origen los
+  tuviera. Los ingresos sí se recrean con fecha desplazada, sin cambios.
+  `duplicate_expense` (gasto individual, no mes completo) sigue copiando todo
+  tal cual — asimetría deliberada.
+- Ya no existen `POST /:id/items`, `PATCH /:budgetId/items/:itemId` ni
+  `DELETE /:budgetId/items/:itemId` — un ítem de presupuesto se crea/edita/
+  borra como cualquier `Expense` (`POST/PATCH/DELETE /finances/expenses...`),
+  con `budgetId` para el vínculo.
 
 ### Infraestructura Global (`main.ts`)
 
@@ -613,17 +668,16 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `create_recurring_activity` | Crea plantilla de actividad recurrente |
 | `get_activity_instances` | Instancias generadas por una plantilla |
 | `cancel_future_instances` | Cancela instancias futuras pendientes de una plantilla |
-| `list_expenses` / `get_expense` / `create_expense` / `update_expense` / `delete_expense` | CRUD de gastos (sin `creditCardId` expuesto) |
-| `duplicate_expense` | Duplica un gasto individual a otro mes/año (con desplazamiento y clamp de fechas, preservando tarjeta de crédito) |
+| `list_expenses` / `get_expense` / `create_expense` / `update_expense` / `delete_expense` | CRUD de gastos. `create_expense`/`update_expense` aceptan `plannedAmount`, `budgetId` y `creditCardId` (spec-035); `amount`/`date` opcionales, con `.refine()` de consistencia — ver "Presupuestos" arriba |
+| `duplicate_expense` | Duplica un gasto individual a otro mes/año tal cual (amount/date incluidos si el origen los tenía) — asimetría deliberada con `duplicate_budget` |
 | `list_incomes` / `get_income` / `create_income` / `update_income` / `delete_income` | CRUD de ingresos |
 | `list_purchases` / `get_purchase` / `create_purchase` / `update_purchase` / `delete_purchase` | CRUD de lista de deseos |
 | `list_accounts` / `get_account` / `create_account` / `update_account` / `delete_account` | CRUD de cuentas |
 | `list_credit_cards` / `get_credit_card` / `create_credit_card` / `update_credit_card` / `delete_credit_card` | CRUD de tarjetas de crédito |
 | `list_cdts` / `get_cdt` / `get_active_cdts` / `create_cdt` / `update_cdt` / `delete_cdt` | CRUD de CDTs + consulta de activos |
-| `list_budgets` / `get_budget` / `create_budget` / `update_budget` / `delete_budget` | CRUD de presupuestos |
-| `add_budget_item` / `update_budget_item` / `delete_budget_item` | Gestión de ítems de presupuesto |
-| `get_monthly_expense_summary` | Resumen combinado presupuesto + gastos variables + `cardTotals` |
-| `duplicate_budget` | Duplica un presupuesto completo (ítems + ingresos + gastos, con desplazamiento y clamp de fechas) a otro mes/año; 409 si el destino ya tiene presupuesto |
+| `list_budgets` / `get_budget` / `create_budget` / `update_budget` / `delete_budget` | CRUD de presupuestos. `create_budget` ya no acepta `items` anidados (nace vacío, spec-035); `get_budget` devuelve `expenses`/`byType` en vez de `items`/`typeSummary`; `delete_budget` borra en cascada todos los gastos, incluidos ejecutados |
+| `get_monthly_expense_summary` | Contrato rediseñado en spec-035: `plannedTotal`/`executedTotal`/`variance`/`pendingPlannedTotal`/`unplannedTotal`/`byType`/`cardTotals` — ya no `budgetTotal`/`expensesTotal`/`combinedTotal` |
+| `duplicate_budget` | Duplica un presupuesto: copia **solo el plan** de sus gastos (spec-035) + todos los ingresos, con desplazamiento y clamp de fechas, a otro mes/año; 409 si el destino ya tiene presupuesto |
 | `list_debts` / `create_debt` / `pay_debt_full` | Deudas — `create_debt` materializa automáticamente las cuotas en presupuestos; `pay_debt_full` reemplaza al antiguo pago de cuota individual (eliminado en spec-026). **Sin** `update_debt` ni `delete_debt` (solo disponibles vía REST) |
 
 Reglas de gestión de MCPs, criterios para agregar tools nuevas y estructura de

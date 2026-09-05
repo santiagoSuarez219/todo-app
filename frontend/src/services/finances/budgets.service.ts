@@ -1,13 +1,11 @@
 import apiClient from '../../lib/api-client';
 import type {
   Budget,
-  BudgetItem,
   CreateBudgetDto,
   UpdateBudgetDto,
   DuplicateBudgetDto,
   DuplicateBudgetResult,
-  CreateBudgetItemDto,
-  UpdateBudgetItemDto,
+  RemoveBudgetResult,
   MonthlySummary,
   PaginationParams,
 } from '../../types';
@@ -38,17 +36,11 @@ export async function updateBudget(id: string, dto: UpdateBudgetDto): Promise<Bu
   return data.data;
 }
 
-export async function deleteBudget(id: string): Promise<void> {
-  await apiClient.delete(`/finances/budgets/${id}`);
-}
-
-export async function addBudgetItem(budgetId: string, dto: CreateBudgetItemDto): Promise<BudgetItem> {
-  const { data } = await apiClient.post<{ data: BudgetItem }>(`/finances/budgets/${budgetId}/items`, dto);
-  return data.data;
-}
-
-export async function updateBudgetItem(budgetId: string, itemId: string, dto: UpdateBudgetItemDto): Promise<BudgetItem> {
-  const { data } = await apiClient.patch<{ data: BudgetItem }>(`/finances/budgets/${budgetId}/items/${itemId}`, dto);
+// spec-035, decisión 12: borrar un presupuesto borra sus gastos en cascada,
+// incluidos los ejecutados — el resultado indica cuántos y por qué monto
+// para que la UI advierta antes de confirmar (ver useDeleteBudget).
+export async function deleteBudget(id: string): Promise<RemoveBudgetResult> {
+  const { data } = await apiClient.delete<{ data: RemoveBudgetResult }>(`/finances/budgets/${id}`);
   return data.data;
 }
 
@@ -57,10 +49,6 @@ export async function getMonthlyExpenseSummary(year: number, month: number): Pro
     params: { year, month },
   });
   return data.data;
-}
-
-export async function deleteBudgetItem(budgetId: string, itemId: string): Promise<void> {
-  await apiClient.delete(`/finances/budgets/${budgetId}/items/${itemId}`);
 }
 
 export async function duplicateBudget(id: string, dto: DuplicateBudgetDto): Promise<DuplicateBudgetResult> {
