@@ -26,6 +26,12 @@ import {
   getActivityFilter,
   type ActivityFilterKey,
 } from '../lib/activityFilters';
+import ActivityModeFilter from '../components/ActivityModeFilter';
+import {
+  DEFAULT_MODE_FILTER,
+  modeFilterToParams,
+  type ActivityModeFilterKey,
+} from '../lib/activityModeFilters';
 import type { CreateActivityDto } from '../types';
 
 const LIMIT = 20;
@@ -109,17 +115,23 @@ export default function ProjectDetail() {
   const [clearOpen, setClearOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ActivityFilterKey>(DEFAULT_ACTIVITY_FILTER);
+  const [modeFilter, setModeFilter] = useState<ActivityModeFilterKey>(DEFAULT_MODE_FILTER);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
 
   const { data: project, isLoading: projectLoading } = useProject(id!);
   const { data: allProjects } = useProjects();
-  const summaryQ = useActivitiesSummary({ projectId: id! });
+  const summaryQ = useActivitiesSummary({ projectId: id!, ...modeFilterToParams(modeFilter) });
+  // spec-036: cabecera y mensaje de "Limpiar completadas" son del proyecto entero
+  // y no cambian con el filtro de modo (que solo acota lista y badges); sin
+  // `mode` comparte la query key con el summary sin filtrar.
+  const projectTotalsQ = useActivitiesSummary({ projectId: id! });
   const listQ = useActivitiesByProject(id!, {
     page,
     limit: LIMIT,
     ...activityFilterToParams(activeFilter),
+    ...modeFilterToParams(modeFilter),
   });
   // spec-034: consulta aparte, sin paginar, solo para los conteos de "hoy" y
   // "esta semana" — el summary no los deriva (agrupa por status/overdue/
@@ -153,12 +165,17 @@ export default function ProjectDetail() {
 
   const todayCount = statsActivities.filter((a) => a.dueDate && isToday(a.dueDate)).length;
   const weekCount = statsActivities.filter((a) => a.dueDate && isThisWeek(a.dueDate)).length;
-  const overdueCount = summaryQ.data?.overdue ?? 0;
+  const overdueCount = projectTotalsQ.data?.overdue ?? 0;
 
-  const completedCount = summaryQ.data?.byStatus.completed ?? 0;
+  const completedCount = projectTotalsQ.data?.byStatus.completed ?? 0;
 
   function handleFilterChange(key: ActivityFilterKey) {
     setActiveFilter(key);
+    setPage(1);
+  }
+
+  function handleModeFilterChange(key: ActivityModeFilterKey) {
+    setModeFilter(key);
     setPage(1);
   }
 
@@ -246,7 +263,7 @@ export default function ProjectDetail() {
           label="Vencidas"
           value={overdueCount}
           variant="red"
-          isLoading={summaryQ.isLoading}
+          isLoading={projectTotalsQ.isLoading}
         />
       </div>
 
@@ -269,6 +286,11 @@ export default function ProjectDetail() {
         {/* Filter tabs — mismo criterio que Dashboard: se desactivan mientras
             se busca. */}
         <div className={isSearching ? 'opacity-50 pointer-events-none' : undefined}>
+          {/* spec-036: se compone con el estado; ambos se aplican server-side
+              a la lista y al summary. */}
+          <div className="flex justify-end mb-3">
+            <ActivityModeFilter value={modeFilter} onChange={handleModeFilterChange} />
+          </div>
           <ActivityStatusFilter
             value={activeFilter}
             onChange={handleFilterChange}
@@ -277,7 +299,7 @@ export default function ProjectDetail() {
         </div>
         {isSearching && (
           <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3 mb-4">
-            Los filtros de estado se desactivan mientras buscas.
+            Los filtros de estado y modo se desactivan mientras buscas.
           </p>
         )}
 

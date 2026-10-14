@@ -20,6 +20,12 @@ import {
   getActivityFilter,
   type ActivityFilterKey,
 } from '../lib/activityFilters';
+import ActivityModeFilter from '../components/ActivityModeFilter';
+import {
+  DEFAULT_MODE_FILTER,
+  modeFilterToParams,
+  type ActivityModeFilterKey,
+} from '../lib/activityModeFilters';
 
 const LIMIT = 20;
 
@@ -78,6 +84,7 @@ function StatCard({
 
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState<ActivityFilterKey>(DEFAULT_ACTIVITY_FILTER);
+  const [modeFilter, setModeFilter] = useState<ActivityModeFilterKey>(DEFAULT_MODE_FILTER);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -85,8 +92,13 @@ export default function Dashboard() {
   const todayQ = useTodayActivities({ limit: 100 });
   const overdueQ = useOverdueActivities({ limit: 100 });
   const weekQ = useThisWeekActivities({ limit: 100 });
-  const summaryQ = useActivitiesSummary();
-  const listQ = useActivities({ page, limit: LIMIT, ...activityFilterToParams(activeFilter) });
+  const summaryQ = useActivitiesSummary(modeFilterToParams(modeFilter));
+  const listQ = useActivities({
+    page,
+    limit: LIMIT,
+    ...activityFilterToParams(activeFilter),
+    ...modeFilterToParams(modeFilter),
+  });
   const searchQ = useSearchActivities(debouncedSearch, { limit: 50 });
 
   const isSearching = debouncedSearch.trim().length >= 2;
@@ -107,6 +119,11 @@ export default function Dashboard() {
 
   function handleFilterChange(key: ActivityFilterKey) {
     setActiveFilter(key);
+    setPage(1);
+  }
+
+  function handleModeFilterChange(key: ActivityModeFilterKey) {
+    setModeFilter(key);
     setPage(1);
   }
 
@@ -176,6 +193,11 @@ export default function Dashboard() {
             scope propio (todo, sin importar estado), no compone con el
             filtro de estado. */}
         <div className={isSearching ? 'opacity-50 pointer-events-none' : undefined}>
+          {/* spec-036: se compone con el estado; ambos se aplican server-side
+              a la lista y al summary. */}
+          <div className="flex justify-end mb-3">
+            <ActivityModeFilter value={modeFilter} onChange={handleModeFilterChange} />
+          </div>
           <ActivityStatusFilter
             value={activeFilter}
             onChange={handleFilterChange}
@@ -184,7 +206,7 @@ export default function Dashboard() {
         </div>
         {isSearching && (
           <p className="text-xs text-gray-400 dark:text-gray-500 -mt-3 mb-4">
-            Los filtros de estado se desactivan mientras buscas.
+            Los filtros de estado y modo se desactivan mientras buscas.
           </p>
         )}
 

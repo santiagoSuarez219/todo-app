@@ -5,6 +5,7 @@ import { useProjects } from '../hooks/useProjects';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import EnergyIndicator from './EnergyIndicator';
+import ModeBadge from './ModeBadge';
 import ActivityForm from './ActivityForm';
 import ConfirmDialog from './ConfirmDialog';
 import Modal from './Modal';
@@ -778,6 +779,7 @@ export default function ActivityCard({ activity, onEdit, onDelete }: Props) {
         <div className="flex items-center gap-3 flex-wrap">
           <InlinePriorityEditor activity={activity} />
           <EnergyIndicator energy={activity.energy} />
+          <ModeBadge mode={activity.mode} />
         </div>
 
         {/* ── Row 4.5: chip "Esperando a…" — solo con status: waiting ── */}

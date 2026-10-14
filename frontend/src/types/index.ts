@@ -44,6 +44,18 @@ export const Energy = {
 } as const;
 export type Energy = (typeof Energy)[keyof typeof Energy];
 
+/** spec-036: modo de colaboración con Claude. `null` en la entidad = sin Claude. */
+export const ActivityMode = {
+  AUTONOMOUS: 'autonomous',
+  COWORK_ASYNC: 'cowork_async',
+  COWORK: 'cowork',
+} as const;
+export type ActivityMode = (typeof ActivityMode)[keyof typeof ActivityMode];
+
+/** spec-036: centinela de consulta (no valor de la entidad) — `mode IS NULL`. */
+export const MODE_NONE = 'none' as const;
+export type ActivityModeFilterValue = ActivityMode | typeof MODE_NONE;
+
 export const RecurrenceFrequency = {
   DAILY: 'daily',
   WEEKLY: 'weekly',
@@ -77,6 +89,8 @@ export interface Activity {
   priority: Priority;
   status: ActivityStatus;
   energy: Energy;
+  /** spec-036: null = sin Claude (trabajo propio). No se hereda a subtareas. */
+  mode: ActivityMode | null;
   parent: Activity | null;
   subtasks: Activity[];
   /** spec-031: reemplaza al booleano `scheduledForToday` — caduca sola. */
@@ -123,6 +137,8 @@ export interface CreateActivityDto {
   priority?: Priority;
   status?: ActivityStatus;
   energy?: Energy;
+  /** spec-036: null limpia (sin Claude). */
+  mode?: ActivityMode | null;
   scheduledFor?: string | null;
   deferUntil?: string | null;
   waitingFor?: string | null;
@@ -162,6 +178,8 @@ export interface ActivityListParams extends PaginationParams {
   /** Uno o varios estados (unión). Se serializa separado por comas. */
   status?: ActivityStatus[];
   dueFilter?: DueFilter;
+  /** spec-036: filtra por modo; 'none' = sin Claude. */
+  mode?: ActivityModeFilterValue;
   /** Default `false` en el backend — se omite para dejarlo en su default. */
   includeTemplates?: boolean;
   /** Default `false` en el backend — se omite para dejarlo en su default. */
@@ -170,6 +188,8 @@ export interface ActivityListParams extends PaginationParams {
 
 export interface ActivitiesSummaryParams {
   projectId?: string;
+  /** spec-036: acota todos los conteos a un modo; 'none' = sin Claude. */
+  mode?: ActivityModeFilterValue;
   includeTemplates?: boolean;
   includeSubtasks?: boolean;
 }
@@ -180,6 +200,8 @@ export interface ActivitiesSummary {
   byStatus: Record<ActivityStatus, number>;
   overdue: number;
   noDate: number;
+  /** spec-036: suma = total; `none` = sin Claude. */
+  byMode: Record<ActivityModeFilterValue, number>;
 }
 
 // ─── Finances — Enums ────────────────────────────────────────────────────────
