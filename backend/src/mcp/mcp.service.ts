@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
+import { ActivityMode } from '../common/enums/activity-mode.enum';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ListActivitiesQueryDto } from '../activities/dto/list-activities-query.dto';
 import { ActivitiesSummaryQueryDto } from '../activities/dto/activities-summary-query.dto';
@@ -38,6 +39,23 @@ const paginationSchema = {
     .describe('Items per page, max 100 (default: 20)'),
 };
 
+// spec-036: valores de `mode` — enum `ActivityMode` (entidad/create/update).
+const MODE_VALUES = ['autonomous', 'cowork_async', 'cowork'] as const;
+
+const MODE_SEMANTICS =
+  "Claude collaboration mode: 'autonomous' = Claude can do it alone (delegable); " +
+  "'cowork_async' = Claude works on it asynchronously with the user's input/review; " +
+  "'cowork' = worked on together, live. null/unset = no Claude involved (the user's own work).";
+
+// spec-036: filtro `mode` de listado/summary/by-mode — enum + centinela 'none'
+// (ListActivitiesQueryDto / ActivitiesSummaryQueryDto / MODE_NONE).
+const modeFilterSchema = z
+  .enum([...MODE_VALUES, 'none'])
+  .describe(
+    "Claude collaboration mode: 'autonomous' | 'cowork_async' | 'cowork', or " +
+      "'none' = no Claude involved (mode IS NULL, the user's own work).",
+  );
+
 // spec-034: filtros compartidos por `list_activities` y
 // `get_activities_by_project` — deben coincidir exactamente con
 // `ListActivitiesQueryDto` (backend), nunca inventar parámetros.
@@ -58,6 +76,7 @@ const activityListFiltersSchema = {
     .describe(
       'Filter by one or more statuses (union). Omit to include all statuses.',
     ),
+  mode: modeFilterSchema.optional(),
   dueFilter: z
     .enum(['overdue', 'no_date'])
     .optional()
@@ -265,7 +284,8 @@ export class McpService {
         'excludes recurring templates and subtasks — only top-level, ' +
         'non-template activities are returned unless includeTemplates or ' +
         'includeSubtasks is set. Use status to filter by one or more ' +
-        'statuses and dueFilter for overdue/no-date activities.',
+        'statuses, dueFilter for overdue/no-date activities and mode for ' +
+        "the Claude collaboration mode ('none' = no Claude).",
       { ...paginationSchema, ...activityListFiltersSchema },
       async (query) => {
         try {
@@ -283,7 +303,10 @@ export class McpService {
     server.tool(
       'get_activities_summary',
       'Get activity counts grouped by status, plus overdue and no-date ' +
-        'counts, without fetching the rows. Excludes templates and ' +
+        'counts, without fetching the rows. Also returns byMode: counts per ' +
+        'collaboration mode with keys autonomous, cowork_async, cowork and none ' +
+        '(none = no Claude, mode IS NULL); sum(byMode) = total. byMode is ' +
+        'always complete. Excludes templates and ' +
         'subtasks by default (same defaults as list_activities). Use this ' +
         'instead of calling get_activities_by_status repeatedly to count ' +
         '— it returns the real total, not just what fits in one page.',
@@ -293,6 +316,11 @@ export class McpService {
           .uuid()
           .optional()
           .describe('Restrict the summary to a single project (UUID)'),
+        mode: modeFilterSchema
+          .optional()
+          .describe(
+            "Restrict all counts to one collaboration mode ('none' = no Claude). byMode stays complete.",
+          ),
         includeTemplates: z
           .boolean()
           .optional()
@@ -373,6 +401,13 @@ export class McpService {
               .enum(['high', 'medium', 'low'])
               .optional()
               .describe('Energy level required (default: medium)'),
+            mode: z
+              .enum(MODE_VALUES)
+              .nullable()
+              .optional()
+              .describe(
+                MODE_SEMANTICS + ' Not inherited by subtasks; set it on each.',
+              ),
             parentId: z
               .string()
               .uuid()
@@ -444,6 +479,14 @@ export class McpService {
             "'testing' means the work is done but not yet verified — it sits between in_progress and completed. 'waiting' means blocked on a third party — set waitingFor/waitingSince. 'on_hold' means the user themself paused it — different from waiting, don't use interchangeably.",
           ),
         energy: z.enum(['high', 'medium', 'low']).optional(),
+        mode: z
+          .enum(MODE_VALUES)
+          .nullable()
+          .optional()
+          .describe(
+            MODE_SEMANTICS +
+              ' Set null to clear. On a recurring template, editing mode overwrites mode on its future pending instances.',
+          ),
         parentId: z
           .string()
           .uuid()
@@ -689,6 +732,61 @@ export class McpService {
     );
 
     server.tool(
+      'get_activities_by_mode',
+      'Get activities by Claude collaboration mode: autonomous (Claude can do ' +
+        'it alone), cowork_async, cowork, or none (= no Claude, the ' +
+        "user's own work, mode IS NULL). Default exclusions: recurring " +
+        'templates, deferred activities (deferUntil in the future) and ' +
+        'completed/cancelled — only pending, in_progress, testing, waiting ' +
+        'and on_hold are returned. Pass status (array) to replace that ' +
+        'default list (e.g. ["completed"] to see finished work). Includes ' +
+        'subtasks as rows (mode is not inherited, so a subtask can be ' +
+        "delegable on its own). Use get_activities_by_mode('autonomous') to " +
+        'answer "what can Claude do on its own?".',
+      {
+        mode: modeFilterSchema,
+        status: z
+          .array(
+            z.enum([
+              'pending',
+              'in_progress',
+              'testing',
+              'completed',
+              'cancelled',
+              'on_hold',
+              'waiting',
+            ]),
+          )
+          .optional()
+          .describe(
+            'Replaces the default active-status list. Omit for pending, in_progress, testing, waiting, on_hold.',
+          ),
+        projectId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('Optional project UUID to scope the results to'),
+        ...paginationSchema,
+      },
+      async ({ mode, status, projectId, ...pagination }) => {
+        try {
+          return ok(
+            await this.activitiesService.findByMode(
+              mode as ActivityMode | 'none',
+              {
+                ...(pagination as PaginationDto),
+                status: status as ActivityStatus[] | undefined,
+                projectId,
+              },
+            ),
+          );
+        } catch (e) {
+          return err(e);
+        }
+      },
+    );
+
+    server.tool(
       'get_activities_by_status',
       'Get activities filtered by status',
       {
@@ -814,6 +912,13 @@ export class McpService {
               ),
             priority: z.enum(['high', 'medium', 'low']).optional(),
             energy: z.enum(['high', 'medium', 'low']).optional(),
+            mode: z
+              .enum(MODE_VALUES)
+              .nullable()
+              .optional()
+              .describe(
+                MODE_SEMANTICS + ' Copied to every generated instance.',
+              ),
             description: z.string().optional(),
           })
           .strict(),
