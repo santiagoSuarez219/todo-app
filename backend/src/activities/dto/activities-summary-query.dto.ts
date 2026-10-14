@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsUUID } from 'class-validator';
+import { ActivityMode } from '../../common/enums/activity-mode.enum';
 
 /**
  * spec-034: params de `GET /activities/summary` — mismos flags de inclusión
@@ -16,6 +17,15 @@ export class ActivitiesSummaryQueryDto {
   @IsOptional()
   @IsUUID()
   projectId?: string;
+
+  @ApiPropertyOptional({
+    enum: [...Object.values(ActivityMode), 'none'],
+    description:
+      "spec-036: acota todos los conteos a un modo. 'none' = sin Claude (mode IS NULL).",
+  })
+  @IsOptional()
+  @IsIn([...Object.values(ActivityMode), 'none'])
+  mode?: ActivityMode | 'none';
 
   @ApiPropertyOptional({
     default: false,
