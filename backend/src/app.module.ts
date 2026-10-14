@@ -46,7 +46,11 @@ import { AuthGuard } from './common/guards/auth.guard';
         database: config.get<string>('DB_NAME'),
         username: config.get<string>('DB_USER'),
         password: config.get<string>('DB_PASSWORD'),
-        ssl: config.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+        ssl:
+          config.get<string>('NODE_ENV') === 'production' ||
+          config.get<string>('DB_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
         synchronize: false,

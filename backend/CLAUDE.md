@@ -96,6 +96,7 @@ DB_PASSWORD=todo_password
 
 # Environment
 NODE_ENV=development
+# DB_SSL=true  # opcional: SSL (rejectUnauthorized: false) sin NODE_ENV=production, p. ej. para una base Neon de desarrollo
 FRONTEND_URL=http://localhost:5173
 PORT=3003
 
@@ -171,14 +172,15 @@ externas). Autenticación: no implementada — app de uso personal, un solo usua
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `GET` | `/activities` | Lista paginada. **Excluye plantillas y subtareas por defecto** — `?includeTemplates=true` / `?includeSubtasks=true` para incluirlas. Acepta `?status=` (uno o varios, separados por coma) y `?dueFilter=overdue\|no_date` (spec-034) |
-| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas. Acepta `?projectId=`, `?includeTemplates=`, `?includeSubtasks=` (spec-034) |
+| `GET` | `/activities` | Lista paginada. **Excluye plantillas y subtareas por defecto** — `?includeTemplates=true` / `?includeSubtasks=true` para incluirlas. Acepta `?status=` (uno o varios, separados por coma), `?dueFilter=overdue\|no_date` (spec-034) y `?mode=autonomous\|cowork_async\|cowork\|none` (spec-036; `none` = `mode IS NULL`) |
+| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas. Acepta `?projectId=`, `?includeTemplates=`, `?includeSubtasks=` (spec-034) y `?mode=` (spec-036). Incluye `byMode` (`autonomous`, `cowork_async`, `cowork`, `none`; suma = `total`) |
 | `GET` | `/activities/today` | `dueDate` en el día actual o `scheduledForToday = true` |
 | `GET` | `/activities/tomorrow` | `dueDate` mañana |
 | `GET` | `/activities/this-week` | Semana actual (Lun–Dom) por `dueDate` |
 | `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
 | `GET` | `/activities/schedule` | Cronograma mensual — `?year=&month=`, ver lógica |
 | `GET` | `/activities/without-project` | Sin proyecto asociado. Excluye plantillas y subtareas (spec-034) |
+| `GET` | `/activities/mode/:mode` | spec-036: por modo de colaboración (`none` = sin Claude). Excluye plantillas, diferidas y `completed`/`cancelled` por defecto; `?status=` sustituye la lista de estados activos; `?projectId=` acota. Incluye subtareas. Respalda la tool MCP `get_activities_by_mode` |
 | `GET` | `/activities/project/:projectId` | Por proyecto. Mismos filtros y mismo comportamiento por defecto que `GET /activities` (spec-034) |
 | `GET` | `/activities/priority/:priority` | Por prioridad |
 | `GET` | `/activities/status/:status` | Por status |
@@ -231,6 +233,7 @@ src/
 │   ├── entities/activity.entity.ts
 │   ├── dto/create-activity.dto.ts
 │   ├── dto/update-activity.dto.ts
+│   ├── dto/activities-by-mode-query.dto.ts   spec-036
 │   ├── activities.service.ts             Lógica de negocio + queries especializadas
 │   ├── activities.controller.ts          Endpoints REST
 │   └── recurrence-scheduler.service.ts   Cron diario: genera instancias del día siguiente
@@ -275,7 +278,8 @@ src/
     ├── 1782908224127-AddCreditCardToExpenses.ts
     ├── 1786714977098-AddDebtScheduleAndBudgetItemLink.ts   spec-026: startMonth/startYear/paidOffAt, budget_items.debtId
     ├── 1786715738000-DropPaidInstallmentsFromDebts.ts      spec-026: columna reemplazada por cálculo derivado
-    └── 1787100000000-UnifyBudgetItemsIntoExpenses.ts       spec-035: fusiona budget_items en expenses, elimina la tabla
+    ├── 1787100000000-UnifyBudgetItemsIntoExpenses.ts       spec-035: fusiona budget_items en expenses, elimina la tabla
+    └── 1787100000001-AddModeToActivities.ts                spec-036: enum `activities_mode_enum` + columna `mode` nullable, sin backfill
 ```
 
 ### Entidades
@@ -290,7 +294,7 @@ src/
 | `startDate` | `date` | requerido |
 | `endDate` | `date` | nullable |
 | `activities` | relación | `OneToMany → Activity` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Activity (`activities`)
 
@@ -306,6 +310,7 @@ src/
 | `priority` | `enum` | default `medium` |
 | `status` | `enum` | default `pending` |
 | `energy` | `enum` | default `medium` |
+| `mode` | `enum` (`activities_mode_enum`) | nullable, sin default — modo de colaboración con Claude (spec-036); `null` = sin Claude. No se hereda a subtareas |
 | `type` | `enum` | default `task` |
 | `scheduledForToday` | `boolean` | default `false` — aparece en la vista Today |
 | `notionUrl` | `varchar` | nullable — URL de página Notion asociada |
@@ -318,7 +323,7 @@ src/
 | `recurrenceDayOfMonth` | `integer` | nullable — día del mes (1–31) |
 | `recurrenceEndDate` | `timestamptz` | nullable — hasta cuándo generar instancias |
 | `instanceDate` | `date` | nullable — fecha de esta instancia específica |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Expense (`expenses`)
 
@@ -338,7 +343,7 @@ src/
 | `creditCard` | FK → `credit_cards` | nullable, `onDelete: SET NULL` |
 | `debt` | FK → `debts` | nullable, `onDelete: CASCADE` — cuota de deuda materializada (heredado de `BudgetItem`, spec-026) |
 | `installmentNumber` | `int` | nullable — heredado de `BudgetItem` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 Invariantes en DB (`CHK_expenses_has_amount`, `CHK_expenses_amount_date_together`):
 no puede haber una fila sin `plannedAmount` ni `amount`, y `amount`/`date`
@@ -358,7 +363,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `amount` | `decimal(12,2)` | COP |
 | `date` | `date` | requerido |
 | `type` | `enum` | `sueldo \| freelance \| intereses \| dividendos \| otro` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Purchase (`purchases`)
 
@@ -372,7 +377,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `status` | `enum` | default `pendiente` |
 | `url` | `varchar` | nullable |
 | `notes` | `text` | nullable |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Account (`accounts`)
 
@@ -384,7 +389,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `bank` | `varchar(255)` | requerido |
 | `currentBalance` | `decimal(15,2)` | COP |
 | `interestRate` | `decimal(5,4)` | nullable, decimal (0.045 = 4.5%) |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### CreditCard (`credit_cards`)
 
@@ -397,7 +402,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `monthlyFee` | `decimal(10,2)` | COP |
 | `totalLimit` | `decimal(15,2)` | COP |
 | `availableLimit` | `decimal(15,2)` | COP |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 #### Cdt (`cdts`)
 
@@ -409,7 +414,7 @@ se calcula en `expenses.service.ts` (`withExecutionStatus()`,
 | `interestRate` | `decimal(5,4)` | anual, decimal |
 | `startDate` | `date` | requerido |
 | `endDate` | `date` | requerido, debe ser posterior a `startDate` |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 Activo si `endDate >= hoy` (calculado en `findActive()`, no persistido).
 
@@ -426,7 +431,7 @@ Activo si `endDate >= hoy` (calculado en `findActive()`, no persistido).
 | `month` | `integer` | 1–12 |
 | `year` | `integer` | requerido, índice único `(month, year)` |
 | `expenses` | relación | `OneToMany → Expense`, **sin `cascade`** — el borrado en cascada de sus gastos es una decisión de negocio explícita en `BudgetsService.remove()`, no un efecto de TypeORM |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 `totalIncome`, `plannedTotal`, `executedTotal`, `variance` y `byType` no son
 columnas — se calculan en `budgets.service.ts` al leer.
@@ -448,7 +453,7 @@ columnas — se calculan en `budgets.service.ts` al leer.
 | `startYear` | `int` | año de la primera cuota |
 | `paidOffAt` | `timestamptz` | nullable, fecha del pago total anticipado (`pay-off`) |
 | `status` | `enum` | default `activa`; se persiste `pagada` solo por pago total o normalización perezosa (ver abajo) |
-| `createdAt` / `updatedAt` | `timestamptz` | auto |
+| `createdAt` / `updatedAt` | `timestamp` (sin zona) | auto — ver nota al pie |
 
 `paidInstallments` **no es columna** (se eliminó en spec-026, Fase 7) — se
 deriva en cada lectura a partir de `startMonth`/`startYear`, `totalInstallments`
@@ -460,12 +465,36 @@ deriva, para uso de la UI.
 Las cuotas de deuda se materializan como `Expense` (`debt` + `installmentNumber`,
 heredados de `BudgetItem` en spec-035) — ver `Expense` arriba.
 
+### Nota sobre los tipos de fecha
+
+Verificado contra la base de producción (2026-09-05). No todas las columnas
+temporales son del mismo tipo, y la diferencia importa:
+
+| Tipo real | Columnas |
+|---|---|
+| `timestamp` **sin** zona horaria | Los 20 `createdAt` / `updatedAt` de todas las tablas |
+| `timestamptz` (con zona) | `activities.dueDate`, `activities.completedAt`, `activities.recurrenceEndDate`, `debts.paidOffAt` |
+| `date` (día puro) | `activities.deferUntil`, `activities.scheduledFor`, `activities.waitingSince`, `expenses.date`, `incomes.date`, `cdts.startDate`/`endDate` |
+
+Los `createdAt`/`updatedAt` salen `timestamp` sin zona porque
+`@CreateDateColumn()` / `@UpdateDateColumn()` se usan **sin opciones**, y ese
+es el default de TypeORM en Postgres. Versiones anteriores de este archivo
+los documentaban como `timestamptz`, lo cual es falso.
+
+⚠️ **Consecuencia práctica:** un cliente que lea esas columnas las interpreta
+en **su** zona horaria, no en UTC. Al depurar con un script Node local
+(`-05:00`), un `updatedAt` recién escrito aparece 5 horas en el futuro —
+pasó de verdad al investigar un reporte durante el despliegue de v2.0.0 y
+casi lo confundimos con un bug de datos. Para comparar contra "ahora", usar
+`now()` **dentro** de la consulta SQL, no en el cliente.
+
 ### Enums
 
 ```
 ProjectStatus:        active | inactive | paused | completed
 ActivityStatus:       pending | in_progress | completed | cancelled | on_hold
 ActivityType:         task | reminder
+ActivityMode:         autonomous | cowork_async | cowork   (spec-036; null = sin Claude)
 Priority:             high | medium | low
 Energy:               high | medium | low
 RecurrenceFrequency:  daily | weekly | biweekly | monthly | yearly
@@ -525,7 +554,7 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
 #### Recurrencia (`recurrence-scheduler.service.ts`)
 
 - Cron `EVERY_DAY_AT_MIDNIGHT`: por cada plantilla activa (`isTemplate: true`, `isRecurring: true`) evalúa si corresponde generar una instancia para el día siguiente y la crea.
-- Al editar una plantilla, `name` / `description` / `priority` / `energy` se propagan automáticamente a las instancias futuras que sigan `pending` (no afecta instancias ya completadas o pasadas).
+- Al editar una plantilla, `name` / `description` / `priority` / `energy` / `mode` (spec-036) se propagan automáticamente a las instancias futuras que sigan `pending` (no afecta instancias ya completadas o pasadas).
 
 #### Completar subtareas en cascada (spec-024)
 
@@ -662,6 +691,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `get_activities_by_project` | Por proyecto |
 | `get_activities_by_type` | Por tipo |
 | `get_activities_by_priority` | Por prioridad |
+| `get_activities_by_mode` | spec-036: por modo (`none` = sin Claude). Excluye plantillas, diferidas y completed/cancelled por defecto; incluye subtareas |
 | `get_activities_by_status` | Por status |
 | `search_activities` | Búsqueda ILIKE en name, description, project.name |
 | `get_activity_subtasks` | Subtareas de una actividad |

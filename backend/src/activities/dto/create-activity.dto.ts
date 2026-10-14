@@ -13,6 +13,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { ActivityMode } from '../../common/enums/activity-mode.enum';
 import { ActivityStatus } from '../../common/enums/activity-status.enum';
 import { Energy } from '../../common/enums/energy.enum';
 import { Priority } from '../../common/enums/priority.enum';
@@ -61,6 +62,16 @@ export class CreateActivityDto {
   @IsEnum(Energy)
   @IsOptional()
   energy?: Energy;
+
+  @ApiPropertyOptional({
+    enum: ActivityMode,
+    nullable: true,
+    description:
+      'Modo de colaboración con Claude. null = sin Claude (trabajo propio); en update, null limpia el campo. No se hereda a subtareas.',
+  })
+  @IsEnum(ActivityMode)
+  @IsOptional()
+  mode?: ActivityMode | null;
 
   @ApiPropertyOptional({ description: 'UUID de la actividad padre (subtarea)' })
   @IsUUID()

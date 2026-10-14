@@ -233,7 +233,29 @@ Calendar.
 
 **Campos comunes:** `id`, `name`, `description`, `project`, `status`
 (`pending | in_progress | testing | completed | cancelled | on_hold | waiting`), `priority`
-(`high | medium | low`), `energy` (`high | medium | low`).
+(`high | medium | low`), `energy` (`high | medium | low`), `mode` (`autonomous | cowork_async | cowork | null`).
+
+**`mode`** (opcional, nullable) — modo de colaboración con Claude Code:
+
+| Valor | Significado |
+|---|---|
+| `autonomous` | Claude puede hacerlo solo; el usuario solo verifica el resultado |
+| `cowork_async` | Claude avanza de forma asíncrona, con insumos/revisión del usuario |
+| `cowork` | Se trabaja en conjunto, en vivo |
+| `null` | Sin Claude: trabajo propio del usuario |
+
+Reglas:
+- **Asigna el modo siempre con el campo `mode`, nunca con etiquetas `[A]`, `[CA]` o `[C]`
+  en el título.** Si encuentras esas etiquetas en un título existente, no las repliques en
+  actividades nuevas; propón mover el dato a `mode` (y limpiar el título) con confirmación.
+- `mode` **no se hereda** a las subtareas: cada subtarea lleva el suyo (una fase puede ser
+  `autonomous` y otra `cowork`).
+- **El trabajo `autonomous` terminado pasa a `testing`, nunca a `completed`.** Es "hecho por
+  Claude, falta que el usuario verifique"; solo el usuario lo lleva a `completed`.
+- `autonomous` + `waiting` es una combinación **válida** (esperando un insumo para poder
+  delegarlo). No hay validación cruzada entre `mode` y `status`.
+- Para limpiar el modo envía `mode: null` en `update_activity`. Para consultarlo usa
+  `get_activities_by_mode` (o el filtro `mode` de `list_activities`).
 
 **`status: testing`.** El trabajo está hecho pero todavía no verificado — se sitúa entre
 `in_progress` y `completed`. No es sinónimo de `in_progress` (ahí todavía se está
@@ -297,8 +319,14 @@ ella después de crearla.
 
 Un job automático (cron diario a medianoche) genera la instancia del día siguiente para
 cada plantilla activa. No crees instancias manualmente ni adviertas al usuario sobre esto.
-Si el usuario edita **nombre, descripción, prioridad o energía** de una plantilla, el
-cambio se propaga automáticamente a las instancias futuras pendientes.
+Si el usuario edita **nombre, descripción, prioridad, energía o `mode`** de una plantilla,
+el cambio se propaga automáticamente a las instancias futuras pendientes.
+
+⚠️ **`mode` en plantillas:** esa propagación **pisa** el `mode` que se haya editado a mano
+en instancias futuras pendientes (igual que `priority`/`energy`), y limpiar `mode`
+(`null`) en la plantilla lo limpia en ellas. No toca la instancia de hoy ni las
+completadas. Avisa al usuario antes de editar `mode` en una plantilla que tenga
+instancias futuras. `create_recurring_activity` acepta `mode` y lo copia a cada instancia.
 
 ## Google Calendar
 
@@ -334,10 +362,10 @@ Token estático en variables de entorno, independiente del login del usuario. Si
 
 | Herramienta | Descripción |
 |-------------|-------------|
-| `list_activities` | Lista actividades paginadas. **Excluye plantillas recurrentes y subtareas por defecto** — pásale `includeTemplates`/`includeSubtasks` si las necesitas. Acepta `status` (uno o varios) y `dueFilter` (`overdue` \| `no_date`) |
+| `list_activities` | Lista actividades paginadas. **Excluye plantillas recurrentes y subtareas por defecto** — pásale `includeTemplates`/`includeSubtasks` si las necesitas. Acepta `status` (uno o varios), `dueFilter` (`overdue` \| `no_date`) y `mode` (`autonomous` \| `cowork_async` \| `cowork` \| `none`) |
 | `get_activity` | Obtiene una actividad por UUID (incluye proyecto, padre y subtareas) |
-| `create_activity` | Crea una actividad o subtarea (`parentId`) |
-| `update_activity` | Actualiza una actividad, incluidos campos de recurrencia. ⚠️ Ver cascada |
+| `create_activity` | Crea una actividad o subtarea (`parentId`). Acepta `mode` |
+| `update_activity` | Actualiza una actividad, incluidos campos de recurrencia y `mode` (`null` lo limpia). ⚠️ Ver cascada |
 | `delete_activity` | Elimina una actividad permanentemente |
 
 ### ⚠️ Completar actividades con subtareas (propagación en cascada)
@@ -365,7 +393,8 @@ usuario lo sabe.
 | `get_activities_without_project` | Bandeja de entrada. Excluye diferidas |
 | `get_deferred_activities` | Ocultas por `deferUntil`, ordenadas ascendente. Acepta `projectId` opcional |
 | `get_activities_by_project` | Filtradas por `projectId`. Mismo comportamiento por defecto que `list_activities`: excluye plantillas y subtareas salvo que se pidan explícitamente |
-| `get_activities_summary` | Conteo por estado (+ `overdue`, `noDate`, `total`) sin traer filas. Úsala en vez de sumar varias llamadas a `get_activities_by_status` — acepta `projectId` opcional |
+| `get_activities_summary` | Conteo por estado (+ `overdue`, `noDate`, `total`) y `byMode` (claves `autonomous`, `cowork_async`, `cowork`, `none`; siempre presentes, suman `total`) sin traer filas. Úsala en vez de sumar varias llamadas a `get_activities_by_status` — acepta `projectId` y `mode` opcionales (`mode` acota los conteos; `byMode` sigue completo) |
+| `get_activities_by_mode` | Filtradas por `mode` (`autonomous` \| `cowork_async` \| `cowork` \| `none` = sin Claude). **Por defecto excluye** plantillas, diferidas y `completed`/`cancelled` (solo devuelve `pending`, `in_progress`, `testing`, `waiting`, `on_hold`); `status` (array) sustituye esa lista. **Incluye subtareas** como filas. Acepta `projectId`, `page`, `limit` |
 | `get_activities_by_priority` | Filtradas por `priority` |
 | `get_activities_by_status` | Filtradas por `status` |
 | `search_activities` | Texto en nombre, descripción o proyecto; opcionalmente acotada a un proyecto |
@@ -612,6 +641,10 @@ Dispara con "hagamos la revisión mensual". Ejecuta la semanal primero, luego:
 | "Esto lo veo el mes que viene" | `deferUntil` a esa fecha, no `on_hold`: reaparece sola |
 | "¿Qué estoy esperando?" | `get_activities_by_status(waiting)` — presenta `waitingFor` y días desde `waitingSince` |
 | "Esto quedó esperando al proveedor" | `update_activity` con `status: waiting` y `waitingFor` — pregunta a quién si no lo dijo |
+| "¿Qué puede hacer Claude solo?" / "¿qué puedo delegar?" | `get_activities_by_mode(autonomous)` — solo trabajo activo; si hay `waiting` (esperando un insumo para poder delegar), señálalo aparte |
+| "¿Qué trabajo tengo en cowork?" | `get_activities_by_mode(cowork)` o `cowork_async` |
+| "¿Qué es solo mío (sin Claude)?" | `get_activities_by_mode(none)` |
+| "¿Qué hizo Claude que falta verificar?" | `get_activities_by_mode(autonomous, status: [testing])` |
 | "Planifiquemos el día de mañana" | § Flujo de planificación |
 | "Hagamos la revisión semanal / mensual" | § Cadencias de revisión |
 

@@ -2,8 +2,9 @@ import type { ChangeEvent } from 'react';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { MODE_LABELS, NO_MODE_LABEL } from '../lib/activityModeFilters';
 import {
-  ActivityStatus, Priority, Energy,
+  ActivityStatus, Priority, Energy, ActivityMode,
   RecurrenceFrequency,
   type CreateActivityDto, type Activity, type Project, type WeekDay,
 } from '../types';
@@ -25,6 +26,8 @@ const schema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),
   energy: z.string().optional(),
+  // spec-036: '' = sin Claude (se traduce a null en toDto).
+  mode: z.string().optional(),
   dueDate: z.string().nullish(),
   deferUntil: z.string().nullish(),
   scheduledFor: z.string().nullish(),
@@ -132,6 +135,8 @@ export default function ActivityForm({
         status: initial?.status ?? ActivityStatus.PENDING,
         priority: initial?.priority ?? Priority.MEDIUM,
         energy: initial?.energy ?? Energy.MEDIUM,
+        // spec-036: una subtarea nueva arranca vacía — mode no se hereda.
+        mode: initial?.mode ?? '',
         dueDate: initial?.dueDate ? initial.dueDate.slice(0, 10) : '',
         deferUntil: initial?.deferUntil ? initial.deferUntil.slice(0, 10) : '',
         scheduledFor: initial?.scheduledFor ? initial.scheduledFor.slice(0, 10) : '',
@@ -179,6 +184,8 @@ export default function ActivityForm({
       status: (values.status as CreateActivityDto['status']) || undefined,
       priority: (values.priority as CreateActivityDto['priority']) || undefined,
       energy: (values.energy as CreateActivityDto['energy']) || undefined,
+      // spec-036: null limpia el modo en update; en create equivale a "sin Claude".
+      mode: (values.mode as ActivityMode) || null,
       dueDate: values.dueDate || null,
       deferUntil: values.deferUntil || null,
       scheduledFor: values.scheduledFor || null,
@@ -272,6 +279,22 @@ export default function ActivityForm({
             ))}
           </select>
         </div>
+      </div>
+
+      {/* ── Modo con Claude (spec-036) ── */}
+      <div>
+        <label htmlFor="activity-mode" className={labelCls}>Modo con Claude</label>
+        <select id="activity-mode" {...register('mode')} className={inputCls}>
+          <option value="">{NO_MODE_LABEL}</option>
+          {Object.values(ActivityMode).map((m) => (
+            <option key={m} value={m}>{MODE_LABELS[m]}</option>
+          ))}
+        </select>
+        {isRecurring && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Al guardar, se aplica también a las instancias futuras pendientes.
+          </p>
+        )}
       </div>
 
       {/* ── Esperando a / Esperando desde — solo con status: waiting ── */}

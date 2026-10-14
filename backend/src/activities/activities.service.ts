@@ -10,6 +10,7 @@ import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { ProjectsService } from '../projects/projects.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { ActivityMode } from '../common/enums/activity-mode.enum';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { Priority } from '../common/enums/priority.enum';
 import { RecurrenceFrequency } from '../common/enums/recurrence-frequency.enum';
@@ -25,7 +26,24 @@ export interface ActivitiesSummary {
   byStatus: Record<ActivityStatus, number>;
   overdue: number;
   noDate: number;
+  // spec-036: siempre con las 4 claves; `none` = sin Claude (mode IS NULL).
+  byMode: Record<ActivityMode | typeof MODE_NONE, number>;
 }
+
+/**
+ * spec-036: centinela de consulta (no valor del enum) para filtrar por
+ * `mode IS NULL` — "sin Claude".
+ */
+export const MODE_NONE = 'none';
+
+/** spec-036: estados "activos" por defecto de `findByMode` (mismo criterio que el filtro Activas de spec-034). */
+const ACTIVE_STATUSES: ActivityStatus[] = [
+  ActivityStatus.PENDING,
+  ActivityStatus.IN_PROGRESS,
+  ActivityStatus.TESTING,
+  ActivityStatus.WAITING,
+  ActivityStatus.ON_HOLD,
+];
 
 @Injectable()
 export class ActivitiesService {
@@ -96,6 +114,7 @@ export class ActivitiesService {
       includeSubtasks?: boolean;
       status?: ActivityStatus[];
       dueFilter?: DueFilter;
+      mode?: ActivityMode | typeof MODE_NONE;
     },
   ): SelectQueryBuilder<Activity> {
     if (!opts.includeTemplates) {
@@ -107,6 +126,13 @@ export class ActivitiesService {
     if (opts.status && opts.status.length > 0) {
       qb = qb.andWhere('activity.status IN (:...listFilterStatuses)', {
         listFilterStatuses: opts.status,
+      });
+    }
+    if (opts.mode === MODE_NONE) {
+      qb = qb.andWhere('activity.mode IS NULL');
+    } else if (opts.mode) {
+      qb = qb.andWhere('activity.mode = :listFilterMode', {
+        listFilterMode: opts.mode,
       });
     }
     if (opts.dueFilter === DueFilter.OVERDUE) {
@@ -132,6 +158,8 @@ export class ActivitiesService {
       description: template.description,
       priority: template.priority,
       energy: template.energy,
+      // spec-036: mode se propaga como priority/energy (subtareas no heredan).
+      mode: template.mode,
       project: template.project,
       status: ActivityStatus.PENDING,
       isTemplate: false,
@@ -234,6 +262,7 @@ export class ActivitiesService {
       priority,
       status,
       energy,
+      mode,
       scheduledFor,
       deferUntil,
       waitingFor,
@@ -257,6 +286,7 @@ export class ActivitiesService {
       priority,
       status,
       energy,
+      mode: mode ?? null,
       scheduledFor,
       deferUntil,
       waitingFor: isWaiting ? (waitingFor ?? null) : null,
@@ -338,6 +368,7 @@ export class ActivitiesService {
       priority,
       status,
       energy,
+      mode,
       scheduledFor,
       deferUntil,
       waitingFor,
@@ -354,6 +385,8 @@ export class ActivitiesService {
       ...(priority !== undefined && { priority }),
       ...(status !== undefined && { status }),
       ...(energy !== undefined && { energy }),
+      // spec-036: null limpia (sin Claude); undefined conserva.
+      ...(mode !== undefined && { mode }),
       // spec-031: programar no es posponer, tampoco toca postponementCount
       // (mismo criterio ya establecido para deferUntil).
       ...(scheduledFor !== undefined && { scheduledFor }),
@@ -485,6 +518,7 @@ export class ActivitiesService {
           description: saved.description,
           priority: saved.priority,
           energy: saved.energy,
+          mode: saved.mode,
         })
         .where('templateId = :id', { id })
         .andWhere('status = :status', { status: ActivityStatus.PENDING })
@@ -618,6 +652,7 @@ export class ActivitiesService {
         {
           includeTemplates: query.includeTemplates,
           includeSubtasks: query.includeSubtasks,
+          mode: query.mode,
         },
       );
       if (query.projectId) {
@@ -661,7 +696,57 @@ export class ActivitiesService {
       .andWhere('activity.dueDate IS NULL')
       .getCount();
 
-    return { total, byStatus, overdue, noDate };
+    // spec-036: byMode se cuenta sobre el mismo conjunto que byStatus, así
+    // sum(byMode) === total. `mode` NULL se reporta como `none`.
+    const modeRows = await scopedQuery()
+      .select('activity.mode', 'mode')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('activity.mode')
+      .getRawMany<{ mode: ActivityMode | null; count: string }>();
+
+    const byMode: ActivitiesSummary['byMode'] = {
+      [ActivityMode.AUTONOMOUS]: 0,
+      [ActivityMode.COWORK_ASYNC]: 0,
+      [ActivityMode.COWORK]: 0,
+      [MODE_NONE]: 0,
+    };
+    for (const row of modeRows) {
+      byMode[row.mode ?? MODE_NONE] = Number(row.count);
+    }
+
+    return { total, byStatus, overdue, noDate, byMode };
+  }
+
+  /**
+   * spec-036: actividades delegables/colaborativas por modo. A diferencia de
+   * `findByStatus`/`findByPriority` (sin exclusiones), aplica por defecto:
+   * no plantillas, no diferidas y solo estados activos. `status` explícito
+   * sustituye la lista por defecto. Incluye subtareas como filas: `mode` no
+   * se hereda, así que una subtarea marcada es trabajo delegable por sí misma.
+   */
+  findByMode(
+    mode: ActivityMode | typeof MODE_NONE,
+    opts: PaginationDto & { status?: ActivityStatus[]; projectId?: string },
+  ): Promise<Activity[]> {
+    let qb = this.baseQuery()
+      .where('activity.isTemplate = false')
+      .andWhere(this.notDeferredCondition(), {
+        today: this.toDateOnlyString(new Date()),
+      });
+    qb =
+      mode === MODE_NONE
+        ? qb.andWhere('activity.mode IS NULL')
+        : qb.andWhere('activity.mode = :byModeValue', { byModeValue: mode });
+    qb = qb.andWhere('activity.status IN (:...byModeStatuses)', {
+      byModeStatuses:
+        opts.status && opts.status.length > 0 ? opts.status : ACTIVE_STATUSES,
+    });
+    if (opts.projectId) {
+      qb = qb.andWhere('activity.projectId = :byModeProjectId', {
+        byModeProjectId: opts.projectId,
+      });
+    }
+    return this.paginate(qb, opts).getMany();
   }
 
   findToday(pagination: PaginationDto): Promise<Activity[]> {
