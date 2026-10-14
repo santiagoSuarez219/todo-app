@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ActivityMode } from '../../common/enums/activity-mode.enum';
 import { ActivityStatus } from '../../common/enums/activity-status.enum';
 import { Priority } from '../../common/enums/priority.enum';
 import { Energy } from '../../common/enums/energy.enum';
@@ -60,6 +61,11 @@ export class Activity {
   // que nunca existió.
   @Column({ type: 'date', nullable: true })
   scheduledFor: string | null;
+
+  // spec-036: modo de colaboración con Claude. null = sin Claude (trabajo
+  // propio). No se hereda a subtareas; sí se propaga de plantilla a instancias.
+  @Column({ type: 'enum', enum: ActivityMode, nullable: true })
+  mode: ActivityMode | null;
 
   @ManyToOne(() => Activity, (activity) => activity.subtasks, {
     nullable: true,

@@ -96,6 +96,7 @@ DB_PASSWORD=todo_password
 
 # Environment
 NODE_ENV=development
+# DB_SSL=true  # opcional: SSL (rejectUnauthorized: false) sin NODE_ENV=production, p. ej. para una base Neon de desarrollo
 FRONTEND_URL=http://localhost:5173
 PORT=3003
 
@@ -171,14 +172,15 @@ externas). Autenticación: no implementada — app de uso personal, un solo usua
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `GET` | `/activities` | Lista paginada. **Excluye plantillas y subtareas por defecto** — `?includeTemplates=true` / `?includeSubtasks=true` para incluirlas. Acepta `?status=` (uno o varios, separados por coma) y `?dueFilter=overdue\|no_date` (spec-034) |
-| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas. Acepta `?projectId=`, `?includeTemplates=`, `?includeSubtasks=` (spec-034) |
+| `GET` | `/activities` | Lista paginada. **Excluye plantillas y subtareas por defecto** — `?includeTemplates=true` / `?includeSubtasks=true` para incluirlas. Acepta `?status=` (uno o varios, separados por coma), `?dueFilter=overdue\|no_date` (spec-034) y `?mode=autonomous\|cowork_async\|cowork\|none` (spec-036; `none` = `mode IS NULL`) |
+| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas. Acepta `?projectId=`, `?includeTemplates=`, `?includeSubtasks=` (spec-034) y `?mode=` (spec-036). Incluye `byMode` (`autonomous`, `cowork_async`, `cowork`, `none`; suma = `total`) |
 | `GET` | `/activities/today` | `dueDate` en el día actual o `scheduledForToday = true` |
 | `GET` | `/activities/tomorrow` | `dueDate` mañana |
 | `GET` | `/activities/this-week` | Semana actual (Lun–Dom) por `dueDate` |
 | `GET` | `/activities/overdue` | Vencidas y no completadas (ver lógica) |
 | `GET` | `/activities/schedule` | Cronograma mensual — `?year=&month=`, ver lógica |
 | `GET` | `/activities/without-project` | Sin proyecto asociado. Excluye plantillas y subtareas (spec-034) |
+| `GET` | `/activities/mode/:mode` | spec-036: por modo de colaboración (`none` = sin Claude). Excluye plantillas, diferidas y `completed`/`cancelled` por defecto; `?status=` sustituye la lista de estados activos; `?projectId=` acota. Incluye subtareas. Respalda la tool MCP `get_activities_by_mode` |
 | `GET` | `/activities/project/:projectId` | Por proyecto. Mismos filtros y mismo comportamiento por defecto que `GET /activities` (spec-034) |
 | `GET` | `/activities/priority/:priority` | Por prioridad |
 | `GET` | `/activities/status/:status` | Por status |
@@ -231,6 +233,7 @@ src/
 │   ├── entities/activity.entity.ts
 │   ├── dto/create-activity.dto.ts
 │   ├── dto/update-activity.dto.ts
+│   ├── dto/activities-by-mode-query.dto.ts   spec-036
 │   ├── activities.service.ts             Lógica de negocio + queries especializadas
 │   ├── activities.controller.ts          Endpoints REST
 │   └── recurrence-scheduler.service.ts   Cron diario: genera instancias del día siguiente
@@ -275,7 +278,8 @@ src/
     ├── 1782908224127-AddCreditCardToExpenses.ts
     ├── 1786714977098-AddDebtScheduleAndBudgetItemLink.ts   spec-026: startMonth/startYear/paidOffAt, budget_items.debtId
     ├── 1786715738000-DropPaidInstallmentsFromDebts.ts      spec-026: columna reemplazada por cálculo derivado
-    └── 1787100000000-UnifyBudgetItemsIntoExpenses.ts       spec-035: fusiona budget_items en expenses, elimina la tabla
+    ├── 1787100000000-UnifyBudgetItemsIntoExpenses.ts       spec-035: fusiona budget_items en expenses, elimina la tabla
+    └── 1787100000001-AddModeToActivities.ts                spec-036: enum `activities_mode_enum` + columna `mode` nullable, sin backfill
 ```
 
 ### Entidades
@@ -306,6 +310,7 @@ src/
 | `priority` | `enum` | default `medium` |
 | `status` | `enum` | default `pending` |
 | `energy` | `enum` | default `medium` |
+| `mode` | `enum` (`activities_mode_enum`) | nullable, sin default — modo de colaboración con Claude (spec-036); `null` = sin Claude. No se hereda a subtareas |
 | `type` | `enum` | default `task` |
 | `scheduledForToday` | `boolean` | default `false` — aparece en la vista Today |
 | `notionUrl` | `varchar` | nullable — URL de página Notion asociada |
@@ -489,6 +494,7 @@ casi lo confundimos con un bug de datos. Para comparar contra "ahora", usar
 ProjectStatus:        active | inactive | paused | completed
 ActivityStatus:       pending | in_progress | completed | cancelled | on_hold
 ActivityType:         task | reminder
+ActivityMode:         autonomous | cowork_async | cowork   (spec-036; null = sin Claude)
 Priority:             high | medium | low
 Energy:               high | medium | low
 RecurrenceFrequency:  daily | weekly | biweekly | monthly | yearly
@@ -548,7 +554,7 @@ Si se envía `parentId` en una actividad de tipo `reminder`, `sanitizeByType` lo
 #### Recurrencia (`recurrence-scheduler.service.ts`)
 
 - Cron `EVERY_DAY_AT_MIDNIGHT`: por cada plantilla activa (`isTemplate: true`, `isRecurring: true`) evalúa si corresponde generar una instancia para el día siguiente y la crea.
-- Al editar una plantilla, `name` / `description` / `priority` / `energy` se propagan automáticamente a las instancias futuras que sigan `pending` (no afecta instancias ya completadas o pasadas).
+- Al editar una plantilla, `name` / `description` / `priority` / `energy` / `mode` (spec-036) se propagan automáticamente a las instancias futuras que sigan `pending` (no afecta instancias ya completadas o pasadas).
 
 #### Completar subtareas en cascada (spec-024)
 
@@ -685,6 +691,7 @@ tools MCP para agentes de IA. Cada request crea un `McpServer` nuevo
 | `get_activities_by_project` | Por proyecto |
 | `get_activities_by_type` | Por tipo |
 | `get_activities_by_priority` | Por prioridad |
+| `get_activities_by_mode` | spec-036: por modo (`none` = sin Claude). Excluye plantillas, diferidas y completed/cancelled por defecto; incluye subtareas |
 | `get_activities_by_status` | Por status |
 | `search_activities` | Búsqueda ILIKE en name, description, project.name |
 | `get_activity_subtasks` | Subtareas de una actividad |

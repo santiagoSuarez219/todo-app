@@ -31,9 +31,15 @@ import { DeferredActivitiesQueryDto } from './dto/deferred-activities-query.dto'
 import { ScheduleQueryDto } from './dto/schedule-query.dto';
 import { ListActivitiesQueryDto } from './dto/list-activities-query.dto';
 import { ActivitiesSummaryQueryDto } from './dto/activities-summary-query.dto';
+import { ActivitiesByModeQueryDto } from './dto/activities-by-mode-query.dto';
+import { ActivityMode } from '../common/enums/activity-mode.enum';
 import { ActivityStatus } from '../common/enums/activity-status.enum';
 import { Priority } from '../common/enums/priority.enum';
+import { MODE_NONE } from './activities.service';
 import type { ActivitiesSummary } from './activities.service';
+
+/** spec-036: valores aceptados por `GET /activities/mode/:mode` (enum + centinela `none`). */
+const MODE_PARAM_VALUES = { ...ActivityMode, NONE: MODE_NONE } as const;
 
 @ApiTags('activities')
 @Controller('activities')
@@ -138,6 +144,23 @@ export class ActivitiesController {
     @Query() { projectId, ...pagination }: DeferredActivitiesQueryDto,
   ): Promise<Activity[]> {
     return this.activitiesService.findDeferred(pagination, projectId);
+  }
+
+  @Get('mode/:mode')
+  @ApiOperation({
+    summary:
+      "Get activities by collaboration mode (spec-036). 'none' = sin Claude. " +
+      'Excludes templates, deferred and completed/cancelled by default; ' +
+      '?status overrides the default status list',
+  })
+  @ApiParam({ name: 'mode', enum: Object.values(MODE_PARAM_VALUES) })
+  @ApiOkResponse({ type: [Activity] })
+  findByMode(
+    @Param('mode', new ParseEnumPipe(MODE_PARAM_VALUES))
+    mode: ActivityMode | typeof MODE_NONE,
+    @Query() query: ActivitiesByModeQueryDto,
+  ): Promise<Activity[]> {
+    return this.activitiesService.findByMode(mode, query);
   }
 
   @Get('project/:projectId')

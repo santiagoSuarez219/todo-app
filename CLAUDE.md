@@ -212,6 +212,7 @@ cd frontend && npm run lint
 | `DB_USER` | `.env` | Usuario de la base de datos |
 | `DB_PASSWORD` | `.env` | Contraseña de la base de datos |
 | `NODE_ENV` | `.env` | `development \| production \| test` |
+| `DB_SSL` | `.env` | `true` activa SSL (`rejectUnauthorized: false`) aunque `NODE_ENV` no sea `production`; sirve para apuntar a una base Neon de desarrollo con `NODE_ENV=test`/`development` |
 | `FRONTEND_URL` | `.env` | URL del frontend para CORS |
 | `AUTH_EMAIL` | `.env` | Email del usuario único (spec-021) |
 | `AUTH_PASSWORD` | `.env` | Contraseña en texto plano (spec-021) — solo de referencia/recuperación, el login nunca la compara directamente |

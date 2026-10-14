@@ -123,8 +123,8 @@ de rutas y lógica de negocio: ver `backend/CLAUDE.md`.
 
 | Método | Ruta | Descripción | Params |
 |--------|------|-------------|--------|
-| `GET` | `/activities` | Listar (paginado). **Excluye plantillas y subtareas por defecto** — `?includeTemplates=`/`?includeSubtasks=` para incluirlas. Acepta `?status=` (uno o varios, separados por coma) y `?dueFilter=overdue\|no_date` (spec-034) | `?page=&limit=&status=&dueFilter=&includeTemplates=&includeSubtasks=` |
-| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas (spec-034) | `?projectId=&includeTemplates=&includeSubtasks=` |
+| `GET` | `/activities` | Listar (paginado). **Excluye plantillas y subtareas por defecto** — `?includeTemplates=`/`?includeSubtasks=` para incluirlas. Acepta `?status=` (uno o varios, separados por coma) y `?dueFilter=overdue\|no_date` (spec-034) | `?page=&limit=&status=&dueFilter=&mode=&includeTemplates=&includeSubtasks=` |
+| `GET` | `/activities/summary` | Conteo por estado (los 7 valores, con 0 en los ausentes) + `overdue` + `noDate` + `total`, sin traer filas (spec-034) | `?projectId=&mode=&includeTemplates=&includeSubtasks=` (+ `byMode`, spec-036) |
 | `GET` | `/activities/today` | Actividades de hoy (`dueDate` o `scheduledForToday`) | paginación |
 | `GET` | `/activities/tomorrow` | Actividades de mañana | paginación |
 | `GET` | `/activities/this-week` | Actividades semana actual (Lun–Dom) | paginación |
@@ -231,6 +231,7 @@ ProjectStatus:        'active' | 'inactive' | 'paused' | 'completed'
 ActivityStatus:       'pending' | 'in_progress' | 'testing' | 'completed' | 'cancelled' | 'on_hold' | 'waiting'
 Priority:             'high' | 'medium' | 'low'
 Energy:               'high' | 'medium' | 'low'
+ActivityMode:         'autonomous' | 'cowork_async' | 'cowork'   (spec-036; Activity.mode puede ser null = sin Claude)
 RecurrenceFrequency:  'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
 ExpenseType:          'basico' | 'lujo' | 'ahorro' | 'pago_deuda'
 IncomeType:           'sueldo' | 'freelance' | 'intereses' | 'dividendos' | 'otro'
@@ -290,6 +291,7 @@ existe `BudgetItem`: un ítem de presupuesto es un `Expense` con
 - `ProjectForm.tsx`
 - `ConfirmDialog.tsx`, `EmptyState.tsx`, `Modal.tsx`, `Pagination.tsx`
 - `PriorityBadge.tsx`, `StatusBadge.tsx`, `EnergyIndicator.tsx`
+- `ModeBadge.tsx`, `ActivityModeFilter.tsx` (spec-036) — chip y filtro del modo de colaboración con Claude; catálogo en `lib/activityModeFilters.ts`
 
 ### Cronograma (`components/schedule/`)
 - `MonthNavigator.tsx`, `MonthCalendar.tsx`, `CalendarDayCell.tsx`,

@@ -1,7 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsIn, IsOptional } from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ActivityMode } from '../../common/enums/activity-mode.enum';
 import { ActivityStatus } from '../../common/enums/activity-status.enum';
 
 export enum DueFilter {
@@ -43,6 +44,15 @@ export class ListActivitiesQueryDto extends PaginationDto {
   @IsOptional()
   @IsEnum(DueFilter)
   dueFilter?: DueFilter;
+
+  @ApiPropertyOptional({
+    enum: [...Object.values(ActivityMode), 'none'],
+    description:
+      "spec-036: filtra por modo de colaboración con Claude. 'none' = sin Claude (mode IS NULL).",
+  })
+  @IsOptional()
+  @IsIn([...Object.values(ActivityMode), 'none'])
+  mode?: ActivityMode | 'none';
 
   @ApiPropertyOptional({
     default: false,

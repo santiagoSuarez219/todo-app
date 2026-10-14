@@ -26,7 +26,7 @@ parámetros y con qué límites. Útiles para revisar el contrato sin leer
 |---|---|
 | [`finanzas-personales.capacidades.md`](./finanzas-personales.capacidades.md) | Las 42 herramientas del dominio financiero (gastos, ingresos, presupuestos, deudas, tarjetas, cuentas, CDTs, lista de deseos), con parámetros exactos, límites conocidos y trampas |
 
-De las 68 herramientas del servidor, 42 son financieras y 26 de
+De las 69 herramientas del servidor, 42 son financieras y 27 de
 proyectos/actividades.
 
 ## Autenticación (spec-021)

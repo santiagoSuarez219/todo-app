@@ -1899,3 +1899,227 @@ describe('ActivitiesService - `testing` no dispara lo que pertenece a `completed
     expect(cascadeSpy).toHaveBeenCalledWith('activity-1');
   });
 });
+
+// spec-036 — Modo de colaboración con Claude: campo `mode`
+//
+// Redactado en modo test-first (@tester), en rojo hasta implementar:
+//   - `buildInstanceFromTemplate()` copiando `mode` de la plantilla;
+//   - el `.set({...})` de la propagación de `update()` incluyendo `mode`;
+//   - `findByMode()` (isTemplate = false, notDeferredCondition(), lista de
+//     estados activos por defecto o el `status` recibido);
+//   - `getSummary()` devolviendo `byMode` con las 4 claves.
+//
+// `findByMode` y `byMode` aún no existen en los tipos: se accede vía `any`
+// para que el archivo compile y los tests existentes no se vean afectados.
+// Se asumen: `findByMode(mode, { page, limit, status?, projectId? })` y que
+// `getSummary()` obtiene los conteos por modo con `getRawMany()` seleccionando
+// una columna que contiene "mode" (el alias de la fila puede diferir en la
+// implementación real; ajustar este test junto con ella si es necesario).
+describe('ActivitiesService - mode (spec-036)', () => {
+  let service: ActivitiesService;
+  let mockRepository: any;
+  let mockQb: any;
+
+  beforeEach(async () => {
+    mockQb = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue(undefined),
+      getMany: jest.fn().mockResolvedValue([]),
+      getCount: jest.fn().mockResolvedValue(0),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    };
+
+    mockRepository = {
+      create: jest.fn((data: any) => ({ ...data })),
+      save: jest.fn((data: any) => Promise.resolve(data)),
+      findOne: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ActivitiesService,
+        { provide: getRepositoryToken(Activity), useValue: mockRepository },
+        { provide: ProjectsService, useValue: { findOne: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get<ActivitiesService>(ActivitiesService);
+  });
+
+  function conditionsText(): string {
+    return [...mockQb.where.mock.calls, ...mockQb.andWhere.mock.calls]
+      .map((c: any[]) => c[0])
+      .join(' | ');
+  }
+
+  describe('buildInstanceFromTemplate()', () => {
+    const baseTemplate = {
+      id: 'template-1',
+      name: 'Plantilla',
+      description: null,
+      priority: 'medium',
+      energy: 'medium',
+      project: null,
+      isTemplate: true,
+      recurrenceFrequency: 'daily',
+    };
+
+    it('copia el mode de la plantilla a la instancia', () => {
+      const instance = service.buildInstanceFromTemplate(
+        { ...baseTemplate, mode: 'autonomous' } as any,
+        new Date(),
+      );
+      expect((instance as any).mode).toBe('autonomous');
+    });
+
+    it('copia mode: null (plantilla sin Claude => instancia sin Claude)', () => {
+      const instance = service.buildInstanceFromTemplate(
+        { ...baseTemplate, mode: null } as any,
+        new Date(),
+      );
+      expect((instance as any).mode).toBeNull();
+    });
+  });
+
+  describe('update() — propagación a instancias futuras', () => {
+    it('el .set() de la propagación incluye mode (también null)', async () => {
+      for (const mode of ['cowork', null]) {
+        mockQb.set.mockClear();
+        mockRepository.findOne.mockResolvedValue({
+          id: 'template-1',
+          name: 'Plantilla',
+          status: ActivityStatus.PENDING,
+          isTemplate: true,
+          recurrenceFrequency: 'daily',
+          project: null,
+          parent: null,
+          subtasks: [],
+        });
+
+        await service.update('template-1', { mode } as any);
+
+        expect(mockQb.set).toHaveBeenCalledTimes(1);
+        const setArg = mockQb.set.mock.calls[0][0];
+        expect(setArg).toHaveProperty('mode', mode);
+      }
+    });
+  });
+
+  describe('findByMode()', () => {
+    const run = (args: Record<string, unknown> = {}) =>
+      (service as any).findByMode('autonomous', {
+        page: 1,
+        limit: 20,
+        ...args,
+      });
+
+    it('aplica mode, isTemplate = false y la condición de no diferidas', async () => {
+      await run();
+      const text = conditionsText();
+      expect(text).toMatch(/activity\.mode = :/);
+      expect(text).toMatch(/activity\.isTemplate = false/);
+      expect(text).toMatch(/deferUntil IS NULL OR activity\.deferUntil <= :today/);
+    });
+
+    it('por defecto filtra a pending, in_progress, testing, waiting y on_hold', async () => {
+      await run();
+      const statusCall = [
+        ...mockQb.where.mock.calls,
+        ...mockQb.andWhere.mock.calls,
+      ].find(
+        ([text]: [string]) =>
+          /activity\.status/.test(text) && !/!=/.test(text),
+      );
+      expect(statusCall).toBeDefined();
+      const params = Object.values(statusCall![1] as Record<string, unknown>);
+      const statuses = params.flat() as string[];
+      expect([...statuses].sort()).toEqual(
+        ['on_hold', 'in_progress', 'pending', 'testing', 'waiting'].sort(),
+      );
+      expect(statuses).not.toContain('completed');
+      expect(statuses).not.toContain('cancelled');
+    });
+
+    it('con status explícito sustituye la lista por defecto', async () => {
+      await run({ status: ['completed'] });
+      const statusCall = [
+        ...mockQb.where.mock.calls,
+        ...mockQb.andWhere.mock.calls,
+      ].find(([text]: [string]) => /activity\.status/.test(text));
+      const statuses = Object.values(
+        statusCall![1] as Record<string, unknown>,
+      ).flat() as string[];
+      expect(statuses).toEqual(['completed']);
+    });
+
+    it("'none' se traduce a mode IS NULL", async () => {
+      await (service as any).findByMode('none', { page: 1, limit: 20 });
+      expect(conditionsText()).toMatch(/activity\.mode IS NULL/);
+    });
+
+    it('projectId acota la consulta', async () => {
+      await run({ projectId: 'p1' });
+      const call = mockQb.andWhere.mock.calls.find(([t]: [string]) =>
+        /projectId/.test(t),
+      );
+      expect(call).toBeDefined();
+      expect(Object.values(call![1])).toContain('p1');
+    });
+  });
+
+  describe('getSummary() — byMode', () => {
+    // Devuelve filas de modo si la última selección menciona "mode"; si no,
+    // filas de estado (vacías aquí).
+    function stubRawRows(modeRows: any[]) {
+      let lastSelect = '';
+      mockQb.select.mockImplementation((arg: string) => {
+        lastSelect = String(arg);
+        return mockQb;
+      });
+      mockQb.addSelect.mockImplementation((arg: string) => {
+        lastSelect += ` ${String(arg)}`;
+        return mockQb;
+      });
+      mockQb.getRawMany.mockImplementation(() =>
+        Promise.resolve(/mode/i.test(lastSelect) ? modeRows : []),
+      );
+    }
+
+    it('devuelve byMode con las 4 claves en 0 cuando no hay filas', async () => {
+      stubRawRows([]);
+      const summary: any = await service.getSummary({} as any);
+      expect(summary.byMode).toEqual({
+        autonomous: 0,
+        cowork_async: 0,
+        cowork: 0,
+        none: 0,
+      });
+    });
+
+    it('mapea las filas por modo y las filas con mode NULL a none', async () => {
+      stubRawRows([
+        { mode: 'autonomous', count: '2' },
+        { mode: null, count: '3' },
+      ]);
+      const summary: any = await service.getSummary({} as any);
+      expect(summary.byMode).toEqual({
+        autonomous: 2,
+        cowork_async: 0,
+        cowork: 0,
+        none: 3,
+      });
+    });
+  });
+});

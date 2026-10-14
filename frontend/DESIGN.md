@@ -162,6 +162,14 @@ El toggle persiste en `localStorage` con clave `'color-theme'` → valor `'dark'
 | `cancelled` | `bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300` |
 | `on_hold` | `bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300` |
 
+### Chip de modo con Claude (spec-036)
+
+`ModeBadge`: chip **neutro con borde** (`border-gray-300 dark:border-gray-600`,
+`bg-white dark:bg-gray-800`, `text-gray-700 dark:text-gray-300`). El modo se
+distingue por **ícono**, no por color (la paleta de estados ya está ocupada):
+rayo = `autonomous`, reloj = `cowork_async`, personas = `cowork`. Sin modo
+(`null`) no se renderiza.
+
 ### Badges de prioridad
 
 | Priority | Clases |
@@ -190,3 +198,4 @@ El toggle persiste en `localStorage` con clave `'color-theme'` → valor `'dark'
 | `src/components/StatusBadge.tsx` | Badge status actividad/proyecto |
 | `src/components/PriorityBadge.tsx` | Badge de prioridad |
 | `src/components/EnergyIndicator.tsx` | Indicador de energía |
+| `src/components/ModeBadge.tsx` | Chip del modo de colaboración con Claude |

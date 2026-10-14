@@ -269,3 +269,75 @@
   causa raíz genérica detrás de cualquier flakiness de este tipo, no solo la
   de spec-034. Fijarlo a 1 worker lo resolvería de raíz para toda la suite,
   pero es un cambio de configuración global fuera del alcance de este spec.
+
+## Deuda detectada durante spec-036 (modo de colaboración con Claude)
+
+- **`backend/CLAUDE.md` sigue desactualizado** en la entidad `Activity` y los
+  enums: lista `get_activities_by_type` (eliminada en spec-027); la tabla de
+  `Activity` mantiene `type`, `scheduledForToday`, `notionUrl` e `isRecurring`
+  y omite `deferUntil`, `scheduledFor`, `waitingFor`/`waitingSince`,
+  `completedAt` y `postponementCount`; `ActivityStatus` aparece sin
+  `testing`/`waiting`; faltan las migraciones `1787000000000`–`006`, la ruta
+  `GET /activities/deferred` y las tools `get_activities_summary` /
+  `get_deferred_activities`. spec-036 solo añadió lo suyo (`mode`).
+- **`frontend/DESIGN.md`**: la tabla de badges de estado no incluye `testing`
+  ni `waiting`, y documenta `on_hold` en gris cuando el código lo usa en
+  púrpura.
+- **`frontend/CLAUDE.md`**: el snippet de `Activity` arrastra campos
+  eliminados (ya registrado arriba, spec-034); `mode` no se añadió al snippet.
+
+## Deuda detectada durante la ronda manual de spec-036
+
+- **El frontend no puede listar ni editar plantillas recurrentes.** Desde
+  spec-034 `/activities` y `/activities/project/:id` excluyen las plantillas
+  por defecto, y ninguna página del frontend envía `includeTemplates`
+  (declarado en `types/index.ts`). Resultado: el formulario con
+  `hasInstances` y los botones "Recurrente"/"Cancelar instancias futuras" de
+  `ActivityCard` son código inalcanzable, y `TC-036-004` no se puede ejecutar
+  por la UI. La propagación de `mode` de plantilla a instancias sí funciona
+  (verificada por API).
+- **La API de creación no permite generar instancias de plantillas** (el DTO no acepta
+  `templateId`/`instanceDate`) y el cron no corre con `NODE_ENV=test`, por lo
+  que las pruebas manuales de recurrencia necesitan un script que llame a
+  `ActivitiesService.generateInstanceForDate`. Los casos `test-NNN` que digan
+  "creada vía API con `templateId`" son incorrectos.
+- **Throttler (10 peticiones/min) activo en `development`** (solo se omite con
+  `NODE_ENV=test`): el uso normal de la UI lo supera con facilidad.
+- **Móvil (375 px):** el botón "+ Actividad" del encabezado de `ProjectDetail`
+  queda parcialmente cortado.
+
+## Deuda preexistente detectada en la revisión de spec-036
+
+- **Tests e2e con errores de tipos:** `authCookies` (string vs `string[]`) en
+  todos los `backend/test/e2e-*.e2e-spec.ts` (aparece al compilar con
+  `tsconfig.json` completo) y `activities.service.spec.ts:1086/1089`
+  (`completedAt` posiblemente `null`).
+- **eslint en `backend/src/activities/dto/create-activity.dto.ts:139/140/151`**
+  (`recurrenceFrequency`).
+- **Los tests e2e y el spec nuevo arrastran el patrón `any`** (cientos de avisos
+  de eslint por archivo en `e2e-034`, `e2e-035`, `e2e-036`): tiparlo con
+  helpers reduciría el ruido de `npm run lint`.
+- **`npm run lint` del frontend falla con 4 errores** en archivos ajenos a
+  spec-036: `pages/Login.tsx:38`, `pages/finances/ExpensesView.tsx:151` y
+  `services/auth.service.ts:5,14`.
+- **Aviso de chunk > 500 kB en `npm run build` del frontend** (code-splitting
+  por ruta pendiente).
+- **Dos e2e fallan por motivos ajenos a las specs recientes:**
+  `auth.e2e-spec` › `POST /mcp` › TC-014 (espera 200 pero el transporte MCP
+  responde 406: el test no envía `Accept: application/json, text/event-stream`)
+  y `app.e2e-spec` › `/ (GET)` (test plantilla de Nest que espera "Hello World!"
+  en `/`; el backend usa el prefijo global `/api/v1`).
+- **Los e2e fijan `DB_HOST=localhost` y `NODE_ENV=test` dentro de cada archivo**
+  (`setupTestEnv()`), por lo que no se pueden apuntar a otra base (ej. una
+  Neon de desarrollo) sin copiar los archivos. Leer `DB_*` del entorno con
+  valor por defecto local lo resolvería.
+- **Menores del revisor de spec-036:** `MODE_NONE` vive en el servicio y el
+  literal `'none'` se repite en DTOs y MCP (moverlo a
+  `common/enums/activity-mode.enum.ts`); `MODE_VALUES` del MCP está escrito a
+  mano en vez de derivarse del enum; la descripción de `byMode` ("sigue
+  completo") es ambigua con `mode` acotado; `ModeBadge` pone el contexto solo en
+  `title` (añadir `sr-only`); `id="activity-mode"` fijo en `ActivityForm`
+  (usar `useId()`); `get_activities_by_mode` con `status: []` vuelve en
+  silencio a la lista por defecto; los casts a `any` del bloque de spec-036 en
+  `activities.service.spec.ts:1902-1915` ya no hacen falta; `CLAUDE.md` raíz,
+  "Entidades del dominio → Activity", no menciona `mode`.
