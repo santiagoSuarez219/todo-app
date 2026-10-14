@@ -19,6 +19,7 @@
 | Plantilla `[TEST-036] Plantilla recurrente` (`recurrenceFrequency: daily`, `mode: cowork`, en el proyecto) | `POST /activities` | `3eed47ea-dd97-4936-985c-6473757a1744` | ✅ |
 | Instancia de mañana de la plantilla (la genera el cron a medianoche; la API de creación no acepta `templateId`/`instanceDate`, así que en una ronda manual se genera con un script que llama a `ActivitiesService.generateInstanceForDate`, el mismo método del cron) | `POST /activities` | `0c9b6253-e479-4b07-883f-0e0000fc6a31` (generada con `ActivitiesService.generateInstanceForDate`, como el cron; la API no permite crearla) | ✅ |
 | Actividad `[TEST-036] Autónoma en curso MCP` (`mode: autonomous`, `status: in_progress`) para TC-MCP-036-006 | `POST /activities` | `31909f61-ec43-49cb-97a1-fcc65c18fcb0` | ✅ |
+| **Producción (post-despliegue):** `[TEST-036] Autónoma en curso MCP` recreada para TC-MCP-036-006 | MCP `create_activity` + `update_activity` | `5cb264c8-030a-48ce-ab08-f2f589e49012` | ✅ |
 | Actividades creadas desde la UI durante la ronda: `[TEST-036] Creada con modo`, `…cowork async`, `…cowork` y la subtarea `Subtarea sin herencia` | UI (TC-036-001 y 003) | `269dfd83…`, `f7ed5cb2…`, `77ac0207…`, `45ba7960…` | ✅ |
 
 **Entorno de pruebas:** desarrollo — frontend `http://localhost:5173`, backend local `http://localhost:3003/api/v1` conectado a la base de desarrollo en Neon (Postgres 18, `NODE_ENV=test` + `DB_SSL=true` para desactivar el throttler)
@@ -191,10 +192,10 @@
 **Precondición:** `[TEST-036] Autónoma en curso MCP` (`mode: autonomous`, `status: in_progress`).
 **Input de prueba:** pedir al asistente (con el system prompt actualizado) "¿qué puedes hacer tú solo?", dejar que tome la tarea y que la dé por terminada.
 **Output esperado:** el asistente consulta `get_activities_by_mode(autonomous)` y recibe solo trabajo delegable activo; al terminar mueve la tarea a `status: "testing"` (nunca a `completed`) para que Santiago verifique.
-**Estado:** ⬜ Pendiente — aplazado a post-despliegue
-**Hallazgos:** Aplazado por decisión del usuario (2026-10-14): se ejecuta **después del despliegue**, cuando el MCP de producción ya expone `mode`. Hay que volver a crear el dato `[TEST-036] Autónoma en curso MCP` (`autonomous`, `in_progress`) en ese momento y eliminarlo al terminar.
+**Estado:** ✅ Aprobado (confirmado por el usuario, 2026-10-14, post-despliegue de v2.1.0)
+**Hallazgos:** Ejecutado en producción tras el despliegue. Dato `[TEST-036] Autónoma en curso MCP` (`5cb264c8-030a-48ce-ab08-f2f589e49012`): `create_activity` + `update_activity(mode: autonomous)`, `in_progress`. El asistente consultó `get_activities_by_mode(autonomous)` y recibió solo esa actividad; al pedirle que la tomara y la diera por terminada, la movió a `status: testing` (verificado por MCP: `testing`, `completedAt: null`; aparece en `get_activities_by_mode(autonomous, status: [testing])`), nunca a `completed`. Primera respuesta del asistente: trató la actividad como prueba y ofreció revisar candidatas o borrarla; hizo falta pedirle explícitamente que la tomara. Dato eliminado de producción (404 verificado).
 
 ## Resumen de la ronda
-- Aprobados: 15 — Fallidos: 0 — Pendientes: 1 (TC-MCP-036-006, aplazado a después del despliegue: lo prueba el usuario con el asistente)
+- Aprobados: 16 — Fallidos: 0 — Pendientes: 0 (TC-MCP-036-006 ejecutado en producción tras el despliegue de v2.1.0)
 - Hallazgos escalados a `spec/backlog.md`: plantillas inalcanzables en la UI, instancias no creables por API, throttler activo en `development`, botón "+ Actividad" cortado en móvil
-- Limpieza de datos de prueba: ✅ Completada (2026-10-14): proyecto y 39 actividades, incluidas 3 creadas desde la UI, 1 subtarea, la plantilla y su instancia, eliminados por la API; verificado 404 en los 40 IDs y 0 filas en `activities` y `projects`
+- Limpieza de datos de prueba: ✅ Completada (2026-10-14): proyecto y 39 actividades, incluidas 3 creadas desde la UI, 1 subtarea, la plantilla y su instancia, eliminados por la API; verificado 404 en los 40 IDs y 0 filas en `activities` y `projects` Producción (2026-10-14): la actividad de TC-MCP-036-006 se eliminó por el MCP y devuelve 404.
